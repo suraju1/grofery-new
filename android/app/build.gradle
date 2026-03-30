@@ -1,0 +1,103 @@
+plugins {
+    id("com.android.application")
+    // START: FlutterFire Configuration
+    id("com.google.gms.google-services")
+    // END: FlutterFire Configuration
+    id("kotlin-android")
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id("dev.flutter.flutter-gradle-plugin")
+}
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader("UTF-8") { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterVersionCode = localProperties.getProperty("flutter.versionCode")
+if (flutterVersionCode == null) {
+    flutterVersionCode = "1"
+}
+
+def flutterVersionName = localProperties.getProperty("flutter.versionName")
+if (flutterVersionName == null) {
+    flutterVersionName = "1.0"
+}
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    namespace = "com.axolotls.grofery_user"
+    compileSdk = 36
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled true
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    signingConfigs {
+        release {
+            keyAlias = keystoreProperties.getProperty('keyAlias')
+            keyPassword = keystoreProperties.getProperty('keyPassword')
+            storeFile = keystoreProperties.getProperty('storeFile') ? file(keystoreProperties.getProperty('storeFile')) : null
+            storePassword = keystoreProperties.getProperty('storePassword')
+        }
+    }
+
+    defaultConfig {
+        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        applicationId "com.axolotls.grofery_user"
+        // You can update the following values to match your application needs.
+        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        minSdkVersion = flutter.minSdkVersion
+        targetSdk = 36
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+
+    // buildTypes {
+    //     release {
+    //         // Use release signing only if keystore file actually exists
+    //         // Otherwise fall back to debug signing (allows building without keystore)
+    //         if (keystorePropertiesFile.exists() && keystoreProperties['storeFile'] && keystoreProperties['storeFile'] != 'STORE_FILE_PATH') {
+    //             signingConfig signingConfigs.release
+    //         } else {                                                                                                                                          ha pn purn buildtypes change kela aahe 
+    //             signingConfig signingConfigs.debug
+    //         }
+    //         minifyEnabled false
+    //         shrinkResources false
+    //         // proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+    //     }
+    // }
+    buildTypes {
+    release {
+        signingConfig signingConfigs.release
+        minifyEnabled false
+        shrinkResources false
+    }
+}
+
+}
+
+flutter {
+    source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+    implementation(platform("com.google.firebase:firebase-bom:33.10.0"))
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("com.google.android.material:material:1.12.0")
+}
