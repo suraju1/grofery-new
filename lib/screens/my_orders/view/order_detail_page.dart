@@ -113,6 +113,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                       builder: (context, state) {
                         if (state is OrderDetailLoaded) {
                           final orderData = state.cartData.first.data;
+                          if (orderData == null) return const SizedBox.shrink();
                           return SingleChildScrollView(
                             child: RefreshIndicator(
                               onRefresh: apiCall,
@@ -121,17 +122,17 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                 child: Column(
                                   children: [
                                     OrderItemsCard(
-                                      items: orderData!.items!,
-                                      totalItems: orderData.items!.length.toString(),
+                                      items: orderData.items ?? [],
+                                      totalItems: (orderData.items?.length ?? 0).toString(),
                                       priceColor: Colors.black,
                                       originalPriceColor: Colors.grey[500],
                                     ),
                                     if(orderData.status == 'delivered')...[
-                                      rateWidget(orderData.id! ,orderData.slug!, orderData),
+                                      rateWidget(orderData.id ?? 0 ,orderData.slug ?? '', orderData),
                                       SizedBox(height: 10.h),
                                     ],
                                     trackDeliveryAndReturnProduct(
-                                      orderSlug: orderData.slug!,
+                                      orderSlug: orderData.slug ?? '',
                                       items: orderData.items ?? [],
                                       isDelivered: orderData.status == 'delivered' ? true : false,
                                       isDeliveryBoyAssigned: orderData.deliveryBoyId != null,
@@ -142,27 +143,29 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                     ),
                                     // SizedBox(height: 10.h),
                                     BillSummaryWidget(
-                                      itemsOriginalPrice: double.parse(orderData.totalPayable!),
-                                      itemsDiscountedPrice: double.parse(orderData.subtotal!),
+                                      itemsOriginalPrice: double.tryParse(orderData.totalPayable ?? '0.0') ?? 0.0,
+                                      itemsDiscountedPrice: double.tryParse(orderData.subtotal ?? '0.0') ?? 0.0,
                                       itemsSavings: 0,
-                                      deliveryChargeOriginal: double.parse(orderData.deliveryCharge!),
-                                      handlingCharge: double.parse(orderData.handlingCharges!),
-                                      perStoreDropOffFees: double.parse(orderData.perStoreDropOffFee!),
-                                      grandTotal: double.parse(orderData.finalTotal!),
+                                      deliveryChargeOriginal: double.tryParse(orderData.deliveryCharge ?? '0.0') ?? 0.0,
+                                      handlingCharge: double.tryParse(orderData.handlingCharges ?? '0.0') ?? 0.0,
+                                      perStoreDropOffFees: double.tryParse(orderData.perStoreDropOffFee ?? '0.0') ?? 0.0,
+                                      grandTotal: double.tryParse(orderData.finalTotal ?? '0.0') ?? 0.0,
                                       totalSavings: 0,
                                       isFromOrderDetail: true,
                                       downloadInvoice: () {
-                                        _launchPdf(orderData.invoice!);
+                                        if (orderData.invoice != null && orderData.invoice!.isNotEmpty) {
+                                          _launchPdf(orderData.invoice!);
+                                        }
                                       },
                                       promoCode: orderData.promoCode,
                                       promoDiscount: double.parse(orderData.promoDiscount ?? '0.0'),
                                     ),
                                     SizedBox(height: 10.h),
                                     OrderDetailCard(
-                                      orderId: orderData.id.toString(),
-                                      paymentMethod: orderData.paymentMethod!,
-                                      deliveryAddress: orderData.shippingAddress1!,
-                                      orderDate: orderData.createdAt!,
+                                      orderId: orderData.id?.toString() ?? '',
+                                      paymentMethod: orderData.paymentMethod ?? '',
+                                      deliveryAddress: orderData.shippingAddress1 ?? '',
+                                      orderDate: orderData.createdAt ?? '',
                                     ),
                                     SizedBox(height: 10.h),
                                   ],

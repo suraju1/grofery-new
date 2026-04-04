@@ -40,16 +40,15 @@ class _ReturnItemsDialogState extends State<ReturnItemsDialog> {
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-      insetPadding: EdgeInsets.symmetric(horizontal: 15.w, vertical: 50.h),
+      insetPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           _header(context),
-          Expanded(
-            child: _selectedItem == null
-                ? _buildListView()
-                : returnForm(),
-          ),
+          if (_selectedItem == null)
+            Flexible(child: _buildListView())
+          else
+            Expanded(child: returnForm()),
 
           if(_selectedItem != null)
             _footerActions()
@@ -95,6 +94,8 @@ class _ReturnItemsDialogState extends State<ReturnItemsDialog> {
   Widget _buildListView() {
     return ListView.builder(
       padding: EdgeInsets.all(12.sp),
+      shrinkWrap: true,
+      physics: const ClampingScrollPhysics(),
       itemCount: widget.items.length,
       itemBuilder: (context, i) {
         final item = widget.items[i];
@@ -159,7 +160,7 @@ class _ReturnItemsDialogState extends State<ReturnItemsDialog> {
     setState(() => _submitting = true);
     try {
       context.read<ReturnOrderItemBloc>().add(ReturnOrderItemRequest(
-          orderItemId: _selectedItem!.id!,
+          orderItemId: _selectedItem?.id ?? 0,
           reason: _reasonCtrl.text,
         images: _images
       ));
@@ -201,7 +202,7 @@ class _ReturnItemsDialogState extends State<ReturnItemsDialog> {
     );
     if (confirmed == true) {
       if(mounted) {
-        context.read<ReturnOrderItemBloc>().add(CancelOrderItem(orderItemId: item.id!));
+        context.read<ReturnOrderItemBloc>().add(CancelOrderItem(orderItemId: item.id ?? 0));
         Navigator.pop(context);
       }
 
@@ -240,7 +241,7 @@ class _ReturnItemsDialogState extends State<ReturnItemsDialog> {
     );
     if (confirmed == true) {
       if(mounted){
-        context.read<ReturnOrderItemBloc>().add(CancelReturnRequest(orderItemId: item.id!));
+        context.read<ReturnOrderItemBloc>().add(CancelReturnRequest(orderItemId: item.id ?? 0));
         Navigator.pop(context);
       }
 
@@ -266,8 +267,8 @@ class _ReturnItemsDialogState extends State<ReturnItemsDialog> {
   Widget _productHeader(OrderItems item) {
     final String? imageUrl = item.product?.image;
     final String title = item.title ?? AppLocalizations.of(context)!.product;
-    final String qty = item.quantity.toString();
-    final String price = item.price!;
+    final String qty = item.quantity?.toString() ?? '0';
+    final String price = item.price ?? '0';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -590,14 +591,14 @@ class _ProductReturnCard extends StatelessWidget {
           SizedBox(height: 12.h),
 
           // 1. Non-cancellable / Non-returnable warnings
-          if (item.status != 'delivered' && item.product!.isCancelable == false)
+          if (item.status != 'delivered' && item.product?.isCancelable == false)
             _warningText(AppLocalizations.of(context)!.thisProductIsNotCancelable, context)
-          else if (item.product!.isReturnable == false)
+          else if (item.product?.isReturnable == false)
             _warningText(AppLocalizations.of(context)!.thisProductIsNotReturnable, context),
 
           // 2. Dynamic status message (cancelled, return in progress, refunded, etc.)
           if (status.message != null) ...[
-            if (item.product!.isCancelable == false || item.product!.isReturnable == false)
+            if (item.product?.isCancelable == false || item.product?.isReturnable == false)
               SizedBox(height: 8.h),
             _statusMessage(status, context),
           ],
@@ -626,7 +627,7 @@ class _ProductReturnCard extends StatelessWidget {
   Widget _actionButton(BuildContext context) {
     // Show "Return" button
     if (isDelivered &&
-        item.product!.isReturnable == true &&
+        item.product?.isReturnable != false &&
         (item.returns == null || item.returns!.isEmpty)) {
       return CustomButton(
         onPressed: onReturn,
@@ -636,7 +637,7 @@ class _ProductReturnCard extends StatelessWidget {
 
     // Show "Cancel Item" button (before delivery)
     if (!isDelivered &&
-        item.product!.isCancelable == true &&
+        item.product?.isCancelable != false &&
         item.status != 'cancelled') {
       return CustomButton(
         onPressed: onCancelItem,

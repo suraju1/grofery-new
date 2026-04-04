@@ -250,15 +250,22 @@ class OrderRepository {
     try{
       final response = await AppConstant.apiBaseHelper.postAPICall(
           '${ApiRoutes.cancelOrderItemApi}$orderItemId/cancel',
-          {}
+          {'reason': 'Cancellation request by user'}
       );
 
       if(response.statusCode == 200) {
         return response.data;
       }
-      return {};
+      return {
+        'success': false,
+        'message': 'Failed to cancel the item. Server returned status: ${response.statusCode}'
+      };
     }catch(e) {
-      throw ApiException(e.toString());
+      log('Error cancelling item: $e');
+      return {
+        'success': false,
+        'message': e.toString()
+      };
     }
   }
 }

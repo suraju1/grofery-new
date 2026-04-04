@@ -188,6 +188,58 @@ class _ExploreMoreCarouselState extends State<ExploreMoreCarousel> {
   }
 
   void _navigateToDetail(BuildContext context, ExploreData banner) {
+    debugPrint('EXPLORE_DEBUG: id=${banner.id}, type=${banner.type}, categoryId=${banner.categoryId}, productSlug=${banner.productSlug}, bannerTitle=${banner.title}');
+
+    // 1. Priority: Explicit Category ID
+    if (banner.categoryId != null && banner.categoryId != 0) {
+      debugPrint('EXPLORE_DEBUG: Navigating to category via ID: ${banner.categoryId}');
+      GoRouter.of(context).push(AppRoutes.productListing, extra: {
+        'isTheirMoreCategory': false,
+        'title': banner.categoryName ?? banner.title ?? 'Category',
+        'logo': banner.image ?? '',
+        'totalProduct': '',
+        'type': ProductListingType.category,
+        'identifier': banner.categoryId.toString(),
+      });
+      return;
+    }
+
+    // 2. Fallback: Product Slug (even if type is null)
+    if (banner.productSlug != null && banner.productSlug!.isNotEmpty) {
+      // If type is explicitly 'category' or 'brand', use it
+      if (banner.type?.toLowerCase() == 'category') {
+        GoRouter.of(context).push(AppRoutes.productListing, extra: {
+          'isTheirMoreCategory': false,
+          'title': banner.title ?? 'Category',
+          'logo': banner.image ?? '',
+          'totalProduct': '',
+          'type': ProductListingType.category,
+          'identifier': banner.productSlug!,
+        });
+      } else if (banner.type?.toLowerCase() == 'brand') {
+        GoRouter.of(context).push(AppRoutes.productListing, extra: {
+          'isTheirMoreCategory': false,
+          'title': banner.title ?? 'Brand',
+          'logo': banner.image ?? '',
+          'totalProduct': '',
+          'type': ProductListingType.brand,
+          'identifier': banner.productSlug!,
+        });
+      } else {
+        // Default to Product Detail if type is 'product' or null/unknown
+        GoRouter.of(context).push(
+          AppRoutes.productDetailPage,
+          extra: {
+            'productSlug': banner.productSlug!,
+            'title': banner.title ?? 'Product Details',
+            'mainImage': banner.image ?? '',
+          },
+        );
+      }
+      return;
+    }
+
+    // 3. Last Resort: Type check if slug is null (existing logic as backup)
     if (banner.type == null) {
       ToastManager.show(
         context: context,
@@ -199,47 +251,14 @@ class _ExploreMoreCarouselState extends State<ExploreMoreCarousel> {
 
     switch (banner.type?.toLowerCase()) {
       case 'product':
-        final slug = banner.productSlug ?? '';
-        if (slug.isEmpty) return;
-
-        GoRouter.of(context).push(
-          AppRoutes.productDetailPage,
-          extra: {
-            'productSlug': slug,
-            'title': banner.title ?? 'Product Details',
-            'mainImage': banner.image ?? '',
-          },
-        );
+        // Handled above, but kept for exhaustive switch
         break;
-
       case 'category':
-        final identifier = banner.productSlug ?? '';
-        if (identifier.isEmpty) return;
-
-        GoRouter.of(context).push(AppRoutes.productListing, extra: {
-          'isTheirMoreCategory': false,
-          'title': banner.title ?? 'Category',
-          'logo': banner.image ?? '',
-          'totalProduct': '',
-          'type': ProductListingType.category,
-          'identifier': identifier,
-        });
+        // Handled above, but kept for exhaustive switch
         break;
-
       case 'brand':
-        final identifier = banner.productSlug ?? '';
-        if (identifier.isEmpty) return;
-
-        GoRouter.of(context).push(AppRoutes.productListing, extra: {
-          'isTheirMoreCategory': false,
-          'title': banner.title ?? 'Brand',
-          'logo': banner.image ?? '',
-          'totalProduct': '',
-          'type': ProductListingType.brand,
-          'identifier': identifier,
-        });
+        // Handled above, but kept for exhaustive switch
         break;
-
       default:
         debugPrint('Unknown explore type: ${banner.type}');
         break;

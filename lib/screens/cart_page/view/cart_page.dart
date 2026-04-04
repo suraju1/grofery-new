@@ -930,11 +930,7 @@ class _CartPageState extends State<CartPage> {
   }
 
   void _handleAddMoreItems() {
-    final l10n = AppLocalizations.of(context);
-    // Navigate to products page or show add items dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n?.addMoreItemsTapped ?? 'Add more items tapped!')),
-    );
+    context.go(AppRoutes.home);
   }
 
   void _showAddressSelectionBottomSheet() {

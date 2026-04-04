@@ -7,7 +7,8 @@ import 'package:grofery_user/config/payment_config.dart';
 import 'package:grofery_user/config/settings_data_instance.dart';
 import 'package:grofery_user/screens/payment_options/widgets/webview_payment.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
-import 'package:flutter_stripe/flutter_stripe.dart' as stripe hide PaymentMethodType;
+import 'package:flutter_stripe/flutter_stripe.dart' as stripe
+    hide PaymentMethodType;
 
 /// Repository class to handle all payment gateway integrations
 /// Add your payment gateway SDK imports here as needed
@@ -28,44 +29,43 @@ class PaymentRepository {
       switch (paymentMethodType) {
         case PaymentMethodType.razorpay:
           return await _initiateRazorpayPayment(
-            context: context,
-            amount: amount,
-            additionalData: additionalData,
-            addMoneyToWallet: addMoneyToWallet
-          );
+              context: context,
+              amount: amount,
+              additionalData: additionalData,
+              addMoneyToWallet: addMoneyToWallet);
 
         case PaymentMethodType.stripe:
           return await _initiateStripePayment(
-            context: context,
-            amount: amount,
-            additionalData: additionalData,
-            addMoneyToWallet: addMoneyToWallet
-          );
+              context: context,
+              amount: amount,
+              additionalData: additionalData,
+              addMoneyToWallet: addMoneyToWallet);
 
         case PaymentMethodType.paystack:
           return await _initiatePaystackPayment(
-            context: context,
-            amount: amount,
-            additionalData: additionalData,
-            addMoneyToWallet: addMoneyToWallet
-          );
+              context: context,
+              amount: amount,
+              additionalData: additionalData,
+              addMoneyToWallet: addMoneyToWallet);
 
         case PaymentMethodType.paypal:
-          return {};
+          return {'success': true};
 
         case PaymentMethodType.flutterwave:
           return await _initiateFlutterWavePayment(
               context: context,
               amount: amount,
               additionalData: additionalData,
-              addMoneyToWallet: addMoneyToWallet
-          );
+              addMoneyToWallet: addMoneyToWallet);
 
         case PaymentMethodType.wallet:
-          return {};
+          return {'success': true};
 
         case PaymentMethodType.cod:
-          return {};
+          return {'success': true};
+
+        case PaymentMethodType.directBankTransfer:
+          return {'success': true};
 
         default:
           return {
@@ -94,29 +94,26 @@ class PaymentRepository {
     try {
       dynamic response;
 
-      if(addMoneyToWallet) {
+      if (addMoneyToWallet) {
         response = await AppConstant.apiBaseHelper.postAPICall(
-            ApiRoutes.prepareWalletRechargeApi,
-            {
-              "amount": amount.toInt(),
-              "payment_method": 'razorpayPayment',
-              "description": ''
-            }
-        );
+            ApiRoutes.prepareWalletRechargeApi, {
+          "amount": amount.toInt(),
+          "payment_method": 'razorpayPayment',
+          "description": ''
+        });
       } else {
-        response = await AppConstant.apiBaseHelper.postAPICall(
-            ApiRoutes.razorpayApi,
-            {
-              "amount": amount,
-              "currency": 'INR',
-              // "currency": SettingsData.instance.system?.currency.toString(),
-              "receipt": DateTime.now().toString()
-            }
-        );
+        response =
+            await AppConstant.apiBaseHelper.postAPICall(ApiRoutes.razorpayApi, {
+          "amount": amount,
+          "currency": 'INR',
+          // "currency": SettingsData.instance.system?.currency.toString(),
+          "receipt": DateTime.now().toString()
+        });
       }
 
       if (response.data['success'] == true) {
-        final Completer<Map<String, dynamic>> paymentCompleter = Completer<Map<String, dynamic>>();
+        final Completer<Map<String, dynamic>> paymentCompleter =
+            Completer<Map<String, dynamic>>();
 
         final razorpay = Razorpay();
 
@@ -125,8 +122,10 @@ class PaymentRepository {
 
         final int finalAmount = addMoneyToWallet
             ? (walletResponse['amount_due'] is int
-            ? walletResponse['amount_due']
-            : double.tryParse(walletResponse['amount_due'].toString())?.toInt() ?? 0)
+                ? walletResponse['amount_due']
+                : double.tryParse(walletResponse['amount_due'].toString())
+                        ?.toInt() ??
+                    0)
             : (amount * 100).toInt();
 
         final String? finalOrderId = addMoneyToWallet
@@ -147,8 +146,8 @@ class PaymentRepository {
 
         razorpay.open(options);
 
-        razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, (PaymentSuccessResponse response) {
-
+        razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS,
+            (PaymentSuccessResponse response) {
           // Complete the future with success result
           if (!paymentCompleter.isCompleted) {
             paymentCompleter.complete({
@@ -164,8 +163,8 @@ class PaymentRepository {
         });
 
         // Error callback
-        razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, (PaymentFailureResponse response) {
-
+        razorpay.on(Razorpay.EVENT_PAYMENT_ERROR,
+            (PaymentFailureResponse response) {
           // Complete the future with error result
           if (!paymentCompleter.isCompleted) {
             paymentCompleter.complete({
@@ -181,8 +180,8 @@ class PaymentRepository {
         });
 
         // External wallet callback (optional)
-        razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, (ExternalWalletResponse response) {
-
+        razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET,
+            (ExternalWalletResponse response) {
           if (!paymentCompleter.isCompleted) {
             paymentCompleter.complete({
               'success': false,
@@ -196,7 +195,6 @@ class PaymentRepository {
 
         // Wait for payment completion and return result
         return await paymentCompleter.future;
-
       } else {
         return {
           'success': false,
@@ -211,11 +209,15 @@ class PaymentRepository {
     }
   }
 
-
   // ============================================================================
   // STRIPE PAYMENT
   // ============================================================================
-  Future<Map<String, dynamic>> _initiateStripePayment({required BuildContext context, required double amount, Map<String, dynamic>? additionalData, required bool addMoneyToWallet,}) async {
+  Future<Map<String, dynamic>> _initiateStripePayment({
+    required BuildContext context,
+    required double amount,
+    Map<String, dynamic>? additionalData,
+    required bool addMoneyToWallet,
+  }) async {
     try {
       final paymentSettings = SettingsData.instance.payment;
 
@@ -234,15 +236,13 @@ class PaymentRepository {
 
       dynamic response;
 
-      if(addMoneyToWallet) {
+      if (addMoneyToWallet) {
         response = await AppConstant.apiBaseHelper.postAPICall(
-            ApiRoutes.prepareWalletRechargeApi,
-            {
-              "amount": amount.toInt(),
-              "payment_method": 'stripePayment',
-              "description": ''
-            }
-        );
+            ApiRoutes.prepareWalletRechargeApi, {
+          "amount": amount.toInt(),
+          "payment_method": 'stripePayment',
+          "description": ''
+        });
       } else {
         response = await AppConstant.apiBaseHelper.postAPICall(
           ApiRoutes.stripeCreatePaymentIntentApi,
@@ -257,19 +257,23 @@ class PaymentRepository {
       if (response.data['success'] != true) {
         return {
           'success': false,
-          'error': response.data['data']?['error'] ?? response.data['message'] ?? 'Payment failed'
+          'error': response.data['data']?['error'] ??
+              response.data['message'] ??
+              'Payment failed'
         };
       }
 
       // Get client secret
       final data = response.data['data'] ?? {};
-      final clientSecret = addMoneyToWallet ? data['payment_response']['clientSecret'].toString() : data['clientSecret'].toString();
+      final clientSecret = addMoneyToWallet
+          ? data['payment_response']['clientSecret'].toString()
+          : data['clientSecret'].toString();
 
       if (response.data['data'].isEmpty || response.data['data'] == null) {
         return {'success': false, 'error': 'Invalid payment response'};
       }
 
-      if(context.mounted){
+      if (context.mounted) {
         await stripe.Stripe.instance.initPaymentSheet(
           paymentSheetParameters: stripe.SetupPaymentSheetParameters(
             merchantDisplayName: AppConstant.appName,
@@ -279,12 +283,15 @@ class PaymentRepository {
               testEnv: true,
               currencyCode: currency,
             ),
-            billingDetailsCollectionConfiguration: const stripe.BillingDetailsCollectionConfiguration(
+            billingDetailsCollectionConfiguration:
+                const stripe.BillingDetailsCollectionConfiguration(
               name: stripe.CollectionMode.always,
               email: stripe.CollectionMode.always,
             ),
             allowsDelayedPaymentMethods: true,
-            style: Theme.of(context).brightness == Brightness.dark ? ThemeMode.light : ThemeMode.light,
+            style: Theme.of(context).brightness == Brightness.dark
+                ? ThemeMode.light
+                : ThemeMode.light,
           ),
         );
       }
@@ -301,17 +308,13 @@ class PaymentRepository {
         'signature': clientSecret,
         'order_id': clientSecret,
       };
-
     } on stripe.StripeException catch (e) {
       return {
         'success': false,
         'error': e.error.message ?? 'Payment cancelled'
       };
     } catch (e) {
-      return {
-        'success': false,
-        'error': 'Payment failed: ${e.toString()}'
-      };
+      return {'success': false, 'error': 'Payment failed: ${e.toString()}'};
     }
   }
 
@@ -320,8 +323,6 @@ class PaymentRepository {
     final parts = clientSecret.split('_');
     return parts.length >= 2 ? '${parts[0]}_${parts[1]}' : clientSecret;
   }
-
-
 
 // ============================================================================
 // PAYSTACK PAYMENT
@@ -370,7 +371,8 @@ class PaymentRepository {
       final data = response.data['data'] ?? {};
       // Access code is required for the new SDK
       final accessCode = data['payment_response']['access_code']?.toString();
-      final authorizationUrl = data['payment_response']['authorization_url']?.toString();
+      final authorizationUrl =
+          data['payment_response']['authorization_url']?.toString();
 
       if (accessCode == null || accessCode.isEmpty || accessCode == 'null') {
         return {
@@ -378,7 +380,6 @@ class PaymentRepository {
           'error': 'Access code not received from server',
         };
       }
-
 
       final orderId = addMoneyToWallet
           ? (data['wallet_transaction_id']?.toString() ?? accessCode)
@@ -398,10 +399,12 @@ class PaymentRepository {
           ),
         ),
       );
-
-      if (result['success'] == true) {
+ 
+      if (result != null && result['success'] == true) {
         // We assume success if we got the redirect signal.
         // Ideally verify on backend with reference.
+        //
+        //
 
         return {
           'success': true,
@@ -526,14 +529,10 @@ class PaymentRepository {
     }
   }*/
 
-
-
   String generateSimpleReference() {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     return 'REF_$timestamp';
   }
-
-
 
   Future<Map<String, dynamic>> _initiateFlutterWavePayment({
     required BuildContext context,
@@ -544,21 +543,26 @@ class PaymentRepository {
     try {
       dynamic response;
 
-      if(addMoneyToWallet) {
-        response = await AppConstant.apiBaseHelper.postAPICall(
-            ApiRoutes.prepareWalletRechargeApi,
-            {
-              "amount": amount.toInt(),
-              "payment_method": 'flutterwavePayment',
-              "description": ''
-            }
-        );
+      if (addMoneyToWallet) {
+        response = await AppConstant.apiBaseHelper
+            .postAPICall(ApiRoutes.prepareWalletRechargeApi, {
+          "amount": amount.toInt(),
+          "payment_method": 'flutterwavePayment',
+          "description": ''
+        });
+      } else {
+        response = await AppConstant.apiBaseHelper
+            .postAPICall(ApiRoutes.flutterwaveApi, {
+          "amount": amount.toInt(),
+        });
       }
 
-      if (response.data['success'] != true) {
+      if (response == null || response.data == null || response.data['success'] != true) {
         return {
           'success': false,
-          'error': response.data['data']?['error'] ?? response.data['message'] ?? 'Payment failed'
+          'error': response.data['data']?['error'] ??
+              response.data['message'] ??
+              'Payment failed'
         };
       }
 
@@ -576,12 +580,8 @@ class PaymentRepository {
         'signature': data['payment_response']['link'],
         'order_id': data['payment_response']['link'],
       };
-
     } catch (e) {
-      return {
-        'success': false,
-        'error': 'Payment failed: ${e.toString()}'
-      };
+      return {'success': false, 'error': 'Payment failed: ${e.toString()}'};
     }
   }
 }

@@ -71,6 +71,8 @@ class ExploreData {
   String? productSlug;
   String? type;
   String? title;
+  int? categoryId;
+  String? categoryName;
 
   ExploreData({
     this.id,
@@ -81,6 +83,8 @@ class ExploreData {
     this.productSlug,
     this.type,
     this.title,
+    this.categoryId,
+    this.categoryName,
   });
 
   ExploreData.fromJson(Map<String, dynamic> json) {
@@ -92,6 +96,8 @@ class ExploreData {
     productSlug = json['product_slug']?.toString();
     type = json['type']?.toString();
     title = json['title']?.toString();
+    categoryId = _parseInt(json['category_id']);
+    categoryName = json['category_name']?.toString();
   }
 
   Map<String, dynamic> toJson() {
@@ -104,6 +110,8 @@ class ExploreData {
     data['product_slug'] = productSlug;
     data['type'] = type;
     data['title'] = title;
+    data['category_id'] = categoryId;
+    data['category_name'] = categoryName;
     return data;
   }
 

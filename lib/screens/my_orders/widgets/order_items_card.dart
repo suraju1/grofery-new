@@ -157,10 +157,10 @@ class StoreCartSection extends StatelessWidget {
         useRootNavigator: true,
         openBuilder: (context, closeContainer) {
           return ProductDetailPage(
-            productSlug: item.product!.slug!,
+            productSlug: item.product?.slug ?? '',
             initialData: ProductInitialData(
-              title: item.product!.name!,
-              mainImage: item.product!.image!,
+              title: item.product?.name ?? '',
+              mainImage: item.product?.image ?? '',
             ),
             closeContainer: closeContainer,
           );
@@ -187,7 +187,7 @@ class StoreCartSection extends StatelessWidget {
                     children: [
                       // Product Image
                       _buildProductImage(
-                          item.product!.image!, item.product!.id!),
+                          item.product?.image ?? '', item.product?.id ?? 0),
                       SizedBox(width: 10.w),
 
                       // Product Name and Details
@@ -281,7 +281,7 @@ class StoreCartSection extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            item.product!.name!,
+            item.product?.name ?? '',
             style: TextStyle(
                 fontSize: isTablet(context) ? 18 : 12.sp,
                 fontWeight: FontWeight.w500,
@@ -293,7 +293,7 @@ class StoreCartSection extends StatelessWidget {
             height: 5,
           ),
           Text(
-            item.variant!.title!,
+            item.variant?.title ?? '',
             style: TextStyle(
               fontSize: isTablet(context) ? 16 : 10.sp,
               color: Colors.grey[500],
@@ -313,7 +313,7 @@ class StoreCartSection extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-          if (item.product!.requiresOtp == 1)
+          if ((item.product?.requiresOtp ?? 0) == 1)
             Text(
               'OTP: ${item.otp}',
               style: TextStyle(
@@ -334,7 +334,7 @@ class StoreCartSection extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            '${AppConstant.currency}${((item.quantity)! * (double.parse(item.price.toString()))).toInt()}',
+            '${AppConstant.currency}${((item.quantity) ?? 0) * (double.tryParse(item.price?.toString() ?? '0') ?? 0).toInt()}',
             style: TextStyle(
               fontSize: isTablet(context) ? 18 : 12.sp,
               fontWeight: FontWeight.w600,
