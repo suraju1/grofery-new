@@ -89,7 +89,7 @@ class _ExploreMoreCarouselState extends State<ExploreMoreCarousel> {
                 ),
               ),
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+                padding: EdgeInsets.symmetric(horizontal: 13.w, vertical: 3.h),
                 decoration: BoxDecoration(
                   color: Colors.black,
                   borderRadius: BorderRadius.circular(16.r),
@@ -123,7 +123,7 @@ class _ExploreMoreCarouselState extends State<ExploreMoreCarousel> {
         ),
         SizedBox(height: 6.h),
         SizedBox(
-          height: 170.h,
+          height: 140.h,
           child: PageView.builder(
             controller: _pageController,
             // Infinite count
@@ -150,7 +150,8 @@ class _ExploreMoreCarouselState extends State<ExploreMoreCarousel> {
                       child: InkWell(
                         borderRadius: BorderRadius.circular(16.r),
                         onTap: () {
-                          debugPrint('Explore banner tapped: ${widget.banners[realIndex].id}');
+                          debugPrint(
+                              'Explore banner tapped: ${widget.banners[realIndex].id}');
                           _navigateToDetail(context, widget.banners[realIndex]);
                         },
                         child: Container(
@@ -188,11 +189,13 @@ class _ExploreMoreCarouselState extends State<ExploreMoreCarousel> {
   }
 
   void _navigateToDetail(BuildContext context, ExploreData banner) {
-    debugPrint('EXPLORE_DEBUG: id=${banner.id}, type=${banner.type}, categoryId=${banner.categoryId}, productSlug=${banner.productSlug}, bannerTitle=${banner.title}');
+    debugPrint(
+        'EXPLORE_DEBUG: id=${banner.id}, type=${banner.type}, categoryId=${banner.categoryId}, productSlug=${banner.productSlug}, bannerTitle=${banner.title}');
 
     // 1. Priority: Explicit Category ID
     if (banner.categoryId != null && banner.categoryId != 0) {
-      debugPrint('EXPLORE_DEBUG: Navigating to category via ID: ${banner.categoryId}');
+      debugPrint(
+          'EXPLORE_DEBUG: Navigating to category via ID: ${banner.categoryId}');
       GoRouter.of(context).push(AppRoutes.productListing, extra: {
         'isTheirMoreCategory': false,
         'title': banner.categoryName ?? banner.title ?? 'Category',

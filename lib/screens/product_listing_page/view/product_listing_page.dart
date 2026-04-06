@@ -48,7 +48,8 @@ class _ProductListingPageState extends State<ProductListingPage> {
 
   void _fetchSubCategories() {
     if (widget.type == ProductListingType.category) {
-       context.read<SubCategoryBloc>().add(FetchSubCategory(slug: widget.identifier, isForAllCategory: false));
+      context.read<SubCategoryBloc>().add(
+          FetchSubCategory(slug: widget.identifier, isForAllCategory: false));
     }
   }
 
@@ -61,17 +62,18 @@ class _ProductListingPageState extends State<ProductListingPage> {
 
   void _fetchProducts() {
     context.read<ProductListingBloc>().add(FetchListingProducts(
-      type: widget.type,
-      identifier: widget.identifier,
-    ));
+          type: widget.type,
+          identifier: widget.identifier,
+        ));
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
       context.read<ProductListingBloc>().add(FetchMoreListingProducts(
-        identifier: widget.identifier,
-        type: widget.type,
-      ));
+            identifier: widget.identifier,
+            type: widget.type,
+          ));
     }
   }
 
@@ -111,11 +113,14 @@ class _ProductListingPageState extends State<ProductListingPage> {
               children: [
                 Text(
                   widget.title,
-                  style: TextStyle(color: Colors.black, fontSize: 18.sp, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.bold),
                 ),
                 Text(
-                   "${widget.totalProduct} items",
-                   style: TextStyle(color: Colors.grey, fontSize: 12.sp),
+                  "${widget.totalProduct} items",
+                  style: TextStyle(color: Colors.grey, fontSize: 12.sp),
                 ),
               ],
             ),
@@ -163,14 +168,18 @@ class _ProductListingPageState extends State<ProductListingPage> {
               ),
               child: Row(
                 children: [
-                   Icon(Icons.swap_vert, size: 20.sp, color: Colors.black),
-                   SizedBox(width: 4.w),
-                   Text(
-                     "Sort",
-                     style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w600, color: Colors.black),
-                   ),
-                   SizedBox(width: 4.w),
-                   Icon(Icons.keyboard_arrow_down, size: 20.sp, color: Colors.black),
+                  Icon(Icons.swap_vert, size: 20.sp, color: Colors.black),
+                  SizedBox(width: 4.w),
+                  Text(
+                    "Sort",
+                    style: TextStyle(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black),
+                  ),
+                  SizedBox(width: 4.w),
+                  Icon(Icons.keyboard_arrow_down,
+                      size: 20.sp, color: Colors.black),
                 ],
               ),
             ),
@@ -212,7 +221,8 @@ class _ProductListingPageState extends State<ProductListingPage> {
                         color: Colors.grey[200],
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.close, size: 24.sp, color: Colors.grey[600]),
+                      child: Icon(Icons.close,
+                          size: 24.sp, color: Colors.grey[600]),
                     ),
                   ),
                   SizedBox(height: 20.h),
@@ -222,14 +232,16 @@ class _ProductListingPageState extends State<ProductListingPage> {
                       alignment: Alignment.centerLeft,
                       child: Text(
                         "Sort by",
-                        style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 22.sp, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
                   SizedBox(height: 12.h),
                   const Divider(),
                   ...SortOption.sortOptions.map((option) {
-                    final isSelected = (_selectedSortApiValue ?? 'relevance') == option.apiValue;
+                    final isSelected = (_selectedSortApiValue ?? 'relevance') ==
+                        option.apiValue;
                     return RadioListTile<String>(
                       value: option.apiValue,
                       groupValue: _selectedSortApiValue ?? 'relevance',
@@ -237,21 +249,27 @@ class _ProductListingPageState extends State<ProductListingPage> {
                         option.displayName,
                         style: TextStyle(
                           fontSize: 18.sp,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          color: isSelected ? const Color(0xFF008000) : Colors.grey[800],
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected
+                              ? const Color(0xFF008000)
+                              : Colors.grey[800],
                         ),
                       ),
                       activeColor: const Color(0xFF008000),
                       onChanged: (value) {
-                         setModalState(() {
-                            _selectedSortApiValue = value;
-                         });
-                         Navigator.pop(context);
-                         context.read<ProductListingBloc>().add(FetchSortedListingProducts(
-                           type: widget.type,
-                           identifier: _selectedSubCategorySlug ?? widget.identifier,
-                           sortType: value!,
-                         ));
+                        setModalState(() {
+                          _selectedSortApiValue = value;
+                        });
+                        Navigator.pop(context);
+                        context
+                            .read<ProductListingBloc>()
+                            .add(FetchSortedListingProducts(
+                              type: widget.type,
+                              identifier:
+                                  _selectedSubCategorySlug ?? widget.identifier,
+                              sortType: value!,
+                            ));
                       },
                     );
                   }),
@@ -275,20 +293,25 @@ class _ProductListingPageState extends State<ProductListingPage> {
       child: BlocBuilder<SubCategoryBloc, SubCategoryState>(
         builder: (context, state) {
           if (state is SubCategoryLoading) {
-            return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+            return const Center(
+                child: CircularProgressIndicator(strokeWidth: 2));
           }
           if (state is SubCategoryLoaded) {
             final categories = [
-              SubCategoryData(id: -1, title: "All", slug: widget.identifier, image: widget.logo),
+              SubCategoryData(
+                  id: -1,
+                  title: "All",
+                  slug: widget.identifier,
+                  image: widget.logo),
               ...state.subCategoryData,
             ];
             return ListView.builder(
               itemCount: categories.length,
               itemBuilder: (context, index) {
                 final category = categories[index];
-                final bool isSelected = _selectedSubCategorySlug == null 
-                  ? (index == 0) 
-                  : (category.slug == _selectedSubCategorySlug);
+                final bool isSelected = _selectedSubCategorySlug == null
+                    ? (index == 0)
+                    : (category.slug == _selectedSubCategorySlug);
                 return _buildSidebarItem(category, isSelected);
               },
             );
@@ -306,20 +329,22 @@ class _ProductListingPageState extends State<ProductListingPage> {
           _selectedSubCategorySlug = category.slug;
         });
         if (category.id == -1) {
-           // Show All
-           _fetchProducts();
+          // Show All
+          _fetchProducts();
         } else {
-           // Filter by subcategory
-           context.read<ProductListingBloc>().add(FetchListingProducts(
-             type: ProductListingType.category,
-             identifier: category.slug ?? "",
-           ));
+          // Filter by subcategory
+          context.read<ProductListingBloc>().add(FetchListingProducts(
+                type: ProductListingType.category,
+                identifier: category.slug ?? "",
+              ));
         }
       },
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 16.h),
         decoration: BoxDecoration(
-          border: isSelected ? Border(left: BorderSide(color: Colors.green, width: 4.w)) : null,
+          border: isSelected
+              ? Border(left: BorderSide(color: Colors.green, width: 4.w))
+              : null,
         ),
         child: Column(
           children: [
@@ -330,14 +355,24 @@ class _ProductListingPageState extends State<ProductListingPage> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
-                boxShadow: isSelected ? [BoxShadow(color: Colors.green.withOpacity(0.2), blurRadius: 8, spreadRadius: 2)] : null,
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                            color: Colors.green.withOpacity(0.2),
+                            blurRadius: 8,
+                            spreadRadius: 2)
+                      ]
+                    : null,
               ),
               child: ClipOval(
                 child: category.id == -1
-                  ? Icon(Icons.shopping_basket, color: isSelected ? Colors.green : Colors.blue, size: 24.sp)
-                  : (category.image != null 
-                     ? CachedNetworkImage(imageUrl: category.image!, fit: BoxFit.cover)
-                     : const Icon(Icons.category)),
+                    ? Icon(Icons.shopping_basket,
+                        color: isSelected ? Colors.green : Colors.blue,
+                        size: 24.sp)
+                    : (category.image != null
+                        ? CachedNetworkImage(
+                            imageUrl: category.image!, fit: BoxFit.cover)
+                        : const Icon(Icons.category)),
               ),
             ),
             SizedBox(height: 8.h),
@@ -376,7 +411,8 @@ class _ProductListingPageState extends State<ProductListingPage> {
             itemCount: state.productList.length + (state.hasReachedMax ? 0 : 1),
             itemBuilder: (context, index) {
               if (index >= state.productList.length) {
-                return const Center(child: Padding(
+                return const Center(
+                    child: Padding(
                   padding: EdgeInsets.all(16.0),
                   child: CircularProgressIndicator(),
                 ));
@@ -397,7 +433,8 @@ class _ProductListingPageState extends State<ProductListingPage> {
                   ratingCount: product.ratingCount,
                   onAddToCart: (qty) {},
                   isStoreOpen: product.storeStatus?.isOpen ?? true,
-                  isWishListed: product.favorite != null && product.favorite!.isNotEmpty,
+                  isWishListed:
+                      product.favorite != null && product.favorite!.isNotEmpty,
                   productVariantId: product.variants.first.id,
                   storeId: product.variants.first.storeId,
                   wishlistItemId: product.favorite?.first.id ?? 0,

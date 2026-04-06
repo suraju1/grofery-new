@@ -30,11 +30,7 @@ class ExploreApiData {
   List<ExploreData>? data;
 
   ExploreApiData(
-      {this.currentPage,
-      this.lastPage,
-      this.perPage,
-      this.total,
-      this.data});
+      {this.currentPage, this.lastPage, this.perPage, this.total, this.data});
 
   ExploreApiData.fromJson(Map<String, dynamic> json) {
     currentPage = json['current_page'];
