@@ -19,6 +19,8 @@ class CategoryProductRepository {
     String? includeChildCategories,
     required List<String> categorySlugs,
     required List<String> brandSlugs,
+    String? indicator,
+    double? rating,
   }) async {
     try {
       final latitude = LocationService.getStoredLocation()!.latitude;
@@ -32,29 +34,33 @@ class CategoryProductRepository {
 
       final brandQuery = buildListParam('brands', brandSlugs);
       final categoryQuery = buildListParam('categories', categorySlugs);
+      final ratingQuery = rating != null ? '&ratings=${rating.toInt()}' : '';
+      final indicatorQuery = indicator != null ? '&indicator=$indicator' : '';
+
+      final String filterQuery = '$brandQuery$categoryQuery$ratingQuery$indicatorQuery';
 
 
       final String searchApiUrl =
-          '${ApiRoutes.searchApi}?search=$identifier&per_page=$perPage&page=$currentPage&latitude=$latitude&longitude=$longitude&sort=${sortType ?? SortType.relevance}$brandQuery$categoryQuery';
+          '${ApiRoutes.searchApi}?search=$identifier&per_page=$perPage&page=$currentPage&latitude=$latitude&longitude=$longitude&sort=${sortType ?? SortType.relevance}$filterQuery';
 
       final String storeApiUrl =
-          '${ApiRoutes.storeProductApi}?store=$storeSlug&per_page=$perPage&page=$currentPage&latitude=$latitude&longitude=$longitude&sort=${sortType ?? SortType.relevance}$brandQuery$categoryQuery';
+          '${ApiRoutes.storeProductApi}?store=$storeSlug&per_page=$perPage&page=$currentPage&latitude=$latitude&longitude=$longitude&sort=${sortType ?? SortType.relevance}$filterQuery';
 
       if (isSearchInStore == true) {
         apiUrl =
-            '${ApiRoutes.searchApi}?search=$identifier&store=$storeSlug&per_page=$perPage&page=$currentPage&latitude=$latitude&longitude=$longitude&sort=${sortType ?? SortType.relevance}';
+            '${ApiRoutes.searchApi}?search=$identifier&store=$storeSlug&per_page=$perPage&page=$currentPage&latitude=$latitude&longitude=$longitude&sort=${sortType ?? SortType.relevance}$filterQuery';
       } else {
         apiUrl = switch (type) {
           ProductListingType.category =>
-          '${ApiRoutes.categoryProductApi}?categories=$identifier&per_page=$perPage&page=$currentPage&latitude=$latitude&longitude=$longitude&sort=${sortType ?? SortType.relevance}&include_child_categories=${includeChildCategories ?? '1'}$brandQuery$categoryQuery',
+          '${ApiRoutes.categoryProductApi}?categories=$identifier&per_page=$perPage&page=$currentPage&latitude=$latitude&longitude=$longitude&sort=${sortType ?? SortType.relevance}&include_child_categories=${includeChildCategories ?? '1'}$filterQuery',
           ProductListingType.brand =>
-          '${ApiRoutes.categoryProductApi}?brands=$identifier&per_page=$perPage&page=$currentPage&latitude=$latitude&longitude=$longitude&sort=${sortType ?? SortType.relevance}$brandQuery$categoryQuery',
+          '${ApiRoutes.categoryProductApi}?brands=$identifier&per_page=$perPage&page=$currentPage&latitude=$latitude&longitude=$longitude&sort=${sortType ?? SortType.relevance}$filterQuery',
           ProductListingType.store =>
           storeApiUrl,
           ProductListingType.search =>
           searchApiUrl,
           ProductListingType.featuredSection =>
-          '${ApiRoutes.specificFeatureSectionProductApi}$identifier/products?per_page=$perPage&page=$currentPage&latitude=$latitude&longitude=$longitude&sort=${sortType ?? SortType.relevance}$brandQuery$categoryQuery',
+          '${ApiRoutes.specificFeatureSectionProductApi}$identifier/products?per_page=$perPage&page=$currentPage&latitude=$latitude&longitude=$longitude&sort=${sortType ?? SortType.relevance}$filterQuery',
         };
       }
 

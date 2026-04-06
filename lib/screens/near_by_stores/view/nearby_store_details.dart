@@ -41,8 +41,8 @@ class NearbyStoreDetails extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (_) => StoreDetailBloc()
-            ..add(FetchStoreDetail(storeSlug: storeSlug)),
+          create: (_) =>
+              StoreDetailBloc()..add(FetchStoreDetail(storeSlug: storeSlug)),
         ),
         BlocProvider(
           create: (_) => ProductListingBloc()
@@ -102,27 +102,27 @@ class _NearbyStoreDetailsState extends State<_NearbyStoreDetailsView> {
       final state = context.read<ProductListingBloc>().state;
       if (state is ProductListingLoaded && !state.hasReachedMax) {
         context.read<ProductListingBloc>().add(
-          FetchMoreListingProducts(
-            type: ProductListingType.store,
-            storeSlug: widget.storeSlug,
-            identifier: _searchController.text.trim(),
-            isSearchInStore: isSearchInStore,
-          ),
-        );
+              FetchMoreListingProducts(
+                type: ProductListingType.store,
+                storeSlug: widget.storeSlug,
+                identifier: _searchController.text.trim(),
+                isSearchInStore: isSearchInStore,
+              ),
+            );
       }
     }
   }
 
   void _applySorting(SortOption sortOption) {
     context.read<ProductListingBloc>().add(
-      FetchSortedListingProducts(
-        type: ProductListingType.store,
-        storeSlug: widget.storeSlug,
-        identifier: _searchController.text.trim(),
-        sortType: sortOption.apiValue,
-        isSearchInStore: isSearchInStore,
-      ),
-    );
+          FetchSortedListingProducts(
+            type: ProductListingType.store,
+            storeSlug: widget.storeSlug,
+            identifier: _searchController.text.trim(),
+            sortType: sortOption.apiValue,
+            isSearchInStore: isSearchInStore,
+          ),
+        );
   }
 
   void _performSearch() {
@@ -130,13 +130,13 @@ class _NearbyStoreDetailsState extends State<_NearbyStoreDetailsView> {
     isSearchInStore = query.isNotEmpty;
 
     context.read<ProductListingBloc>().add(
-      FetchListingProducts(
-        type: ProductListingType.store,
-        storeSlug: widget.storeSlug,
-        identifier: query,
-        isSearchInStore: isSearchInStore,
-      ),
-    );
+          FetchListingProducts(
+            type: ProductListingType.store,
+            storeSlug: widget.storeSlug,
+            identifier: query,
+            isSearchInStore: isSearchInStore,
+          ),
+        );
   }
 
   @override
@@ -149,7 +149,11 @@ class _NearbyStoreDetailsState extends State<_NearbyStoreDetailsView> {
         backgroundColor: Theme.of(context).colorScheme.surface,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(color: isDarkMode(context) ? Colors.grey.shade800 : Colors.grey.shade300, height: 1),
+          child: Container(
+              color: isDarkMode(context)
+                  ? Colors.grey.shade800
+                  : Colors.grey.shade300,
+              height: 1),
         ),
       ),
       body: _buildBody(),
@@ -163,8 +167,8 @@ class _NearbyStoreDetailsState extends State<_NearbyStoreDetailsView> {
       child: CustomTextFormField(
         controller: _searchController,
         hintText: 'Search in ${widget.storeName}',
-
-        suffixIcon: _searchController.text.isNotEmpty ? Icons.close : Icons.search,
+        suffixIcon:
+            _searchController.text.isNotEmpty ? Icons.close : Icons.search,
         onSuffixIconTap: () {
           setState(() {
             if (isSubmitted) {
@@ -213,13 +217,13 @@ class _NearbyStoreDetailsState extends State<_NearbyStoreDetailsView> {
     return CustomRefreshIndicator(
       onRefresh: () async {
         context.read<ProductListingBloc>().add(
-          FetchMoreListingProducts(
-            type: ProductListingType.store,
-            storeSlug: widget.storeSlug,
-            identifier: _searchController.text.trim(),
-            isSearchInStore: isSearchInStore,
-          ),
-        );
+              FetchMoreListingProducts(
+                type: ProductListingType.store,
+                storeSlug: widget.storeSlug,
+                identifier: _searchController.text.trim(),
+                isSearchInStore: isSearchInStore,
+              ),
+            );
       },
       child: SingleChildScrollView(
         controller: _scrollController,
@@ -227,14 +231,17 @@ class _NearbyStoreDetailsState extends State<_NearbyStoreDetailsView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildStoreHeader(store, store.distance ?? 0.0, store.avgStoreRating ?? '0.0', store.totalStoreFeedback!),
+            _buildStoreHeader(store, store.distance ?? 0.0,
+                store.avgStoreRating ?? '0.0', store.totalStoreFeedback!),
             const SizedBox(height: 68),
             _buildStoreInfo(store, store.distance ?? 0.0),
             Container(
               height: 5,
               color: Theme.of(context).colorScheme.surfaceContainer,
             ),
-            SizedBox(height: 10,),
+            SizedBox(
+              height: 10,
+            ),
             BlocBuilder<ProductListingBloc, ProductListingState>(
               builder: (context, state) => _buildProductsSection(state),
             ),
@@ -244,7 +251,8 @@ class _NearbyStoreDetailsState extends State<_NearbyStoreDetailsView> {
     );
   }
 
-  Widget _buildStoreHeader(StoreData store, double distance, String rating, int totalStoreFeedback) {
+  Widget _buildStoreHeader(
+      StoreData store, double distance, String rating, int totalStoreFeedback) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -254,13 +262,14 @@ class _NearbyStoreDetailsState extends State<_NearbyStoreDetailsView> {
             width: double.infinity,
             color: Colors.grey[200],
             child: store.banner?.isNotEmpty == true
-                ? CustomImageContainer(imagePath: store.banner!, fit: BoxFit.cover)
+                ? CustomImageContainer(
+                    imagePath: store.banner!, fit: BoxFit.cover)
                 : Container(
-              decoration:  BoxDecoration(color: AppTheme.primaryColor),
-              child: const Center(
-                child: Icon(Icons.store, size: 50, color: Colors.white70),
-              ),
-            ),
+                    decoration: BoxDecoration(color: AppTheme.primaryColor),
+                    child: const Center(
+                      child: Icon(Icons.store, size: 50, color: Colors.white70),
+                    ),
+                  ),
           ),
         ),
         PositionedDirectional(
@@ -276,11 +285,13 @@ class _NearbyStoreDetailsState extends State<_NearbyStoreDetailsView> {
             ),
             child: ClipOval(
               child: store.logo?.isNotEmpty == true
-                  ? CustomImageContainer(imagePath: store.logo!, fit: BoxFit.cover)
+                  ? CustomImageContainer(
+                      imagePath: store.logo!, fit: BoxFit.cover)
                   : Container(
-                color: Colors.blue.shade50,
-                child:  Icon(Icons.store, size: 28, color: AppTheme.primaryColor),
-              ),
+                      color: Colors.blue.shade50,
+                      child: Icon(Icons.store,
+                          size: 28, color: AppTheme.primaryColor),
+                    ),
             ),
           ),
         ),
@@ -296,9 +307,12 @@ class _NearbyStoreDetailsState extends State<_NearbyStoreDetailsView> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(AppTheme.ratingStarIconFilled, size: 16, color: AppTheme.ratingStarColor),
+                Icon(AppTheme.ratingStarIconFilled,
+                    size: 16, color: AppTheme.ratingStarColor),
                 const SizedBox(width: 4),
-                Text('$rating/5 ($totalStoreFeedback)', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                Text('$rating/5 ($totalStoreFeedback)',
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -314,37 +328,57 @@ class _NearbyStoreDetailsState extends State<_NearbyStoreDetailsView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(store.name ?? "Unknown Store",
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              style:
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 6),
           Row(
             children: [
-              Icon(Icons.location_on_outlined, size: 16, color: Colors.grey[600]),
+              Icon(Icons.location_on_outlined,
+                  size: 16, color: Colors.grey[600]),
               const SizedBox(width: 4),
-              Expanded(child: Text(store.address ?? "No address", style: TextStyle(fontSize: 13, color: Colors.grey[600]))),
+              Expanded(
+                  child: Text(store.address ?? "No address",
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600]))),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(12)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(12)),
                 child: Text('${distance.toStringAsFixed(1)} km',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.green.shade700)),
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.green.shade700)),
               ),
             ],
           ),
           const SizedBox(height: 6),
           Row(
             children: [
-              Icon(Icons.access_time_rounded, size: 16, color: Colors.grey[600]),
+              Icon(Icons.access_time_rounded,
+                  size: 16, color: Colors.grey[600]),
               const SizedBox(width: 4),
               Expanded(
                 child: RichText(
                   text: TextSpan(
                     children: [
                       TextSpan(
-                        text: store.status?.isOpen == true ? 'Open Now' : 'Closed',
-                        style: TextStyle(fontSize: 13, color: store.status?.isOpen == true ? Colors.green : Colors.red),
+                        text: store.status?.isOpen == true
+                            ? 'Open Now'
+                            : 'Closed',
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: store.status?.isOpen == true
+                                ? Colors.green
+                                : Colors.red),
                       ),
                       if (store.timing != null && store.timing!.isNotEmpty)
-                        TextSpan(text: ' · ${store.timing}', style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+                        TextSpan(
+                            text: ' · ${store.timing}',
+                            style: TextStyle(
+                                fontSize: 13, color: Colors.grey[600])),
                     ],
                   ),
                 ),
@@ -360,9 +394,8 @@ class _NearbyStoreDetailsState extends State<_NearbyStoreDetailsView> {
   Widget _buildProductsSection(ProductListingState state) {
     if (state is ProductListingFailed) {
       return SizedBox(
-        height: isTablet(context) ? 1000 : 500,
-        child: Center(child: NoProductPage())
-      );
+          height: isTablet(context) ? 1000 : 500,
+          child: Center(child: NoProductPage()));
     }
 
     return Container(
@@ -383,17 +416,24 @@ class _NearbyStoreDetailsState extends State<_NearbyStoreDetailsView> {
             ),
           ),
           const SizedBox(height: 10),
-          if (state is ProductListingLoading) SizedBox(height: isTablet(context) ? 1000 : 500, child: Center(child: const CustomCircularProgressIndicator())),
+          if (state is ProductListingLoading)
+            SizedBox(
+                height: isTablet(context) ? 1000 : 500,
+                child: Center(child: const CustomCircularProgressIndicator())),
           if (state is ProductListingLoaded)
-            _buildProductContent(state.productList, state.isFilterLoading, state.hasReachedMax),
+            _buildProductContent(
+                state.productList, state.isFilterLoading, state.hasReachedMax),
         ],
       ),
     );
   }
 
-  Widget _buildProductContent(List<ProductData> productData, bool isFilterLoading, bool hasReachedMax) {
+  Widget _buildProductContent(
+      List<ProductData> productData, bool isFilterLoading, bool hasReachedMax) {
     if (isFilterLoading) {
-      return SizedBox(height: isTablet(context) ? 1000 : 500, child: Center(child: CustomCircularProgressIndicator()));
+      return SizedBox(
+          height: isTablet(context) ? 1000 : 500,
+          child: Center(child: CustomCircularProgressIndicator()));
     }
     if (productData.isEmpty) {
       return NoProductPage(onRetry: _performSearch);
@@ -415,15 +455,19 @@ class _NearbyStoreDetailsState extends State<_NearbyStoreDetailsView> {
           mainAxisExtent: 290.h,
         ),
         itemCount: hasReachedMax ? productData.length : productData.length + 3,
-        itemBuilder: (context, index) => _buildGridItem(productData, index, hasReachedMax),
+        itemBuilder: (context, index) =>
+            _buildGridItem(productData, index, hasReachedMax),
       ),
     );
   }
 
-  Widget _buildGridItem(List<ProductData> productData, int index, bool hasReachedMax) {
+  Widget _buildGridItem(
+      List<ProductData> productData, int index, bool hasReachedMax) {
     if (index >= productData.length) return productShimmer();
     final product = productData[index];
-    final variant = product.variants.isNotEmpty ? product.variants.first : ProductVariants();
+    final variant = product.variants.isNotEmpty
+        ? product.variants.first
+        : ProductVariants();
 
     return CustomProductCard(
       productId: product.id,
@@ -448,24 +492,41 @@ class _NearbyStoreDetailsState extends State<_NearbyStoreDetailsView> {
         } else {
           final item = UserCart(
               productId: product.id.toString(),
-              variantId: product.variants.firstWhere((variant) => variant.isDefault).id.toString(),
-              variantName: product.variants.firstWhere((variant) => variant.isDefault).title.toString(),
-              vendorId: product.variants.firstWhere((variant) => variant.isDefault).storeId.toString(),
+              variantId: product.variants
+                  .firstWhere((variant) => variant.isDefault)
+                  .id
+                  .toString(),
+              variantName: product.variants
+                  .firstWhere((variant) => variant.isDefault)
+                  .title
+                  .toString(),
+              vendorId: product.variants
+                  .firstWhere((variant) => variant.isDefault)
+                  .storeId
+                  .toString(),
               name: product.title,
               image: product.mainImage,
-              price: product.variants.firstWhere((variant) => variant.isDefault).specialPrice.toDouble(),
-              originalPrice: product.variants.firstWhere((variant) => variant.isDefault).price.toDouble(),
+              price: product.variants
+                  .firstWhere((variant) => variant.isDefault)
+                  .specialPrice
+                  .toDouble(),
+              originalPrice: product.variants
+                  .firstWhere((variant) => variant.isDefault)
+                  .price
+                  .toDouble(),
               quantity: quantity,
               serverCartItemId: null,
               syncAction: CartSyncAction.add,
               updatedAt: DateTime.now(),
               minQty: product.minimumOrderQuantity,
               maxQty: product.totalAllowedQuantity,
-              isOutOfStock: product.variants.firstWhere((variant) => variant.isDefault).stock <= 0,
+              isOutOfStock: product.variants
+                      .firstWhere((variant) => variant.isDefault)
+                      .stock <=
+                  0,
               isSynced: false,
-              tieredPricing: variant.tieredPricing
-          );
-          context.read<CartBloc>().add(AddToCart(item: item, context:  context));
+              tieredPricing: variant.tieredPricing);
+          context.read<CartBloc>().add(AddToCart(item: item, context: context));
 
           /*context.read<AddToCartBloc>().add(
             AddItemToCart(
@@ -479,18 +540,21 @@ class _NearbyStoreDetailsState extends State<_NearbyStoreDetailsView> {
       variantCount: product.variants.length,
       onVariantSelectorRequested: product.variants.length > 1
           ? () => showVariantBottomSheet(
-        variantsList: product.variants,
-        productData: product,
-        productImage: product.mainImage,
-        quantityStepSize: product.quantityStepSize,
-        context: context,
-      )
+                variantsList: product.variants,
+                productData: product,
+                productImage: product.mainImage,
+                quantityStepSize: product.quantityStepSize,
+                context: context,
+              )
           : null,
       isStoreOpen: product.storeStatus?.isOpen ?? true,
-      isWishListed: product.favorite != null,
+      isWishListed: product.favorite != null &&
+          product.favorite!.any((f) => f.wishlistId == 1),
       productVariantId: variant.id,
       storeId: variant.storeId,
-      wishlistItemId: product.favorite?.first.id ?? 0,
+      wishlistItemId: (product.favorite?.any((f) => f.wishlistId == 1) ?? false)
+          ? product.favorite!.firstWhere((f) => f.wishlistId == 1).id ?? 0
+          : 0,
       totalStocks: variant.stock,
       imageFit: product.imageFit,
       quantityStepSize: product.quantityStepSize,
@@ -503,16 +567,24 @@ class _NearbyStoreDetailsState extends State<_NearbyStoreDetailsView> {
   Widget productShimmer() {
     return Column(
       children: [
-        ShimmerWidget.rectangular(height: 130, width: 130, borderRadius: 15, isBorder: true,),
+        ShimmerWidget.rectangular(
+          height: 130,
+          width: 130,
+          borderRadius: 15,
+          isBorder: true,
+        ),
         SizedBox(height: 10),
-        ShimmerWidget.rectangular(isBorder: false, height: 15, width: 130, borderRadius: 15),
+        ShimmerWidget.rectangular(
+            isBorder: false, height: 15, width: 130, borderRadius: 15),
       ],
     );
   }
 
   void _showSortBottomSheet() {
     final currentState = context.read<ProductListingBloc>().state;
-    final currentSortType = currentState is ProductListingLoaded ? currentState.currentSortType : SortType.relevance;
+    final currentSortType = currentState is ProductListingLoaded
+        ? currentState.currentSortType
+        : SortType.relevance;
 
     CustomSortBottomSheet.show(
       context: context,

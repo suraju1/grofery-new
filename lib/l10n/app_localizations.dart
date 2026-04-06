@@ -1264,6 +1264,12 @@ abstract class AppLocalizations {
   /// **'Promo Code & Coupons'**
   String get promoCodeCoupons;
 
+  /// No description provided for @noCouponsAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No coupons available'**
+  String get noCouponsAvailable;
+
   /// No description provided for @support.
   ///
   /// In en, this message translates to:

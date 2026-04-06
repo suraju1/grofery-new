@@ -242,6 +242,7 @@
   "pleaseEnterAnAmountGreaterThanOrEqualTo1": "Please enter an amount greater than or equal to 1",
   "transactions": "Transactions",
   "promoCodeCoupons": "Promo Code & Coupons",
+  "noCouponsAvailable": "No coupons available",
   "support": "Support",
   "callUs": "Call Us",
   "phoneNumber": "Phone number",

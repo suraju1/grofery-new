@@ -28,20 +28,19 @@ class SaveForLaterPage extends StatefulWidget {
 }
 
 class _SaveForLaterPageState extends State<SaveForLaterPage> {
-
   @override
   void initState() {
     super.initState();
     context.read<SaveForLaterBloc>().add(
-      FetchSavedProducts(),
-    );
+          FetchSavedProducts(),
+        );
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<GetUserCartBloc, GetUserCartState>(
       listener: (BuildContext context, state) {
-        if(state is GetUserCartLoading) {
+        if (state is GetUserCartLoading) {
           context.read<SaveForLaterBloc>().add(FetchSavedProducts());
         }
       },
@@ -53,15 +52,15 @@ class _SaveForLaterPageState extends State<SaveForLaterPage> {
         body: CustomRefreshIndicator(
           onRefresh: () async {
             context.read<SaveForLaterBloc>().add(
-              FetchSavedProducts(),
-            );
+                  FetchSavedProducts(),
+                );
           },
           child: BlocConsumer<SaveForLaterBloc, SaveForLaterState>(
             listener: (BuildContext context, SaveForLaterState state) {
-              if(state is ProductSavedSuccess) {
+              if (state is ProductSavedSuccess) {
                 context.read<SaveForLaterBloc>().add(
-                  FetchSavedProducts(),
-                );
+                      FetchSavedProducts(),
+                    );
               }
             },
             builder: (BuildContext context, SaveForLaterState state) {
@@ -82,10 +81,10 @@ class _SaveForLaterPageState extends State<SaveForLaterPage> {
                 return CustomCircularProgressIndicator();
               } else if (state is SaveForLaterFailed) {
                 return NoDeliveryLocationPage(
-                  onRetry: (){
+                  onRetry: () {
                     context.read<SaveForLaterBloc>().add(
-                      FetchSavedProducts(),
-                    );
+                          FetchSavedProducts(),
+                        );
                   },
                 );
               }
@@ -97,7 +96,10 @@ class _SaveForLaterPageState extends State<SaveForLaterPage> {
     );
   }
 
-  Widget productList({required List<SavedItems> productData, required bool hasReachedMax,}) {
+  Widget productList({
+    required List<SavedItems> productData,
+    required bool hasReachedMax,
+  }) {
     return Expanded(
       child: AnimatedSwitcher(
         duration: Duration(milliseconds: 300),
@@ -106,12 +108,14 @@ class _SaveForLaterPageState extends State<SaveForLaterPage> {
     );
   }
 
-  Widget _buildContent(List<SavedItems> productData, bool hasReachedMax,) {
-
+  Widget _buildContent(
+    List<SavedItems> productData,
+    bool hasReachedMax,
+  ) {
     if (productData.isEmpty) {
       return NoProductPage(
-        onRetry: (){
-          context.read<SaveForLaterBloc >().add(FetchSavedProducts());
+        onRetry: () {
+          context.read<SaveForLaterBloc>().add(FetchSavedProducts());
         },
       );
     }
@@ -191,9 +195,8 @@ class _SaveForLaterPageState extends State<SaveForLaterPage> {
             maxQty: product.product!.totalAllowedQuantity!,
             isOutOfStock: product.variant!.stock! <= 0,
             tieredPricing: product.variant!.tieredPricing,
-            isSynced: false
-        );
-        context.read<CartBloc>().add(AddToCart(item: item, context:  context));
+            isSynced: false);
+        context.read<CartBloc>().add(AddToCart(item: item, context: context));
         /*context.read<AddToCartBloc>().add(
           AddItemToCart(
             productVariantId: product.variant!.id!,
@@ -215,7 +218,6 @@ class _SaveForLaterPageState extends State<SaveForLaterPage> {
       totalAllowedQuantity: product.product!.totalAllowedQuantity!,
       tieredPricing: product.variant!.tieredPricing,
     );
-
   }
 
   Widget productShimmer() {

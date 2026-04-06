@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:grofery_user/screens/home_page/model/brands_model.dart';
 import 'package:grofery_user/screens/product_detail_page/model/product_detail_model.dart';
 //
 import '../../../../model/sorting_model/sorting_model.dart';
@@ -14,14 +15,15 @@ part 'product_listing_state.dart';
 class ProductListingBloc
     extends Bloc<ProductListingEvent, ProductListingState> {
   ProductListingBloc() : super(ProductListingInitial()) {
+    log('Initializing ProductListingBloc with FilterByDeliveryTime handler');
     on<FetchListingProducts>(_onFetchListingProducts);
     on<FetchMoreListingProducts>(_onFetchMoreListingProducts);
     on<FetchSortedListingProducts>(_onFetchSortedListingProducts);
     on<ResetSearchKeywords>(_onResetSearchKeywords);
-
     on<FetchFilteredListingProducts>(_onFetchFilteredListingProducts);
     on<ApplyFiltersAndSort>(_onApplyFiltersAndSort);
     on<ClearProductFilters>(_onClearProductFilters);
+    on<FilterByDeliveryTime>((event, emit) => _onFilterByDeliveryTime(event, emit));
   }
 
   int currentPage = 1;
@@ -37,13 +39,21 @@ class ProductListingBloc
 
   List<String> appliedCategorySlugs = [];
   List<String> appliedBrandSlugs = [];
+  String? appliedIndicator;
+  double? appliedRating;
+
+  // Frontend-only filter tracking
+  int? appliedMaxDeliveryMinutes;
+  int? appliedMinDeliveryMinutes;
 
   Future<void> _onFetchListingProducts(
       FetchListingProducts event, Emitter<ProductListingState> emit) async {
     emit(ProductListingLoading());
     try {
-      appliedCategorySlugs.clear();
-      appliedBrandSlugs.clear();
+      appliedCategorySlugs = event.categorySlugs ?? [];
+      appliedBrandSlugs = event.brandSlugs ?? [];
+      appliedIndicator = event.indicator;
+      appliedRating = event.rating;
       currentPage = 1;
       hasReachedMax = false;
       isLoadingMore = false;
@@ -65,11 +75,20 @@ class ProductListingBloc
           storeSlug: event.storeSlug ?? '',
           includeChildCategories: event.includeChildCategories,
           categorySlugs: appliedCategorySlugs,
-          brandSlugs: appliedBrandSlugs);
+          brandSlugs: appliedBrandSlugs,
+          indicator: appliedIndicator,
+          rating: appliedRating);
 
       if (response['data'].isNotEmpty) {
-        final products = List<ProductData>.from(
+        var products = List<ProductData>.from(
             response['data']['data'].map((data) => ProductData.fromJson(data)));
+
+        if (appliedIndicator != null && appliedIndicator!.isNotEmpty) {
+          products = products.where((p) => p.indicator == appliedIndicator).toList();
+        }
+        if (appliedRating != null) {
+          products = products.where((p) => p.ratings >= appliedRating!).toList();
+        }
 
         totalProducts = int.parse(response['data']['total'].toString());
         final currentTotal =
@@ -77,6 +96,16 @@ class ProductListingBloc
         final lastPageNum = int.parse(response['data']['last_page'].toString());
         /*categoryIds = response['data']['category_ids'] as String;
         brandIds = response['data']['brand_ids'] as String;*/
+        List<BrandsData> brandsList = [];
+        if (response['data']['brands'] != null) {
+          brandsList = List<BrandsData>.from(
+              response['data']['brands'].map((v) => BrandsData.fromJson(v)));
+        }
+        // Fallback: extract brands from products if API doesn't return a brands list
+        if (brandsList.isEmpty) {
+          brandsList = _extractBrandsFromProducts(
+              response['data']['data'] as List<dynamic>);
+        }
 
         if (event.type == ProductListingType.search) {
           keywords = response['data']['keywords'] as List<dynamic>;
@@ -89,7 +118,8 @@ class ProductListingBloc
         if (response['success'] == true) {
           emit(ProductListingLoaded(
               message: response['message'],
-              productList: products,
+              productList: _applyFrontendFilters(products),
+              fullProductList: products,
               hasReachedMax: hasReachedMax,
               isFilterLoading: false,
               isLoading: false,
@@ -97,7 +127,9 @@ class ProductListingBloc
               totalProducts: totalProducts,
               keywords: keywords,
               categoryIds: categoryIds,
-              brandIds: brandIds));
+              brandIds: brandIds,
+              brandsList: brandsList,
+              appliedDeliveryMinutes: appliedMaxDeliveryMinutes));
         } else {
           emit(ProductListingFailed(error: response['message']));
         }
@@ -133,11 +165,20 @@ class ProductListingBloc
             isSearchInStore: event.isSearchInStore ?? false,
             storeSlug: event.storeSlug ?? '',
             categorySlugs: appliedCategorySlugs,
-            brandSlugs: appliedBrandSlugs);
+            brandSlugs: appliedBrandSlugs,
+            indicator: appliedIndicator,
+            rating: appliedRating);
 
         if (response['data'].isNotEmpty) {
-          final newProducts = List<ProductData>.from(response['data']['data']
+          var newProducts = List<ProductData>.from(response['data']['data']
               .map((data) => ProductData.fromJson(data)));
+
+          if (appliedIndicator != null && appliedIndicator!.isNotEmpty) {
+            newProducts = newProducts.where((p) => p.indicator == appliedIndicator).toList();
+          }
+          if (appliedRating != null) {
+            newProducts = newProducts.where((p) => p.ratings >= appliedRating!).toList();
+          }
           if (event.type == ProductListingType.search) {
             keywords = response['data']['keywords'];
           }
@@ -150,6 +191,17 @@ class ProductListingBloc
               currentTotal >= lastPageNum || newProducts.length < perPage;
           /*categoryIds = response['data']['category_ids'] as String;
           brandIds = response['data']['brand_ids'] as String;*/
+
+          List<BrandsData> brandsList = currentState.brandsList ?? [];
+          if (response['data']['brands'] != null) {
+            brandsList = List<BrandsData>.from(
+                response['data']['brands'].map((v) => BrandsData.fromJson(v)));
+          }
+          // Fallback: extract from product data if no brands list returned
+          if (brandsList.isEmpty) {
+            brandsList = _extractBrandsFromProducts(
+                response['data']['data'] as List<dynamic>);
+          }
 
           // ✅ Remove duplicates when combining lists
           final updatedProductList =
@@ -165,7 +217,8 @@ class ProductListingBloc
 
           emit(ProductListingLoaded(
               message: response['message'],
-              productList: updatedProductList,
+              productList: _applyFrontendFilters(updatedProductList),
+              fullProductList: updatedProductList,
               hasReachedMax: hasReachedMax,
               isFilterLoading: false,
               isLoading: false,
@@ -173,7 +226,9 @@ class ProductListingBloc
               totalProducts: totalProducts,
               keywords: keywords,
               categoryIds: categoryIds,
-              brandIds: brandIds));
+              brandIds: brandIds,
+              brandsList: brandsList,
+              appliedDeliveryMinutes: appliedMaxDeliveryMinutes));
         } else {
           emit(ProductListingFailed(
               error: response['message'] ?? 'No products found'));
@@ -192,14 +247,7 @@ class ProductListingBloc
       Emitter<ProductListingState> emit) async {
     final currentState = state;
     if (currentState is ProductListingLoaded) {
-      emit(ProductListingLoaded(
-          message: currentState.message,
-          productList: [],
-          hasReachedMax: false,
-          isFilterLoading: true,
-          isLoading: false,
-          currentSortType: currentState.currentSortType,
-          totalProducts: 0));
+      emit(currentState.copyWith(isFilterLoading: true));
     }
 
     try {
@@ -221,10 +269,19 @@ class ProductListingBloc
           isSearchInStore: event.isSearchInStore ?? false,
           storeSlug: event.storeSlug ?? '',
           categorySlugs: appliedCategorySlugs,
-          brandSlugs: appliedBrandSlugs);
+          brandSlugs: appliedBrandSlugs,
+          indicator: appliedIndicator,
+          rating: appliedRating);
 
-      final products = List<ProductData>.from(
+      var products = List<ProductData>.from(
           response['data']['data'].map((data) => ProductData.fromJson(data)));
+
+      if (appliedIndicator != null && appliedIndicator!.isNotEmpty) {
+        products = products.where((p) => p.indicator == appliedIndicator).toList();
+      }
+      if (appliedRating != null) {
+        products = products.where((p) => p.ratings >= appliedRating!).toList();
+      }
 
       // ✅ Update pagination state
       final currentTotal =
@@ -234,6 +291,18 @@ class ProductListingBloc
       /*categoryIds = response['data']['category_ids'] as String;
       brandIds = response['data']['brand_ids'] as String;*/
 
+      totalProducts = int.parse(response['data']['total'].toString());
+      List<BrandsData> brandsList = [];
+      if (response['data']['brands'] != null) {
+        brandsList = List<BrandsData>.from(
+            response['data']['brands'].map((v) => BrandsData.fromJson(v)));
+      }
+      // Fallback: extract brands from product items
+      if (brandsList.isEmpty) {
+        brandsList = _extractBrandsFromProducts(
+            response['data']['data'] as List<dynamic>);
+      }
+
       if (event.type == ProductListingType.search) {
         keywords = response['data']['keywords'];
       }
@@ -242,7 +311,8 @@ class ProductListingBloc
       if (response['success'] == true) {
         emit(ProductListingLoaded(
             message: response['message'],
-            productList: products,
+            productList: _applyFrontendFilters(products),
+            fullProductList: products,
             hasReachedMax: hasReachedMax,
             isFilterLoading: false,
             isLoading: false,
@@ -250,7 +320,9 @@ class ProductListingBloc
             totalProducts: totalProducts,
             keywords: keywords,
             categoryIds: categoryIds,
-            brandIds: brandIds));
+            brandIds: brandIds,
+            brandsList: brandsList,
+            appliedDeliveryMinutes: appliedMaxDeliveryMinutes));
       } else {
         emit(ProductListingFailed(error: response['message']));
       }
@@ -295,6 +367,8 @@ class ProductListingBloc
       selectedSortingType = selectedSortingType;
       appliedCategorySlugs = event.categorySlugs;
       appliedBrandSlugs = event.brandSlugs;
+      appliedIndicator = event.indicator;
+      appliedRating = event.rating;
       List<dynamic> keywords = [];
       String? categoryIds = '';
       String? brandIds = '';
@@ -308,11 +382,20 @@ class ProductListingBloc
           isSearchInStore: event.isSearchInStore ?? false,
           storeSlug: event.storeSlug ?? '',
           categorySlugs: appliedCategorySlugs,
-          brandSlugs: appliedBrandSlugs);
+          brandSlugs: appliedBrandSlugs,
+          indicator: appliedIndicator,
+          rating: appliedRating);
 
       if (response['data'].isNotEmpty) {
-        final products = List<ProductData>.from(
+        var products = List<ProductData>.from(
             response['data']['data'].map((data) => ProductData.fromJson(data)));
+
+        if (appliedIndicator != null && appliedIndicator!.isNotEmpty) {
+          products = products.where((p) => p.indicator == appliedIndicator).toList();
+        }
+        if (appliedRating != null) {
+          products = products.where((p) => p.ratings >= appliedRating!).toList();
+        }
 
         totalProducts = int.parse(response['data']['total'].toString());
         final currentTotal =
@@ -320,6 +403,17 @@ class ProductListingBloc
         final lastPageNum = int.parse(response['data']['last_page'].toString());
         /*categoryIds = response['data']['category_ids'] as String;
         brandIds = response['data']['brand_ids'] as String;*/
+
+        List<BrandsData> brandsList = [];
+        if (response['data']['brands'] != null) {
+          brandsList = List<BrandsData>.from(
+              response['data']['brands'].map((v) => BrandsData.fromJson(v)));
+        }
+        // Fallback: extract brands from product items
+        if (brandsList.isEmpty) {
+          brandsList = _extractBrandsFromProducts(
+              response['data']['data'] as List<dynamic>);
+        }
 
         if (event.type == ProductListingType.search) {
           keywords = response['data']['keywords'] as List<dynamic>;
@@ -333,7 +427,8 @@ class ProductListingBloc
         if (response['success'] == true) {
           emit(ProductListingLoaded(
               message: response['message'],
-              productList: products,
+              productList: _applyFrontendFilters(products),
+              fullProductList: products,
               hasReachedMax: hasReachedMax,
               isFilterLoading: false,
               isLoading: false,
@@ -341,7 +436,9 @@ class ProductListingBloc
               totalProducts: totalProducts,
               keywords: keywords,
               categoryIds: categoryIds,
-              brandIds: brandIds));
+              brandIds: brandIds,
+              brandsList: brandsList,
+              appliedDeliveryMinutes: appliedMaxDeliveryMinutes));
         } else {
           emit(ProductListingFailed(error: response['message']));
         }
@@ -368,6 +465,8 @@ class ProductListingBloc
       isSearchInStore: event.isSearchInStore,
       categorySlugs: event.categorySlugs,
       brandSlugs: event.brandSlugs,
+      indicator: event.indicator,
+      rating: event.rating,
     ));
   }
 
@@ -378,6 +477,8 @@ class ProductListingBloc
   ) async {
     appliedCategorySlugs.clear();
     appliedBrandSlugs.clear();
+    appliedIndicator = null;
+    appliedRating = null;
 
     // Fetch products without filters
     add(FetchListingProducts(
@@ -387,5 +488,78 @@ class ProductListingBloc
       sortType: selectedSortingType,
       isSearchInStore: event.isSearchInStore,
     ));
+  }
+
+  /// Extracts unique brands from product list as fallback when the API
+  /// doesn't return a dedicated `brands` array.
+  List<BrandsData> _extractBrandsFromProducts(List<dynamic> rawProducts) {
+    final seen = <String>{};
+    final extracted = <BrandsData>[];
+    for (final p in rawProducts) {
+      final slug = p['brand'] as String?;
+      final name = p['brand_name'] as String?;
+      if (slug != null && slug.isNotEmpty && seen.add(slug)) {
+        extracted.add(BrandsData(title: name, slug: slug));
+      }
+    }
+    return extracted;
+  }
+
+  void _onFilterByDeliveryTime(
+    FilterByDeliveryTime event,
+    Emitter<ProductListingState> emit,
+  ) {
+    appliedMaxDeliveryMinutes = event.maxMinutes;
+    appliedMinDeliveryMinutes = event.minMinutes;
+
+    final currentState = state;
+    if (currentState is ProductListingLoaded) {
+      final filteredList = _applyFrontendFilters(currentState.fullProductList);
+      emit(currentState.copyWith(
+        productList: filteredList,
+        appliedDeliveryMinutes: appliedMaxDeliveryMinutes,
+      ));
+    }
+  }
+
+  List<ProductData> _applyFrontendFilters(List<ProductData> products) {
+    List<ProductData> result = products;
+
+    if (appliedMaxDeliveryMinutes != null || appliedMinDeliveryMinutes != null) {
+      result = result.where((product) {
+        final minutes = _parseDeliveryTime(product.estimatedDeliveryTime);
+        if (minutes == null) return true; // Keep if we can't parse? or filter out? Usually keep.
+
+        bool match = true;
+        if (appliedMaxDeliveryMinutes != null) {
+          match = match && minutes <= appliedMaxDeliveryMinutes!;
+        }
+        if (appliedMinDeliveryMinutes != null) {
+          match = match && minutes >= appliedMinDeliveryMinutes!;
+        }
+        return match;
+      }).toList();
+    }
+
+    return result;
+  }
+
+  int? _parseDeliveryTime(String time) {
+    if (time.isEmpty) return null;
+
+    // Remove non-digit characters and parse
+    // Handles "30 mins", "10", "45-60 min" (takes the first number)
+    final RegExp regExp = RegExp(r'(\d+)');
+    final Match? match = regExp.firstMatch(time);
+
+    if (match != null) {
+      int value = int.parse(match.group(1)!);
+      if (time.toLowerCase().contains('hour')) {
+        value *= 60;
+      }
+      return value;
+    }
+
+    return null;
   }
 }

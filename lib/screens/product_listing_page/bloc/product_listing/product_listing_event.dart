@@ -23,6 +23,10 @@ class FetchListingProducts extends ProductListingEvent {
   final String? sortType;
   final bool? isSearchInStore;
   final String? includeChildCategories;
+  final String? indicator;
+  final double? rating;
+  final List<String>? brandSlugs;
+  final List<String>? categorySlugs;
 
   FetchListingProducts({
     required this.type,
@@ -30,11 +34,26 @@ class FetchListingProducts extends ProductListingEvent {
     this.storeSlug,
     this.sortType,
     this.isSearchInStore,
-    this.includeChildCategories
+    this.includeChildCategories,
+    this.indicator,
+    this.rating,
+    this.brandSlugs,
+    this.categorySlugs,
   });
 
   @override
-  List<Object?> get props => [type, identifier, storeSlug, sortType, isSearchInStore, includeChildCategories];
+  List<Object?> get props => [
+        type,
+        identifier,
+        storeSlug,
+        sortType,
+        isSearchInStore,
+        includeChildCategories,
+        indicator,
+        rating,
+        brandSlugs,
+        categorySlugs,
+      ];
 }
 
 class FetchSortedListingProducts extends ProductListingEvent {
@@ -43,17 +62,21 @@ class FetchSortedListingProducts extends ProductListingEvent {
   final String? storeSlug;
   final String sortType;
   final bool? isSearchInStore;
+  final String? indicator;
+  final double? rating;
 
   FetchSortedListingProducts({
     required this.type,
     required this.identifier,
     this.storeSlug,
     required this.sortType,
-    this.isSearchInStore
+    this.isSearchInStore,
+    this.indicator,
+    this.rating,
   });
 
   @override
-  List<Object?> get props => [type, identifier, storeSlug, sortType, isSearchInStore];
+  List<Object?> get props => [type, identifier, storeSlug, sortType, isSearchInStore, indicator, rating];
 }
 
 class FetchMoreListingProducts extends ProductListingEvent {
@@ -62,24 +85,27 @@ class FetchMoreListingProducts extends ProductListingEvent {
   final String? storeSlug;
   final String? sortType;
   final bool? isSearchInStore;
+  final String? indicator;
+  final double? rating;
 
   FetchMoreListingProducts({
     required this.type,
     required this.identifier,
     this.storeSlug,
     this.sortType,
-    this.isSearchInStore
+    this.isSearchInStore,
+    this.indicator,
+    this.rating,
   });
 
   @override
-  List<Object?> get props => [type, identifier, storeSlug, sortType, isSearchInStore];
+  List<Object?> get props => [type, identifier, storeSlug, sortType, isSearchInStore, indicator, rating];
 }
 
 class FetchKeywords extends ProductListingEvent {
   final String query;
   FetchKeywords({required this.query});
   @override
-  // TODO: implement props
   List<Object?> get props => [query];
 }
 
@@ -92,6 +118,8 @@ class FetchFilteredListingProducts extends ProductListingEvent {
   final bool? isSearchInStore;
   final List<String> categorySlugs;
   final List<String> brandSlugs;
+  final String? indicator;
+  final double? rating;
 
   FetchFilteredListingProducts({
     required this.type,
@@ -100,6 +128,8 @@ class FetchFilteredListingProducts extends ProductListingEvent {
     this.isSearchInStore,
     required this.categorySlugs,
     required this.brandSlugs,
+    this.indicator,
+    this.rating,
   });
 
   @override
@@ -110,6 +140,8 @@ class FetchFilteredListingProducts extends ProductListingEvent {
     isSearchInStore,
     categorySlugs,
     brandSlugs,
+    indicator,
+    rating,
   ];
 }
 
@@ -121,6 +153,8 @@ class ApplyFiltersAndSort extends ProductListingEvent {
   final bool? isSearchInStore;
   final List<String> categorySlugs;
   final List<String> brandSlugs;
+  final String? indicator;
+  final double? rating;
 
   ApplyFiltersAndSort({
     required this.type,
@@ -130,6 +164,8 @@ class ApplyFiltersAndSort extends ProductListingEvent {
     this.isSearchInStore,
     required this.categorySlugs,
     required this.brandSlugs,
+    this.indicator,
+    this.rating,
   });
 
   @override
@@ -141,6 +177,8 @@ class ApplyFiltersAndSort extends ProductListingEvent {
     isSearchInStore,
     categorySlugs,
     brandSlugs,
+    indicator,
+    rating,
   ];
 }
 
@@ -159,4 +197,14 @@ class ClearProductFilters extends ProductListingEvent {
 
   @override
   List<Object?> get props => [type, identifier, storeSlug, isSearchInStore];
+}
+
+class FilterByDeliveryTime extends ProductListingEvent {
+  final int? maxMinutes;
+  final int? minMinutes;
+
+  FilterByDeliveryTime({this.maxMinutes, this.minMinutes});
+
+  @override
+  List<Object?> get props => [maxMinutes, minMinutes];
 }

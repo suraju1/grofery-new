@@ -1049,11 +1049,19 @@ class _HomePageState extends State<HomePage>
                                       );
                                     }
 
-                                    return CustomScrollView(
-                                      clipBehavior: Clip.antiAlias,
-                                      physics:
-                                          const AlwaysScrollableScrollPhysics(),
-                                      slivers: [
+                                    return CustomRefreshIndicator(
+                                      onRefresh: () async {
+                                        apiCalls('');
+                                        context.read<CategoryBloc>().add(
+                                            FetchCategory(context: context));
+                                        await Future.delayed(
+                                            const Duration(milliseconds: 500));
+                                      },
+                                      child: CustomScrollView(
+                                        clipBehavior: Clip.antiAlias,
+                                        physics:
+                                            const AlwaysScrollableScrollPhysics(),
+                                        slivers: [
                                         SliverToBoxAdapter(
                                           child: BlocBuilder<BannerBloc,
                                               BannerState>(
@@ -1270,7 +1278,8 @@ class _HomePageState extends State<HomePage>
                                           ),
                                         ),
                                       ],
-                                    );
+                                    ),
+                                  );
                                   },
                                 );
                               },

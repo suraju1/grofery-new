@@ -616,6 +616,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get promoCodeCoupons => 'ప్రోమో కోడ్ & కూపన్‌లు';
 
   @override
+  String get noCouponsAvailable => 'No coupons available';
+
+  @override
   String get support => 'మద్దతు';
 
   @override

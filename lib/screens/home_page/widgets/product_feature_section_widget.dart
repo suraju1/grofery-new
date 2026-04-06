@@ -30,19 +30,23 @@ class ProductFeatureSectionWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final section = featureSectionData;
-    if (section == null || section.products == null || section.products!.isEmpty) {
+    if (section == null ||
+        section.products == null ||
+        section.products!.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    final displayTitle = featureSectionTitle?.isNotEmpty == true 
-        ? featureSectionTitle 
+    final displayTitle = featureSectionTitle?.isNotEmpty == true
+        ? featureSectionTitle
         : (section.title ?? title ?? '');
 
     return Container(
       margin: EdgeInsets.symmetric(vertical: 8.h),
       padding: EdgeInsets.symmetric(vertical: 16.h),
       decoration: BoxDecoration(
-        color: backgroundColor != null ? _parseColor(backgroundColor!) : Colors.white,
+        color: backgroundColor != null
+            ? _parseColor(backgroundColor!)
+            : Colors.white,
         image: backgroundImage?.isNotEmpty == true
             ? DecorationImage(
                 image: NetworkImage(backgroundImage!),
@@ -60,7 +64,9 @@ class ProductFeatureSectionWidget extends StatelessWidget {
               style: TextStyle(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.bold,
-                color: section.textColor != null ? _parseColor(section.textColor!) : Colors.black,
+                color: section.textColor != null
+                    ? _parseColor(section.textColor!)
+                    : Colors.black,
               ),
             ),
           ),
@@ -74,7 +80,7 @@ class ProductFeatureSectionWidget extends StatelessWidget {
               itemBuilder: (context, index) {
                 final product = section.products![index];
                 return Container(
-                  width: 160.w,
+                  width: 185.w,
                   margin: EdgeInsets.only(right: 12.w),
                   child: CustomProductCard(
                     productId: product.id,
@@ -83,22 +89,32 @@ class ProductFeatureSectionWidget extends StatelessWidget {
                     productSlug: product.slug,
                     productPrice: product.variants.first.price.toString(),
                     productTags: product.tags,
-                    specialPrice: product.variants.first.specialPrice.toString(),
+                    specialPrice:
+                        product.variants.first.specialPrice.toString(),
                     estimatedDeliveryTime: product.estimatedDeliveryTime,
                     ratings: product.ratings.toDouble(),
                     ratingCount: product.ratingCount,
                     onAddToCart: (qty) {},
                     isStoreOpen: product.storeStatus?.isOpen ?? true,
-                    isWishListed: product.favorite != null && product.favorite!.isNotEmpty,
+                    isWishListed: product.favorite != null &&
+                        product.favorite!.any((f) => f.wishlistId == 1),
                     productVariantId: product.variants.first.id,
                     storeId: product.variants.first.storeId,
-                    wishlistItemId: product.favorite?.first.id ?? 0,
+                    wishlistItemId: (product.favorite?.any(
+                                (f) => f.wishlistId == 1) ??
+                            false)
+                        ? product.favorite!
+                                .firstWhere((f) => f.wishlistId == 1)
+                                .id ??
+                            0
+                        : 0,
                     totalStocks: product.variants.first.stock,
                     imageFit: product.imageFit,
                     quantityStepSize: product.quantityStepSize,
                     minQty: product.minimumOrderQuantity,
                     totalAllowedQuantity: product.totalAllowedQuantity,
                     tieredPricing: product.variants.first.tieredPricing,
+                    indicator: product.indicator,
                   ),
                 );
               },

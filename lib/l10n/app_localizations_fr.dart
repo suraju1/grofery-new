@@ -620,6 +620,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get promoCodeCoupons => 'Code promo et coupons';
 
   @override
+  String get noCouponsAvailable => 'No coupons available';
+
+  @override
   String get support => 'Support';
 
   @override

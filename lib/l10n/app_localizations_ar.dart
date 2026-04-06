@@ -613,6 +613,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get promoCodeCoupons => 'رموز العرض والكوبونات';
 
   @override
+  String get noCouponsAvailable => 'No coupons available';
+
+  @override
   String get support => 'الدعم';
 
   @override

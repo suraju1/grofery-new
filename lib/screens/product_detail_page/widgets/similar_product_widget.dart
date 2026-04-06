@@ -31,7 +31,8 @@ class SimilarProductWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildProductList(BuildContext context, List<ProductData> similarProducts) {
+  Widget _buildProductList(
+      BuildContext context, List<ProductData> similarProducts) {
     if (similarProducts.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -56,7 +57,7 @@ class SimilarProductWidget extends StatelessWidget {
             itemBuilder: (context, index) {
               final product = similarProducts[index];
               return Container(
-                width: 160.w,
+                width: 185.w,
                 margin: EdgeInsets.only(right: 12.w),
                 child: CustomProductCard(
                   productId: product.id,
@@ -71,16 +72,25 @@ class SimilarProductWidget extends StatelessWidget {
                   ratingCount: product.ratingCount,
                   onAddToCart: (qty) {},
                   isStoreOpen: product.storeStatus?.isOpen ?? true,
-                  isWishListed: product.favorite != null && product.favorite!.isNotEmpty,
+                  isWishListed: product.favorite != null &&
+                      product.favorite!.any((f) => f.wishlistId == 1),
                   productVariantId: product.variants.first.id,
                   storeId: product.variants.first.storeId,
-                  wishlistItemId: product.favorite?.first.id ?? 0,
+                  wishlistItemId: (product.favorite?.any(
+                              (f) => f.wishlistId == 1) ??
+                          false)
+                      ? product.favorite!
+                              .firstWhere((f) => f.wishlistId == 1)
+                              .id ??
+                          0
+                      : 0,
                   totalStocks: product.variants.first.stock,
                   imageFit: product.imageFit,
                   quantityStepSize: product.quantityStepSize,
                   minQty: product.minimumOrderQuantity,
                   totalAllowedQuantity: product.totalAllowedQuantity,
                   tieredPricing: product.variants.first.tieredPricing,
+                  indicator: product.indicator,
                 ),
               );
             },

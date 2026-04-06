@@ -12,6 +12,7 @@ class ProductListingLoading extends ProductListingState {}
 class ProductListingLoaded extends ProductListingState {
   final String message;
   final List<ProductData> productList;
+  final List<ProductData> fullProductList; // New: store all products fetched for current page
   final bool hasReachedMax;
   final bool isFilterLoading;
   final SortType currentSortType;
@@ -20,10 +21,13 @@ class ProductListingLoaded extends ProductListingState {
   final List<dynamic>? keywords;
   final String? categoryIds;
   final String? brandIds;
+  final List<BrandsData>? brandsList;
+  final int? appliedDeliveryMinutes; // New: for UI state tracking
 
   ProductListingLoaded({
     required this.message,
     required this.productList,
+    this.fullProductList = const [],
     required this.hasReachedMax,
     this.isFilterLoading = false,
     required this.isLoading,
@@ -31,13 +35,16 @@ class ProductListingLoaded extends ProductListingState {
     required this.totalProducts,
     this.keywords,
     this.categoryIds,
-    this.brandIds
+    this.brandIds,
+    this.brandsList,
+    this.appliedDeliveryMinutes,
   });
 
   @override
   List<Object?> get props => [
     message,
     productList,
+    fullProductList,
     hasReachedMax,
     isFilterLoading,
     currentSortType,
@@ -45,8 +52,42 @@ class ProductListingLoaded extends ProductListingState {
     isLoading,
     keywords,
     categoryIds,
-    brandIds
+    brandIds,
+    brandsList,
+    appliedDeliveryMinutes,
   ];
+
+  ProductListingLoaded copyWith({
+    String? message,
+    List<ProductData>? productList,
+    List<ProductData>? fullProductList,
+    bool? hasReachedMax,
+    bool? isFilterLoading,
+    SortType? currentSortType,
+    int? totalProducts,
+    bool? isLoading,
+    List<dynamic>? keywords,
+    String? categoryIds,
+    String? brandIds,
+    List<BrandsData>? brandsList,
+    int? appliedDeliveryMinutes,
+  }) {
+    return ProductListingLoaded(
+      message: message ?? this.message,
+      productList: productList ?? this.productList,
+      fullProductList: fullProductList ?? this.fullProductList,
+      hasReachedMax: hasReachedMax ?? this.hasReachedMax,
+      isFilterLoading: isFilterLoading ?? this.isFilterLoading,
+      currentSortType: currentSortType ?? this.currentSortType,
+      totalProducts: totalProducts ?? this.totalProducts,
+      isLoading: isLoading ?? this.isLoading,
+      keywords: keywords ?? this.keywords,
+      categoryIds: categoryIds ?? this.categoryIds,
+      brandIds: brandIds ?? this.brandIds,
+      brandsList: brandsList ?? this.brandsList,
+      appliedDeliveryMinutes: appliedDeliveryMinutes ?? this.appliedDeliveryMinutes,
+    );
+  }
 }
 
 class ProductListingFailed extends ProductListingState {

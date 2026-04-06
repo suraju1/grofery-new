@@ -614,6 +614,9 @@ class AppLocalizationsGu extends AppLocalizations {
   String get promoCodeCoupons => 'પ્રોમો કોડ અને કૂપન્સ';
 
   @override
+  String get noCouponsAvailable => 'No coupons available';
+
+  @override
   String get support => 'સપોર્ટ';
 
   @override

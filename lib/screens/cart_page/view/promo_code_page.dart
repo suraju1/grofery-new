@@ -52,18 +52,43 @@ class _PromoCodePageState extends State<PromoCodePage> {
         },
         child: BlocBuilder<PromoCodeBloc, PromoCodeState>(
           builder: (BuildContext context, PromoCodeState state) {
-            if(state is PromoCodeLoaded) {
+            if (state is PromoCodeLoaded) {
+              if (state.promoCodeData.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.confirmation_number_outlined, 
+                          size: 64, color: Colors.grey[400]),
+                      SizedBox(height: 16),
+                      Text(
+                        l10n?.noCouponsAvailable ?? 'No coupons available',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey[600]),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Check back later for new offers',
+                        style: TextStyle(color: Colors.grey[400]),
+                      ),
+                    ],
+                  ),
+                );
+              }
               return Stack(
                 children: [
                   ListView.builder(
-                    itemCount: state.promoCodeData.length,
-                    itemBuilder: (context, index){
-                      final coupon = state.promoCodeData[index];
-                      return BlocBuilder<ValidatePromoCodeBloc, ValidatePromoCodeState>(
-                        builder: (context, validateState) {
+                      itemCount: state.promoCodeData.length,
+                      itemBuilder: (context, index) {
+                        final coupon = state.promoCodeData[index];
+                        return BlocBuilder<ValidatePromoCodeBloc,
+                            ValidatePromoCodeState>(builder: (context, validateState) {
                           bool isThisCouponLoading = false;
-                          if(validateState is ValidatePromoCodeLoading &&
-                              context.read<ValidatePromoCodeBloc>().selectedPromoCode == coupon.code){
+                          if (validateState is ValidatePromoCodeLoading &&
+                              context.read<ValidatePromoCodeBloc>().selectedPromoCode ==
+                                  coupon.code) {
                             isThisCouponLoading = true;
                           }
 
@@ -71,29 +96,53 @@ class _PromoCodePageState extends State<PromoCodePage> {
                             title: coupon.description ?? '',
                             subtitle: coupon.description ?? '',
                             couponCode: coupon.code ?? '',
-                            isCollected: context.read<PromoCodeBloc>().selectedPromoCode == coupon.code,
+                            isCollected:
+                                context.read<PromoCodeBloc>().selectedPromoCode ==
+                                    coupon.code,
                             isLoading: isThisCouponLoading,
-                            onTap: (){
+                            onTap: () {
                               final code = coupon.code ?? '';
-                              if(code.isNotEmpty){
-                                 // Store selected code temporarily in bloc validtor
-                                 context.read<ValidatePromoCodeBloc>().selectedPromoCode = code;
-                                 context.read<ValidatePromoCodeBloc>().add(ValidatePromoCodeRequest(
-                                   promoCode: code,
-                                   cartAmount: widget.cartAmount?.toInt() ?? 0,
-                                   deliveryCharges: widget.deliveryCharges?.toInt() ?? 0
-                                 ));
+                              if (code.isNotEmpty) {
+                                // Store selected code temporarily in bloc validtor
+                                context.read<ValidatePromoCodeBloc>().selectedPromoCode =
+                                    code;
+                                context.read<ValidatePromoCodeBloc>().add(
+                                    ValidatePromoCodeRequest(
+                                        promoCode: code,
+                                        cartAmount: widget.cartAmount?.toInt() ?? 0,
+                                        deliveryCharges:
+                                            widget.deliveryCharges?.toInt() ?? 0));
                               }
                             },
                           );
-                        }
-                      );
-                    }
-                  ),
+                        });
+                      }),
                 ],
               );
+            } else if (state is PromoCodeFailed) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                    SizedBox(height: 16),
+                    Text(
+                      state.error,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.red[700]),
+                    ),
+                    SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        context.read<PromoCodeBloc>().add(FetchPromoCode());
+                      },
+                      child: Text('Retry'),
+                    )
+                  ],
+                ),
+              );
             }
-            return CustomCircularProgressIndicator();
+            return Center(child: CustomCircularProgressIndicator());
           },
         ),
       )

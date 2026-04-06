@@ -114,11 +114,19 @@ class ShoppingListWidget extends StatelessWidget {
                         context: context,
                       )
                           : null,
-                      isStoreOpen: true,
-                      isWishListed: productData.favorite != null,
+                      isStoreOpen: productData.storeStatus?.isOpen ?? true,
+                      isWishListed: productData.favorite != null &&
+                          productData.favorite!.any((f) => f.wishlistId == 1),
                       productVariantId: productData.variants.firstWhere((variant) => variant.isDefault).id,
                       storeId: productData.variants.firstWhere((variant) => variant.isDefault).storeId,
-                      wishlistItemId: productData.favorite?.first.id ?? 0,
+                      wishlistItemId: (productData.favorite
+                                  ?.any((f) => f.wishlistId == 1) ??
+                              false)
+                          ? productData.favorite!
+                                  .firstWhere((f) => f.wishlistId == 1)
+                                  .id ??
+                              0
+                          : 0,
                       totalStocks: productData.variants.firstWhere((variant) => variant.isDefault).stock,
                       imageFit: productData.imageFit,
                       quantityStepSize: productData.quantityStepSize,
