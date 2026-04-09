@@ -3,6 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:grofery_user/config/theme.dart';
 import '../model/get_cart_model.dart';
+import 'package:grofery_user/services/user_cart/cart_validation.dart';
+import 'package:grofery_user/utils/widgets/custom_toast.dart';
 
 class CartItemAttachment {
   final int productId;
@@ -61,13 +63,13 @@ class CartWidget extends StatelessWidget {
       child: Column(
         children: [
           ...items.map((item) => CartItemWidget(
-            item: item,
-            onQuantityChanged: onQuantityChanged,
-            onRemoveItem: onRemoveItem,
-            quantityButtonColor: quantityButtonColor,
-            priceColor: priceColor,
-            originalPriceColor: originalPriceColor,
-          )),
+                item: item,
+                onQuantityChanged: onQuantityChanged,
+                onRemoveItem: onRemoveItem,
+                quantityButtonColor: quantityButtonColor,
+                priceColor: priceColor,
+                originalPriceColor: originalPriceColor,
+              )),
           SizedBox(height: 12.h),
           TextButton.icon(
             onPressed: onAddMoreItems,
@@ -80,7 +82,7 @@ class CartWidget extends StatelessWidget {
   }
 }
 
-class CartItemWidget extends StatelessWidget {
+class CartItemWidget extends StatefulWidget {
   final CartItems item;
   final void Function(String, int) onQuantityChanged;
   final void Function(String) onRemoveItem;
@@ -99,9 +101,63 @@ class CartItemWidget extends StatelessWidget {
   });
 
   @override
+  State<CartItemWidget> createState() => _CartItemWidgetState();
+}
+
+class _CartItemWidgetState extends State<CartItemWidget> {
+  late int localQuantity;
+  bool isUpdating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    localQuantity = widget.item.quantity ?? 1;
+  }
+
+  @override
+  void didUpdateWidget(covariant CartItemWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!isUpdating) {
+      localQuantity = widget.item.quantity ?? 1;
+    }
+  }
+
+  void _handleUpdate(int targetQty) {
+    setState(() {
+      localQuantity = targetQty;
+      isUpdating = true;
+    });
+    
+    widget.onQuantityChanged(widget.item.id.toString(), targetQty);
+    
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          isUpdating = false;
+        });
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final variant = item.variant;
-    final product = item.product;
+    final variant = widget.item.variant;
+    final product = widget.item.product;
+    final quantity = localQuantity;
+
+    double activeUnitPrice = (variant?.specialPrice ?? 0).toDouble();
+    bool isTierApplied = false;
+    var activeTier;
+
+    if (variant?.tieredPricing != null && variant!.tieredPricing!.isNotEmpty) {
+      for (var tier in variant.tieredPricing!) {
+        if (quantity >= tier.minQty) {
+          activeUnitPrice = tier.price / tier.minQty;
+          isTierApplied = tier.minQty > 1; // Only show bulk flag if it actually scales above 1
+          activeTier = tier;
+        }
+      }
+    }
 
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 8.h),
@@ -123,7 +179,8 @@ class CartItemWidget extends StatelessWidget {
               children: [
                 Text(
                   product?.name ?? '',
-                  style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
+                  style:
+                      TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
                 ),
                 if (variant?.title != null)
                   Text(
@@ -134,21 +191,23 @@ class CartItemWidget extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      "₹${variant?.specialPrice ?? 0}",
+                      "₹${(activeUnitPrice * quantity).toStringAsFixed(2)}",
                       style: TextStyle(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.bold,
-                        color: priceColor ?? Colors.black,
+                        color: widget.priceColor ?? Colors.black,
                       ),
                     ),
-                    if ((variant?.price ?? 0) > (variant?.specialPrice ?? 0)) ...[
+                    if (!isTierApplied &&
+                        (variant?.price ?? 0) >
+                            (variant?.specialPrice ?? 0)) ...[
                       SizedBox(width: 8.w),
                       Text(
-                        "₹${variant?.price}",
+                        "₹${((variant?.price ?? 0) * quantity).toStringAsFixed(2)}",
                         style: TextStyle(
                           fontSize: 12.sp,
                           decoration: TextDecoration.lineThrough,
-                          color: originalPriceColor ?? Colors.grey,
+                          color: widget.originalPriceColor ?? Colors.grey,
                         ),
                       ),
                     ],
@@ -164,8 +223,8 @@ class CartItemWidget extends StatelessWidget {
   }
 
   Widget _buildQuantityStepper(BuildContext context) {
-    final itemId = item.id.toString();
-    final quantity = item.quantity ?? 1;
+    final itemId = widget.item.id.toString();
+    final quantity = localQuantity;
 
     return Container(
       decoration: BoxDecoration(
@@ -175,23 +234,47 @@ class CartItemWidget extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            icon: Icon(TablerIcons.minus, size: 16.sp, color: AppTheme.primaryColor),
+            icon: Icon(TablerIcons.minus,
+                size: 16.sp, color: AppTheme.primaryColor),
             onPressed: () {
-              if (quantity > 1) {
-                onQuantityChanged(itemId, quantity - 1);
+              final minQty = widget.item.product?.minimumOrderQuantity ?? 1;
+              if (quantity <= minQty) {
+                widget.onRemoveItem(itemId);
               } else {
-                onRemoveItem(itemId);
+                _handleUpdate(quantity - 1);
               }
             },
           ),
           Text(
             quantity.toString(),
-            style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+            style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryColor),
           ),
           IconButton(
-            icon: Icon(TablerIcons.plus, size: 16.sp, color: AppTheme.primaryColor),
+            icon: Icon(TablerIcons.plus,
+                size: 16.sp, color: AppTheme.primaryColor),
             onPressed: () {
-              onQuantityChanged(itemId, quantity + 1);
+              final minQty = widget.item.product?.minimumOrderQuantity ?? 1;
+              final maxQty = widget.item.product?.totalAllowedQuantity ?? 100;
+              final stock = widget.item.variant?.stock ?? 100;
+
+              final String? error = CartValidation.validateProductAddToCart(
+                 context: context,
+                 requestedQuantity: quantity + 1,
+                 minQty: minQty,
+                 maxQty: maxQty,
+                 stock: stock,
+                 isStoreOpen: true,
+              );
+
+              if (error != null) {
+                 ToastManager.show(context: context, message: error, type: ToastType.error);
+                 return;
+              }
+
+              _handleUpdate(quantity + 1);
             },
           ),
         ],

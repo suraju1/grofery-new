@@ -4,20 +4,13 @@ import 'package:grofery_user/config/constant.dart';
 
 class CartRemoteRepository {
   Future<Map<String, dynamic>> addItemToCart({
-    required int productVariantId,
-    required int storeId,
-    required int quantity,
+    required Map<String, dynamic> body,
   }) async {
-    debugPrint(
-        '[API] ADD → variant:$productVariantId store:$storeId qty:$quantity');
+    debugPrint('[API] ADD → body: $body');
 
     final response = await AppConstant.apiBaseHelper.postAPICall(
       ApiRoutes.addToCartApi,
-      {
-        'product_variant_id': productVariantId,
-        'store_id': storeId,
-        'quantity': quantity,
-      },
+      body,
     );
 
     return response.data;
@@ -25,13 +18,13 @@ class CartRemoteRepository {
 
   Future<void> updateItemQuantity({
     required int cartItemId,
-    required int quantity,
+    required Map<String, dynamic> body,
   }) async {
-    debugPrint('[API] UPDATE → cartItemId:$cartItemId qty:$quantity');
+    debugPrint('[API] UPDATE → cartItemId:$cartItemId body: $body');
 
     await AppConstant.apiBaseHelper.postAPICall(
       ApiRoutes.removeItemFromCartApi + cartItemId.toString(),
-      {'quantity': quantity},
+      body,
     );
   }
 

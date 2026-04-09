@@ -633,7 +633,7 @@ class ProductVariants {
     }
 
     if (applicableTier != null) {
-      return applicableTier.price;
+      return (applicableTier.price / applicableTier.minQty);
     }
 
     return (specialPrice > 0 ? specialPrice : price);

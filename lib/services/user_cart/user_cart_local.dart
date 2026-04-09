@@ -151,11 +151,6 @@ class CartLocalRepository {
   }
 }*/
 
-
-
-
-
-
 import 'dart:developer';
 
 import 'package:flutter/foundation.dart';
@@ -197,14 +192,16 @@ class CartLocalRepository {
       item.cartKey,
       item.copyWith(
         syncAction: CartSyncAction.add,
-        price: _calculateEffectivePrice(item.quantity, item.tieredPricing, item.price),
+        price: _calculateEffectivePrice(
+            item.quantity, item.tieredPricing, item.price),
       ),
     );
   }
 
-  double _calculateEffectivePrice(int quantity, List<TieredPricing>? tieredPricing, double fallbackPrice) {
+  double _calculateEffectivePrice(
+      int quantity, List<TieredPricing>? tieredPricing, double fallbackPrice) {
     if (tieredPricing == null || tieredPricing.isEmpty) return fallbackPrice;
-    
+
     TieredPricing? applicableTier;
     for (var tier in tieredPricing) {
       if (quantity >= tier.minQty) {
@@ -213,7 +210,9 @@ class CartLocalRepository {
         break;
       }
     }
-    return applicableTier != null ? (applicableTier.price / applicableTier.minQty) : fallbackPrice;
+    return applicableTier != null
+        ? (applicableTier.price / applicableTier.minQty)
+        : fallbackPrice;
   }
 
   void updateQuantity(String cartKey, int quantity) {
@@ -232,7 +231,8 @@ class CartLocalRepository {
         ? CartSyncAction.update
         : CartSyncAction.add;
 
-    final newPrice = _calculateEffectivePrice(quantity, item.tieredPricing, item.price);
+    final newPrice =
+        _calculateEffectivePrice(quantity, item.tieredPricing, item.price);
 
     final updatedItem = item.copyWith(
       quantity: quantity,
@@ -246,8 +246,7 @@ class CartLocalRepository {
     // Verify the save
     final verify = box.get(cartKey);
     debugPrint(
-        '[LOCAL] AFTER UPDATE → $cartKey → qty: $quantity, syncAction: $syncAction, serverCartItemId: ${verify
-            ?.serverCartItemId}');
+        '[LOCAL] AFTER UPDATE → $cartKey → qty: $quantity, syncAction: $syncAction, serverCartItemId: ${verify?.serverCartItemId}');
   }
 
   void addItemGuest(UserCart item) {
@@ -257,7 +256,8 @@ class CartLocalRepository {
       item.copyWith(
         syncAction: CartSyncAction.none, // Important!
         isSynced: false, // optional flag
-        price: _calculateEffectivePrice(item.quantity, item.tieredPricing, item.price),
+        price: _calculateEffectivePrice(
+            item.quantity, item.tieredPricing, item.price),
       ),
     );
   }
@@ -266,13 +266,14 @@ class CartLocalRepository {
     final item = box.get(cartKey);
     if (item == null) return;
 
-    final newPrice = _calculateEffectivePrice(quantity, item.tieredPricing, item.price);
+    final newPrice =
+        _calculateEffectivePrice(quantity, item.tieredPricing, item.price);
     final updatedItem = item.copyWith(
       quantity: quantity,
       syncAction: CartSyncAction.none,
     );
     updatedItem.price = newPrice;
-    
+
     box.put(
       cartKey,
       updatedItem,
@@ -302,8 +303,8 @@ class CartLocalRepository {
       cartKey,
       item.copyWith(syncAction: CartSyncAction.update),
     );
-    debugPrint('[LOCAL] MARKED FOR UPDATE → $cartKey (qty: ${item
-        .quantity}, serverCartItemId: ${item.serverCartItemId})');
+    debugPrint(
+        '[LOCAL] MARKED FOR UPDATE → $cartKey (qty: ${item.quantity}, serverCartItemId: ${item.serverCartItemId})');
   }
 
   void markForDelete(String cartKey) {
@@ -320,8 +321,8 @@ class CartLocalRepository {
         cartKey,
         item.copyWith(syncAction: CartSyncAction.delete),
       );
-      debugPrint('🛒 LOCAL MARKED FOR DELETE → $cartKey (serverCartItemId: ${item
-          .serverCartItemId})');
+      debugPrint(
+          '🛒 LOCAL MARKED FOR DELETE → $cartKey (serverCartItemId: ${item.serverCartItemId})');
     } else {
       // Item was never synced to server, safe to delete immediately
       box.delete(cartKey);
@@ -339,7 +340,6 @@ class CartLocalRepository {
     // Item was never synced to server, safe to delete immediately
     box.delete(cartKey);
     debugPrint('🛒 LOCAL DELETE (no server sync needed) → $cartKey');
-
   }
 
   void clearLocalCart() {
@@ -367,12 +367,10 @@ class CartLocalRepository {
       }
     }
 
-    debugPrint('🧹 Marked ${allItems
-        .where((i) => i.serverCartItemId != null)
-        .length} items for server deletion');
-    debugPrint('🧹 Deleted ${allItems
-        .where((i) => i.serverCartItemId == null)
-        .length} local-only items');
+    debugPrint(
+        '🧹 Marked ${allItems.where((i) => i.serverCartItemId != null).length} items for server deletion');
+    debugPrint(
+        '🧹 Deleted ${allItems.where((i) => i.serverCartItemId == null).length} local-only items');
   }
 
   void markSynced(String cartKey, {int? serverCartItemId}) {
@@ -390,8 +388,8 @@ class CartLocalRepository {
 
     box.put(cartKey, updatedItem);
     final verify = box.get(cartKey);
-    debugPrint('[VERIFY SAVE] serverCartItemId after put: ${verify
-        ?.serverCartItemId}');
+    debugPrint(
+        '[VERIFY SAVE] serverCartItemId after put: ${verify?.serverCartItemId}');
   }
 
   void removeLocal(String cartKey) {
@@ -440,7 +438,6 @@ class CartLocalRepository {
     debugPrint('=== HIVE CART DATA END ===');
   }
 
-
   /// Syncs server cart items to local storage
   /// This should be called after fetching cart from server
   void syncServerCartToLocal(List<dynamic> serverCartItems) {
@@ -462,12 +459,15 @@ class CartLocalRepository {
         final storeId = serverItem['store_id']?.toString() ?? '';
         final productId = serverItem['product_id']?.toString() ?? '';
 
-        if (variantId.isNotEmpty && storeId.isNotEmpty && productId.isNotEmpty) {
+        if (variantId.isNotEmpty &&
+            storeId.isNotEmpty &&
+            productId.isNotEmpty) {
           final cartKey = '${productId}_$variantId';
           serverItemsMap[cartKey] = serverItem;
           debugPrint('🔑 Server item mapped: $cartKey');
         } else {
-          debugPrint('⚠️ Skipping server item with missing IDs: productId=$productId, variantId=$variantId, storeId=$storeId');
+          debugPrint(
+              '⚠️ Skipping server item with missing IDs: productId=$productId, variantId=$variantId, storeId=$storeId');
         }
       }
 
@@ -495,11 +495,13 @@ class CartLocalRepository {
 
         if (localItem != null) {
           // Item exists locally
-          debugPrint('📍 Found local item: $cartKey (serverCartItemId: ${localItem.serverCartItemId}, qty: ${localItem.quantity}, syncAction: ${localItem.syncAction})');
+          debugPrint(
+              '📍 Found local item: $cartKey (serverCartItemId: ${localItem.serverCartItemId}, qty: ${localItem.quantity}, syncAction: ${localItem.syncAction})');
 
           // Skip if item has pending changes
           if (localItem.syncAction != CartSyncAction.none) {
-            debugPrint('⏭️ SKIPPED: $cartKey (has pending sync action: ${localItem.syncAction})');
+            debugPrint(
+                '⏭️ SKIPPED: $cartKey (has pending sync action: ${localItem.syncAction})');
             skipped++;
             continue;
           }
@@ -516,7 +518,8 @@ class CartLocalRepository {
               ),
             );
             updated++;
-            debugPrint('✏️ UPDATED: $cartKey → qty: $serverQuantity, serverId: $serverCartItemId');
+            debugPrint(
+                '✏️ UPDATED: $cartKey → qty: $serverQuantity, serverId: $serverCartItemId');
           } else {
             debugPrint('✓ NO CHANGE: $cartKey (already in sync)');
           }
@@ -527,7 +530,8 @@ class CartLocalRepository {
           if (newItem != null) {
             box.put(cartKey, newItem);
             added++;
-            debugPrint('➕ ADDED: $cartKey → qty: $serverQuantity, serverId: $serverCartItemId');
+            debugPrint(
+                '➕ ADDED: $cartKey → qty: $serverQuantity, serverId: $serverCartItemId');
           } else {
             debugPrint('❌ Failed to create item: $cartKey');
           }
@@ -538,42 +542,46 @@ class CartLocalRepository {
       for (final localItem in localItems) {
         if (!serverItemsMap.containsKey(localItem.cartKey)) {
           if (localItem.syncAction != CartSyncAction.none) {
-            if (localItem.syncAction == CartSyncAction.add || localItem.syncAction == CartSyncAction.delete) {
+            if (localItem.syncAction == CartSyncAction.add ||
+                localItem.syncAction == CartSyncAction.delete) {
               box.delete(localItem.cartKey);
               removed++;
-              debugPrint('🗑️ REMOVED pending ${localItem.syncAction} (not on server): ${localItem.cartKey}');
+              debugPrint(
+                  '🗑️ REMOVED pending ${localItem.syncAction} (not on server): ${localItem.cartKey}');
             } else {
-              debugPrint('⏭️ KEEPING: ${localItem.cartKey} (has pending action: ${localItem.syncAction})');
+              debugPrint(
+                  '⏭️ KEEPING: ${localItem.cartKey} (has pending action: ${localItem.syncAction})');
               skipped++;
             }
           } else if (localItem.serverCartItemId != null) {
             box.delete(localItem.cartKey);
             removed++;
-            debugPrint('🗑️ REMOVED: ${localItem.cartKey} (not on server, serverCartItemId: ${localItem.serverCartItemId})');
+            debugPrint(
+                '🗑️ REMOVED: ${localItem.cartKey} (not on server, serverCartItemId: ${localItem.serverCartItemId})');
           } else {
             box.delete(localItem.cartKey);
             removed++;
-            debugPrint('🗑️ REMOVED unsynced invalid item (no serverCartItemId, no pending action): ${localItem.cartKey}');
+            debugPrint(
+                '🗑️ REMOVED unsynced invalid item (no serverCartItemId, no pending action): ${localItem.cartKey}');
           }
         }
       }
 
-      debugPrint('✅ SYNC COMPLETE → Added: $added, Updated: $updated, Removed: $removed, Skipped: $skipped');
+      debugPrint(
+          '✅ SYNC COMPLETE → Added: $added, Updated: $updated, Removed: $removed, Skipped: $skipped');
       debugPrint('📊 Total local items AFTER sync: ${box.length}');
 
       // Print all items for debugging
       printAllHiveData();
-
     } catch (e, stackTrace) {
       debugPrint('❌ CRITICAL ERROR in syncServerCartToLocal: $e');
       debugPrint('Stack trace: $stackTrace');
     }
   }
 
-
   /// Helper method to create UserCart from server data
   /// Override this method based on your UserCart model structure
-  UserCart? _createUserCartFromServer(dynamic serverItem)   {
+  UserCart? _createUserCartFromServer(dynamic serverItem) {
     try {
       List<TieredPricing> tiers = [];
       if (serverItem['tiered_pricing'] != null) {
@@ -607,5 +615,4 @@ class CartLocalRepository {
       return null;
     }
   }
-
 }

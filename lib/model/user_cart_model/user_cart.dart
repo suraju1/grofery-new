@@ -66,6 +66,12 @@ class UserCart extends HiveObject {
   @HiveField(16)
   List<TieredPricing>? tieredPricing;
 
+  @HiveField(17)
+  bool? isTiered;
+
+  @HiveField(18)
+  double? appliedTierPrice;
+
   UserCart({
     required this.productId,
     required this.variantId,
@@ -84,6 +90,8 @@ class UserCart extends HiveObject {
     this.serverCartItemId,
     required this.syncAction,
     this.tieredPricing,
+    this.isTiered = false,
+    this.appliedTierPrice,
   });
 
   /// 🧠 UNIQUE KEY = productId + variantId
@@ -97,6 +105,8 @@ class UserCart extends HiveObject {
     Object? serverCartItemId = _undefined,
     CartSyncAction? syncAction,
     List<TieredPricing>? tieredPricing,
+    bool? isTiered,
+    double? appliedTierPrice,
   }) {
     return UserCart(
       productId: productId,
@@ -118,6 +128,8 @@ class UserCart extends HiveObject {
           : serverCartItemId as int?,
       syncAction: syncAction ?? this.syncAction,
       tieredPricing: tieredPricing ?? this.tieredPricing,
+      isTiered: isTiered ?? this.isTiered,
+      appliedTierPrice: appliedTierPrice ?? this.appliedTierPrice,
     );
   }
 

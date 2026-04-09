@@ -34,13 +34,15 @@ class UserCartAdapter extends TypeAdapter<UserCart> {
       serverCartItemId: fields[14] as int?,
       syncAction: fields[15] as CartSyncAction,
       tieredPricing: (fields[16] as List?)?.cast<TieredPricing>(),
+      isTiered: fields[17] as bool?,
+      appliedTierPrice: fields[18] as double?,
     );
   }
 
   @override
   void write(BinaryWriter writer, UserCart obj) {
     writer
-      ..writeByte(17)
+      ..writeByte(19)
       ..writeByte(0)
       ..write(obj.productId)
       ..writeByte(1)
@@ -74,7 +76,11 @@ class UserCartAdapter extends TypeAdapter<UserCart> {
       ..writeByte(15)
       ..write(obj.syncAction)
       ..writeByte(16)
-      ..write(obj.tieredPricing);
+      ..write(obj.tieredPricing)
+      ..writeByte(17)
+      ..write(obj.isTiered)
+      ..writeByte(18)
+      ..write(obj.appliedTierPrice);
   }
 
   @override

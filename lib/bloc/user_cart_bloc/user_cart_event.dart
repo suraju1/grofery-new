@@ -20,11 +20,26 @@ class AddToCart extends CartEvent {
   final bool? useWallet;
   final bool? isFromCartPage;
 
-  AddToCart({this.addressId,
-  this.promoCode, this.rushDelivery, this.useWallet, required this.item, required this.context, this.isFromCartPage = false,});
+  AddToCart({
+    this.addressId,
+    this.promoCode,
+    this.rushDelivery,
+    this.useWallet,
+    required this.item,
+    required this.context,
+    this.isFromCartPage = false,
+  });
 
   @override
-  List<Object?> get props => [item, context, addressId, promoCode, rushDelivery, useWallet, isFromCartPage];
+  List<Object?> get props => [
+        item,
+        context,
+        addressId,
+        promoCode,
+        rushDelivery,
+        useWallet,
+        isFromCartPage,
+      ];
 }
 
 class UpdateCartQty extends CartEvent {
@@ -39,11 +54,30 @@ class UpdateCartQty extends CartEvent {
   final bool? rushDelivery;
   final bool? useWallet;
 
-  UpdateCartQty({required this.cartKey, required this.quantity, this.cartItemId, required this.context, this.addressId,
-    this.promoCode, this.rushDelivery, this.useWallet, this.isFromCartPage = false,});
+  UpdateCartQty({
+    required this.cartKey,
+    required this.quantity,
+    this.cartItemId,
+    required this.context,
+    this.addressId,
+    this.promoCode,
+    this.rushDelivery,
+    this.useWallet,
+    this.isFromCartPage = false,
+  });
 
   @override
-  List<Object?> get props => [cartKey, quantity, cartItemId, context, addressId, promoCode, rushDelivery, useWallet, isFromCartPage];
+  List<Object?> get props => [
+        cartKey,
+        quantity,
+        cartItemId,
+        context,
+        addressId,
+        promoCode,
+        rushDelivery,
+        useWallet,
+        isFromCartPage,
+      ];
 }
 
 class RemoveFromCart extends CartEvent {

@@ -359,27 +359,90 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                             ],
                                           ),
                                           SizedBox(height: 10.h),
-                                          PriceRowWidget(
-                                            originalPrice:
-                                                activeVariant.price.toDouble(),
-                                            salePrice: activeVariant
-                                                .specialPrice
-                                                .toDouble(),
-                                            fontSize: 12.sp,
-                                            originalFontSize: 10.sp,
-                                            discountFontSize: 8.sp,
-                                            fontWeight: FontWeight.w700,
-                                            originalPriceColor:
-                                                Colors.grey.shade600,
-                                            discountBackgroundColor:
-                                                Colors.green.shade600,
-                                            discountTextColor: Colors.white,
+                                          BlocBuilder<CartBloc, CartState>(
+                                            builder: (context, cartState) {
+                                              final cartItem = _getCartItem(
+                                                  cartState,
+                                                  product.id,
+                                                  activeVariant.id,
+                                                  activeVariant.storeId);
+                                              final currentQty =
+                                                  cartItem?.quantity ?? 0;
+                                              final effectivePrice =
+                                                  activeVariant
+                                                      .getEffectivePrice(
+                                                          currentQty);
+                                              final displayQty = currentQty > 0
+                                                  ? currentQty
+                                                  : 1;
+                                              final totalPrice =
+                                                  effectivePrice * displayQty;
+                                              final totalOriginalPrice =
+                                                  activeVariant.price *
+                                                      displayQty;
+
+                                              return Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  PriceRowWidget(
+                                                    originalPrice:
+                                                        totalOriginalPrice
+                                                            .toDouble(),
+                                                    salePrice:
+                                                        totalPrice.toDouble(),
+                                                    fontSize: 12.sp,
+                                                    originalFontSize: 10.sp,
+                                                    discountFontSize: 8.sp,
+                                                    fontWeight: FontWeight.w700,
+                                                    originalPriceColor:
+                                                        Colors.grey.shade600,
+                                                    discountBackgroundColor:
+                                                        Colors.green.shade600,
+                                                    discountTextColor:
+                                                        Colors.white,
+                                                  ),
+                                                  if (product
+                                                          .minimumOrderQuantity >
+                                                      0)
+                                                    Padding(
+                                                      padding: EdgeInsets.only(
+                                                          top: 4.h),
+                                                      child: Row(
+                                                        children: [
+                                                          Icon(
+                                                              Icons
+                                                                  .info_outline,
+                                                              size: 14.sp,
+                                                              color: AppTheme
+                                                                  .primaryColor),
+                                                          SizedBox(width: 4.w),
+                                                          Text(
+                                                            "Minimum Order: ${product.minimumOrderQuantity} ${product.minimumOrderQuantity > 1 ? 'pcs' : 'pc'}",
+                                                            style: TextStyle(
+                                                              fontSize: 11.sp,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w500,
+                                                              color: AppTheme
+                                                                  .primaryColor,
+                                                              letterSpacing:
+                                                                  0.2,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                ],
+                                              );
+                                            },
                                           ),
                                         ],
                                       ),
                                     ],
                                   ),
-
+                                  _buildTieredPricingSection(
+                                      product, activeVariant),
                                   // VARIANTS
                                   ListView.builder(
                                     padding: EdgeInsets.zero,
@@ -852,14 +915,28 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: PriceRowWidget(
-                          originalPrice: activeVariant.price.toDouble(),
-                          salePrice: activeVariant.specialPrice.toDouble(),
-                          fontSize: 12.sp,
-                          originalFontSize: 10.sp,
-                          discountFontSize: 8.sp,
-                          fontWeight: FontWeight.w700,
-                          originalPriceColor: Colors.grey.shade600,
+                        child: BlocBuilder<CartBloc, CartState>(
+                          builder: (context, cartState) {
+                            final cartItem = _getCartItem(cartState, product.id,
+                                activeVariant.id, activeVariant.storeId);
+                            final currentQty = cartItem?.quantity ?? 0;
+                            final effectivePrice =
+                                activeVariant.getEffectivePrice(currentQty);
+                            final displayQty = currentQty > 0 ? currentQty : 1;
+                            final totalPrice = effectivePrice * displayQty;
+                            final totalOriginalPrice =
+                                activeVariant.price * displayQty;
+
+                            return PriceRowWidget(
+                              originalPrice: totalOriginalPrice.toDouble(),
+                              salePrice: totalPrice.toDouble(),
+                              fontSize: 12.sp,
+                              originalFontSize: 10.sp,
+                              discountFontSize: 8.sp,
+                              fontWeight: FontWeight.w700,
+                              originalPriceColor: Colors.grey.shade600,
+                            );
+                          },
                         ),
                       ),
                       Text(
@@ -869,6 +946,18 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                           color: Colors.grey.shade600,
                         ),
                       ),
+                      if (product.minimumOrderQuantity > 0)
+                        Padding(
+                          padding: EdgeInsets.only(top: 2),
+                          child: Text(
+                            "Min Order: ${product.minimumOrderQuantity} ${product.minimumOrderQuantity > 1 ? 'pcs' : 'pc'}",
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.primaryColor,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                   SizedBox(
@@ -886,31 +975,13 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                           child: BlocBuilder<CartBloc, CartState>(
                             builder: (context, cartState) {
                               final int productId = product.id;
-                              int productVariantId = activeVariant.id;
+                              final int productVariantId = activeVariant.id;
                               final int storeId = activeVariant.storeId;
-
-                              // Ensure we use the selected variant if available
-                              if (selectedVariants.isNotEmpty) {
-                                final selectedTitle = selectedVariants
-                                    .values.first.value
-                                    .toString();
-                                try {
-                                  final selectedVariant =
-                                      product.variants.firstWhere(
-                                    (v) {
-                                      final attrValue =
-                                          v.attributes.values.first.toString();
-                                      return attrValue.toLowerCase().trim() ==
-                                          selectedTitle.toLowerCase().trim();
-                                    },
-                                  );
-                                  productVariantId = selectedVariant.id;
-                                } catch (_) {}
-                              }
 
                               final cartItem = _getCartItem(cartState,
                                   productId, productVariantId, storeId);
                               final isInCart = cartItem != null;
+                              final int currentQty = cartItem?.quantity ?? 0;
 
                               return AnimatedContainer(
                                 duration: const Duration(milliseconds: 400),
@@ -953,22 +1024,21 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                 onTap: () async {
                                                   await HapticFeedback
                                                       .lightImpact();
-                                                  if (cartItem.quantity >
+
+                                                  final int targetQty =
+                                                      currentQty - 1;
+
+                                                  if (targetQty <
                                                       product
-                                                          .quantityStepSize) {
+                                                          .minimumOrderQuantity) {
+                                                    // If going below minimum order quantity, remove from cart
                                                     if (context.mounted) {
                                                       context
                                                           .read<CartBloc>()
                                                           .add(
-                                                            UpdateCartQty(
+                                                            RemoveFromCart(
                                                                 cartKey: cartItem
                                                                     .cartKey,
-                                                                quantity: cartItem
-                                                                        .quantity -
-                                                                    product
-                                                                        .quantityStepSize,
-                                                                cartItemId: cartItem
-                                                                    .serverCartItemId,
                                                                 context:
                                                                     context),
                                                           );
@@ -978,9 +1048,13 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                       context
                                                           .read<CartBloc>()
                                                           .add(
-                                                            RemoveFromCart(
+                                                            UpdateCartQty(
                                                                 cartKey: cartItem
                                                                     .cartKey,
+                                                                quantity:
+                                                                    targetQty,
+                                                                cartItemId: cartItem
+                                                                    .serverCartItemId,
                                                                 context:
                                                                     context),
                                                           );
@@ -1011,15 +1085,16 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                 onTap: () async {
                                                   await HapticFeedback
                                                       .lightImpact();
-                                                  // Check max limit if needed
+
+                                                  final int targetQty =
+                                                      currentQty + 1;
+
                                                   if (context.mounted) {
                                                     final error = CartValidation
                                                         .validateProductAddToCart(
                                                       context: context,
-                                                      requestedQuantity: cartItem
-                                                              .quantity +
-                                                          product
-                                                              .quantityStepSize,
+                                                      requestedQuantity:
+                                                          targetQty,
                                                       minQty: product
                                                           .minimumOrderQuantity,
                                                       maxQty: product
@@ -1044,10 +1119,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                             UpdateCartQty(
                                                                 cartKey: cartItem
                                                                     .cartKey,
-                                                                quantity: cartItem
-                                                                        .quantity +
-                                                                    product
-                                                                        .quantityStepSize,
+                                                                quantity:
+                                                                    targetQty,
                                                                 cartItemId: cartItem
                                                                     .serverCartItemId,
                                                                 context:
@@ -1084,45 +1157,12 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                         return;
                                       }*/
 
-                                              final l10n =
-                                                  AppLocalizations.of(context)!;
                                               final isStoreOpen =
                                                   product.storeStatus?.isOpen ??
                                                       true;
 
-                                              // 2️⃣ Resolve selected variant
-                                              ProductVariants? selectedVariant;
-
-                                              if (product
-                                                  .attributes.isNotEmpty) {
-                                                if (selectedVariants.isEmpty) {
-                                                  ToastManager.show(
-                                                    context: context,
-                                                    message: l10n
-                                                        .pleaseSelectVariant,
-                                                    type: ToastType.error,
-                                                  );
-                                                  return;
-                                                }
-
-                                                final selectedTitle =
-                                                    selectedVariants
-                                                        .values.first.value;
-
-                                                selectedVariant =
-                                                    product.variants.firstWhere(
-                                                  (v) =>
-                                                      normalize(v.title) ==
-                                                      normalize(selectedTitle),
-                                                  orElse: () => product.variants
-                                                      .firstWhere(
-                                                          (v) => v.isDefault),
-                                                );
-                                              } else {
-                                                selectedVariant =
-                                                    product.variants.firstWhere(
-                                                        (v) => v.isDefault);
-                                              }
+                                              final selectedVariant =
+                                                  activeVariant;
 
                                               // 3️⃣ SINGLE STORE VALIDATION (before quantity checks)
                                               final cartBloc =
@@ -1171,8 +1211,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                 name: product.title,
                                                 image: product.mainImage,
                                                 price: selectedVariant
-                                                    .specialPrice
-                                                    .toDouble(),
+                                                    .getEffectivePrice(
+                                                        requestedQty),
                                                 originalPrice: selectedVariant
                                                     .price
                                                     .toDouble(),
@@ -1188,6 +1228,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                 isOutOfStock:
                                                     selectedVariant.stock <= 0,
                                                 isSynced: false,
+                                                tieredPricing: selectedVariant
+                                                    .tieredPricing,
                                               );
 
                                               // 6️⃣ Add to cart
@@ -1234,6 +1276,201 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         ),
       ),
     );
+  }
+
+  Widget _buildTieredPricingSection(
+      ProductData product, ProductVariants activeVariant) {
+    if (activeVariant.tieredPricing.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return BlocBuilder<CartBloc, CartState>(
+      builder: (context, cartState) {
+        final cartItem = _getCartItem(
+            cartState, product.id, activeVariant.id, activeVariant.storeId);
+        final currentQty = cartItem?.quantity ?? 0;
+
+        return Container(
+          margin: EdgeInsets.only(top: 16.h, bottom: 8.h),
+          padding: EdgeInsets.symmetric(vertical: 8.h),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF4F8FE), // Light blue background
+            borderRadius: BorderRadius.circular(12.r),
+          ),
+          child: Column(
+            children:
+                List.generate(activeVariant.tieredPricing.length, (index) {
+              final tier = activeVariant.tieredPricing[index];
+              final double perUnitPrice = tier.price / tier.minQty;
+
+              // Only highlight the tier that is an EXACT match for the current quantity
+              final bool isTierActive = currentQty == tier.minQty;
+
+              return Column(
+                children: [
+                  Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "₹${perUnitPrice.toStringAsFixed(2)}/pc for ${tier.minQty} pcs+",
+                                style: TextStyle(
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF1E5BB2),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                "Total: ₹${tier.price.toStringAsFixed(2)}",
+                                style: TextStyle(
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF1E5BB2)
+                                      .withValues(alpha: 0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => _onTieredAddToCart(
+                                product, activeVariant, tier.minQty,
+                                isSetAbsolute: true),
+                            borderRadius: BorderRadius.circular(6.r),
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 16.w, vertical: 8.h),
+                              decoration: BoxDecoration(
+                                color: isTierActive
+                                    ? const Color(0xFFE54A50)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(6.r),
+                                border: Border.all(
+                                    color: const Color(0xFFE54A50), width: 1),
+                              ),
+                              child: Text(
+                                "Add ${tier.minQty}",
+                                style: TextStyle(
+                                  fontSize: 13.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: isTierActive
+                                      ? Colors.white
+                                      : const Color(0xFFE54A50),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (index < activeVariant.tieredPricing.length - 1)
+                    Divider(
+                      height: 12.h,
+                      thickness: 1,
+                      color: const Color(0xFFDFEDFD),
+                    ),
+                ],
+              );
+            }),
+          ),
+        );
+      },
+    );
+  }
+
+  void _onTieredAddToCart(
+      ProductData product, ProductVariants variant, int quantity,
+      {bool isSetAbsolute = false}) {
+    final cartBloc = context.read<CartBloc>();
+    final cartItem =
+        _getCartItem(cartBloc.state, product.id, variant.id, variant.storeId);
+
+    final isStoreOpen = product.storeStatus?.isOpen ?? true;
+    final int currentQty = cartItem?.quantity ?? 0;
+
+    int targetQty;
+
+    if (isSetAbsolute) {
+      // Quick Select behavior: If already at this exact quantity, remove. Otherwise, set to it.
+      if (currentQty == quantity) {
+        targetQty = 0;
+      } else {
+        targetQty = quantity;
+      }
+    } else {
+      // Stepper behavior (Additive/Subtractive)
+      targetQty = currentQty + quantity;
+    }
+
+    if (targetQty <= 0) {
+      if (cartItem != null) {
+        cartBloc
+            .add(RemoveFromCart(cartKey: cartItem.cartKey, context: context));
+      }
+      return;
+    }
+
+    final productError = CartValidation.validateProductAddToCart(
+      context: context,
+      requestedQuantity: targetQty,
+      minQty: product.minimumOrderQuantity,
+      maxQty: product.totalAllowedQuantity,
+      stock: variant.stock,
+      isStoreOpen: isStoreOpen,
+    );
+
+    if (productError != null) {
+      ToastManager.show(
+        context: context,
+        message: productError,
+        type: ToastType.error,
+      );
+      return;
+    }
+
+    // Always use getEffectivePrice for consistency
+    final double unitPrice = variant.getEffectivePrice(targetQty);
+
+    if (cartItem != null) {
+      cartBloc.add(UpdateCartQty(
+        cartKey: cartItem.cartKey,
+        quantity: targetQty,
+        cartItemId: cartItem.serverCartItemId,
+        context: context,
+      ));
+    } else {
+      final item = UserCart(
+        productId: product.id.toString(),
+        variantId: variant.id.toString(),
+        variantName: variant.title,
+        vendorId: variant.storeId.toString(),
+        name: product.title,
+        image: product.mainImage,
+        price: unitPrice,
+        originalPrice: variant.price,
+        quantity: targetQty,
+        serverCartItemId: null,
+        syncAction: CartSyncAction.add,
+        updatedAt: DateTime.now(),
+        minQty: product.minimumOrderQuantity,
+        maxQty: product.totalAllowedQuantity,
+        isOutOfStock: variant.stock <= 0,
+        isSynced: false,
+        tieredPricing: variant.tieredPricing ?? [],
+      );
+      cartBloc.add(AddToCart(item: item, context: context));
+    }
   }
 
   List<Widget> _buildSpecTableRows(

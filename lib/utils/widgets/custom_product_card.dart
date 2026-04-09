@@ -150,16 +150,14 @@ class CustomProductCard extends StatelessWidget {
                             builder: (context, state) {
                           final cartItem = _getCartItem(state);
                           final int currentQty = cartItem?.quantity ?? 0;
-
                           final double effectivePrice =
                               _calculateEffectivePrice(
                                   currentQty > 0 ? currentQty : 1);
                           final double original =
                               double.tryParse(productPrice) ?? 0.0;
-                          final String currentSpecialPrice =
-                              (effectivePrice < original)
-                                  ? effectivePrice.toString()
-                                  : specialPrice;
+                          final displayQty = currentQty > 0 ? currentQty : 1;
+                          final totalPrice = effectivePrice * displayQty;
+                          final totalOriginalPrice = original * displayQty;
 
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,8 +168,8 @@ class CustomProductCard extends StatelessWidget {
                                   productName: productName, context: context),
                               SizedBox(height: 2.h),
                               productPriceWidget(
-                                  price: productPrice,
-                                  specialPrice: currentSpecialPrice,
+                                  price: totalOriginalPrice.toString(),
+                                  specialPrice: totalPrice.toString(),
                                   locale: AppConstant.defaultLocalCurrency,
                                   context: context),
                               SizedBox(height: 3.h),
@@ -314,7 +312,7 @@ class CustomProductCard extends StatelessWidget {
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 400),
                   curve: Curves.easeInOut,
-                  width: isInCart ? 95.w : 30.h,
+                  width: isInCart ? 95.w : 65.w,
                   height: 30.h,
                   decoration: BoxDecoration(
                     color: isInCart ? AppTheme.primaryColor : Colors.white,
@@ -601,60 +599,11 @@ class CustomProductCard extends StatelessWidget {
     if (tieredPricing == null || tieredPricing!.isEmpty)
       return const SizedBox.shrink();
 
-    return Container(
-      margin: EdgeInsets.only(top: 12.h),
-      padding: EdgeInsets.symmetric(vertical: 8.h),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF4F8FE), // Light blue background
-        borderRadius: BorderRadius.circular(12.r),
-      ),
-      child: Column(
-        children: List.generate(tieredPricing!.length, (index) {
-          final tier = tieredPricing![index];
-          return Column(
-            children: [
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        "₹${formatPrice(tier.price / tier.minQty)}/pc for ${tier.minQty} pcs+",
-                        style: TextStyle(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF1E5BB2),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    SizedBox(width: 8.w),
-                    InkWell(
-                      onTap: () => onAddToCart(tier.minQty),
-                      child: Text(
-                        "Add ${tier.minQty}",
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFFE54A50),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (index < tieredPricing!.length - 1)
-                Divider(
-                  height: 16.h,
-                  thickness: 1,
-                  color: const Color(0xFFDFEDFD),
-                ),
-            ],
-          );
-        }),
-      ),
+    return _TieredPricingExpandableList(
+      tieredPricing: tieredPricing!,
+      currentQty: currentQty,
+      onAddToCart: onAddToCart,
+      getCartItem: (state) => _getCartItem(state),
     );
   }
 
@@ -895,6 +844,9 @@ class CustomProductCard extends StatelessWidget {
                             currentQty > 0 ? currentQty : 1);
                         final double original =
                             double.tryParse(productPrice) ?? 0.0;
+                        final displayQty = currentQty > 0 ? currentQty : 1;
+                        final totalPrice = effectivePrice * displayQty;
+                        final totalOriginalPrice = original * displayQty;
 
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -911,7 +863,7 @@ class CustomProductCard extends StatelessWidget {
                                       textBaseline: TextBaseline.alphabetic,
                                       children: [
                                         Text(
-                                          "₹${formatPrice(effectivePrice)}",
+                                          "₹${formatPrice(totalPrice)}",
                                           style: TextStyle(
                                             fontSize: 16.sp,
                                             fontWeight: FontWeight.w800,
@@ -919,9 +871,9 @@ class CustomProductCard extends StatelessWidget {
                                           ),
                                         ),
                                         SizedBox(width: 4.w),
-                                        if (effectivePrice < original)
+                                        if (totalPrice < totalOriginalPrice)
                                           Text(
-                                            "₹${formatPrice(original)}",
+                                            "₹${formatPrice(totalOriginalPrice)}",
                                             style: TextStyle(
                                               fontSize: 14.sp,
                                               color: Colors.grey.shade500,
@@ -1452,6 +1404,166 @@ class _QuantityStepperInner extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TieredPricingExpandableList extends StatefulWidget {
+  final List<TieredPricing> tieredPricing;
+  final int currentQty;
+  final Function(int) onAddToCart;
+  final UserCart? Function(CartState) getCartItem;
+
+  const _TieredPricingExpandableList({
+    Key? key,
+    required this.tieredPricing,
+    required this.currentQty,
+    required this.onAddToCart,
+    required this.getCartItem,
+  }) : super(key: key);
+
+  @override
+  _TieredPricingExpandableListState createState() => _TieredPricingExpandableListState();
+}
+
+class _TieredPricingExpandableListState extends State<_TieredPricingExpandableList> {
+  bool isExpanded = false;
+
+  String formatPriceLocally(double price) {
+    if (price == price.toInt()) return price.toInt().toString();
+    return price.toStringAsFixed(2);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    TieredPricing? activeTier;
+    for (var tier in widget.tieredPricing) {
+      if (widget.currentQty >= tier.minQty) {
+        if (activeTier == null || tier.minQty > activeTier.minQty) {
+          activeTier = tier;
+        }
+      }
+    }
+
+    final tiersToShow = isExpanded ? widget.tieredPricing : [activeTier ?? widget.tieredPricing.first];
+
+    return Container(
+      margin: EdgeInsets.only(top: 8.h),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4F8FE),
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 2.h),
+            child: Column(
+              children: List.generate(tiersToShow.length, (index) {
+                final tier = tiersToShow[index];
+                final bool isExactMatch = widget.currentQty == tier.minQty; // ONLY highlight on strict numeric match
+
+                return Column(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              "₹${formatPriceLocally(tier.price / tier.minQty)}/pc for ${tier.minQty} pcs+",
+                              style: TextStyle(
+                                fontSize: 9.sp, // Made font smaller as requested
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF1E5BB2),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          SizedBox(width: 4.w),
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                final cartBloc = context.read<CartBloc>();
+                                final cartItem = widget.getCartItem(cartBloc.state);
+
+                                int targetQty;
+                                if (isExactMatch) {
+                                  targetQty = widget.currentQty - tier.minQty; // Toggle off if perfectly matched
+                                } else {
+                                  // Directly add that exact tier quantity, discarding current qty override
+                                  targetQty = tier.minQty; 
+                                }
+
+                                if (targetQty <= 0) {
+                                  if (cartItem != null) {
+                                    cartBloc.add(RemoveFromCart(cartKey: cartItem.cartKey, context: context));
+                                  }
+                                  return;
+                                }
+
+                                if (cartItem != null) {
+                                  cartBloc.add(UpdateCartQty(
+                                    cartKey: cartItem.cartKey,
+                                    quantity: targetQty,
+                                    cartItemId: cartItem.serverCartItemId,
+                                    context: context,
+                                  ));
+                                } else {
+                                  widget.onAddToCart(targetQty);
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(4.r),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                                decoration: BoxDecoration(
+                                  color: isExactMatch ? const Color(0xFFE54A50) : Colors.white,
+                                  borderRadius: BorderRadius.circular(4.r),
+                                  border: Border.all(color: const Color(0xFFE54A50), width: 1),
+                                ),
+                                child: Text(
+                                  "Add ${tier.minQty}",
+                                  style: TextStyle(
+                                    fontSize: 9.sp, // Smaller font for button
+                                    fontWeight: FontWeight.bold,
+                                    color: isExactMatch ? Colors.white : const Color(0xFFE54A50),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (index < tiersToShow.length - 1)
+                      Divider(height: 4.h, thickness: 1, color: const Color(0xFFDFEDFD)),
+                  ],
+                );
+              }),
+            ),
+          ),
+          if (widget.tieredPricing.length > 1)
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  isExpanded = !isExpanded;
+                });
+              },
+              child: Container(
+                width: double.infinity,
+                padding: EdgeInsets.only(bottom: 4.h, top: 2.h),
+                color: Colors.transparent,
+                child: Icon(
+                  isExpanded ? Icons.keyboard_arrow_up : Icons.more_horiz,
+                  size: 16.sp,
+                  color: const Color(0xFF1E5BB2),
+                ),
+              ),
+            ),
         ],
       ),
     );

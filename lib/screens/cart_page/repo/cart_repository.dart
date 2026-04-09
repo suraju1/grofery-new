@@ -69,6 +69,14 @@ class CartRepository {
           uri.toString(),
           {},
       );
+      
+      debugPrint('🛒 GET CART API URL: ${uri.toString()}');
+      try {
+        debugPrint('🛒 GET CART API RESPONSE: ${jsonEncode(response.data)}');
+      } catch (e) {
+        debugPrint('🛒 GET CART API RESPONSE (Raw): ${response.data}');
+      }
+
       if(response.statusCode == 200) {
         final List<GetCartModel> getCart = [];
         getCart.add(GetCartModel.fromJson(response.data));
@@ -76,8 +84,10 @@ class CartRepository {
       } else {
         return [];
       }
-    }catch(e){
-      throw ApiException('Failed to get cart items');
+    }catch(e, stacktrace){
+      debugPrint('❌ GET CART FORMAT ERROR: $e');
+      debugPrint('❌ GET CART STACKTRACE: $stacktrace');
+      throw ApiException('Failed to get cart items: $e');
     }
   }
 

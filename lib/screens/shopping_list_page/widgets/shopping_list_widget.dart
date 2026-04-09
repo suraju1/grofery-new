@@ -90,7 +90,10 @@ class ShoppingListWidget extends StatelessWidget {
                               minQty: productData.minimumOrderQuantity,
                               maxQty: productData.totalAllowedQuantity,
                               isOutOfStock: productData.variants.firstWhere((variant) => variant.isDefault).stock <= 0,
-                              isSynced: false
+                              isSynced: false,
+                              tieredPricing: productData.variants
+                                  .firstWhere((variant) => variant.isDefault)
+                                  .tieredPricing,
                           );
 
                           context.read<CartBloc>().add(AddToCart(item: item, context:  context));

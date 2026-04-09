@@ -1,6 +1,5 @@
 import 'package:grofery_user/screens/cart_page/model/promo_code_model.dart';
-
-class GetCartModel {
+import 'package:grofery_user/model/tiered_pricing.dart';class GetCartModel {
   bool? success;
   String? message;
   CartData? data;
@@ -256,6 +255,7 @@ class Variant {
   num? specialPrice;
   int? stock;
   String? sku;
+  List<TieredPricing>? tieredPricing;
 
   Variant({
     this.id,
@@ -265,7 +265,8 @@ class Variant {
     this.price,
     this.specialPrice,
     this.stock,
-    this.sku
+    this.sku,
+    this.tieredPricing,
   });
 
   Variant.fromJson(Map<String, dynamic> json) {
@@ -273,10 +274,26 @@ class Variant {
     title = json['title'];
     slug = json['slug'];
     image = json['image'];
-    price = json['price'];
-    specialPrice = json['special_price'];
+    
+    // Safely parse price and specialPrice in case backend sends string
+    price = json['price'] != null ? num.tryParse(json['price'].toString()) : null;
+    specialPrice = json['special_price'] != null ? num.tryParse(json['special_price'].toString()) : null;
+    
     stock = json['stock'];
     sku = json['sku'];
+
+    final dynamic tieredData = json['tiered_pricing'] ?? json['tieredPricing'] ?? json['tiered_prices'] ?? json['bulk_pricing'];
+    if (tieredData != null) {
+      tieredPricing = <TieredPricing>[];
+      if (tieredData is List) {
+        for (var v in tieredData) {
+          tieredPricing!.add(TieredPricing.fromJson(v));
+        }
+        tieredPricing!.sort((a, b) => a.minQty.compareTo(b.minQty));
+      }
+    } else {
+      tieredPricing = null;
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -289,6 +306,9 @@ class Variant {
     data['special_price'] = specialPrice;
     data['stock'] = stock;
     data['sku'] = sku;
+    if (tieredPricing != null) {
+      data['tiered_pricing'] = tieredPricing!.map((v) => v.toJson()).toList();
+    }
     return data;
   }
 }

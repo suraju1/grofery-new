@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../utils/widgets/custom_scaffold.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../model/sorting_model/sorting_model.dart';
@@ -16,6 +17,9 @@ import '../../../model/user_cart_model/user_cart.dart';
 import '../../../model/user_cart_model/cart_sync_action.dart';
 import '../../../utils/widgets/custom_shimmer.dart';
 import '../../../utils/widgets/custom_refresh_indicator.dart';
+import 'package:go_router/go_router.dart';
+import '../../../router/app_routes.dart';
+
 
 class ProductListingPage extends StatefulWidget {
   final bool isTheirMoreCategory;
@@ -94,8 +98,9 @@ class _ProductListingPageState extends State<ProductListingPage> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return CustomScaffold(
       backgroundColor: const Color(0xFFF5F5F5), // Light grey background
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -153,7 +158,7 @@ class _ProductListingPageState extends State<ProductListingPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.search, color: Colors.black),
-            onPressed: () {},
+            onPressed: () => context.push(AppRoutes.search),
           ),
         ],
       ),
@@ -735,11 +740,7 @@ class _ProductListingPageState extends State<ProductListingPage> {
                                             vendorId: variant.storeId.toString(),
                                             name: product.title,
                                             image: product.mainImage,
-                                            price: variant.specialPrice
-                                                        .toDouble() >
-                                                    0
-                                                ? variant.specialPrice.toDouble()
-                                                : variant.price.toDouble(),
+                                            price: variant.getEffectivePrice(qty),
                                             originalPrice:
                                                 variant.price.toDouble(),
                                             quantity: qty,

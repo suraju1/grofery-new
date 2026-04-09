@@ -17,8 +17,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
 
   Timer? _debounce;
 
-  CartBloc(this.localRepo, this.remoteRepo)
-      : super(CartInitial()) {
+  CartBloc(this.localRepo, this.remoteRepo) : super(CartInitial()) {
     on<LoadCart>(_onLoadCart);
     on<AddToCart>(_onAddToCart);
     on<UpdateCartQty>(_onUpdateQty);
@@ -37,12 +36,16 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     emit(CartLoading());
     debugPrint('ADD → ${event.item.productId} ${event.item.variantId}');
     final bool isLoggedIn = Global.userData != null && Global.token!.isNotEmpty;
-    
+
     if (isLoggedIn) {
       // Normal behavior: mark for sync
-      localRepo.addItem(event.item); // this sets syncAction.add
+      localRepo.addItem(
+        event.item,
+        // isTiered: event.isTiered,
+        // appliedPrice: event.appliedPrice,
+      ); // this sets syncAction.add
       _debouncedSync(
-        context:  event.context,
+        context: event.context,
         addressId: event.addressId,
         promoCode: event.promoCode,
         rushDelivery: event.rushDelivery,
@@ -65,9 +68,14 @@ class CartBloc extends Bloc<CartEvent, CartState> {
 
     if (isLoggedIn) {
       // Normal logged-in flow
-      localRepo.updateQuantity(event.cartKey, event.quantity);
+      localRepo.updateQuantity(
+        event.cartKey,
+        event.quantity,
+        // isTiered: event.isTiered,
+        // appliedPrice: event.appliedPrice,
+      );
       _debouncedSync(
-          context:  event.context,
+        context: event.context,
         addressId: event.addressId,
         promoCode: event.promoCode,
         rushDelivery: event.rushDelivery,
@@ -82,8 +90,10 @@ class CartBloc extends Bloc<CartEvent, CartState> {
 
     emit(CartLoaded(localRepo.getAllItems()));
 
-    /*// Just update quantity - it will automatically set the correct syncAction
-    localRepo.updateQuantity(event.cartKey, event.quantity);
+    /*// Just update quantity - it will automatically set the correct syncAction      context.read<UserCartLocalRepository>().updateQuantity(
+        cartKey: event.cartKey,
+        quantity: event.quantity,
+      );
 
     emit(CartLoaded(localRepo.getAllItems()));
     _debouncedSync(event.context);*/
@@ -99,7 +109,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       // Normal behavior: mark for sync
       localRepo.markForDelete(event.cartKey); // this sets syncAction.add
       _debouncedSync(
-          context:  event.context,
+        context: event.context,
         addressId: event.addressId,
         promoCode: event.promoCode,
         rushDelivery: event.rushDelivery,
@@ -113,7 +123,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     }
 
     emit(CartLoaded(localRepo.getAllItems()));
-    
+
     /*localRepo.markForDelete(event.cartKey);
     emit(CartLoaded(localRepo.getAllItems()));
     _debouncedSync(event.context);*/
@@ -134,7 +144,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     debugPrint('🧹 CLEAR CART');
     localRepo.clearLocalCart();
     emit(CartLoaded([]));
-    _debouncedSync(context:  event.context);
+    _debouncedSync(context: event.context);
   }
 
   void _debouncedSync({
@@ -159,9 +169,9 @@ class CartBloc extends Bloc<CartEvent, CartState> {
   }
 
   Future<void> _onSyncLocalCart(
-      SyncLocalCart event,
-      Emitter<CartState> emit,
-      ) async {
+    SyncLocalCart event,
+    Emitter<CartState> emit,
+  ) async {
     final pendingItems = localRepo.getPendingSyncItems();
 
     if (pendingItems.isEmpty) {
@@ -173,23 +183,50 @@ class CartBloc extends Bloc<CartEvent, CartState> {
 
     for (final item in pendingItems) {
       try {
-        debugPrint('🔄 Processing sync for ${item.cartKey} | Action: ${item.syncAction} | ServerID: ${item.serverCartItemId}');
+        debugPrint(
+            '🔄 Processing sync for ${item.cartKey} | Action: ${item.syncAction} | ServerID: ${item.serverCartItemId}');
 
         switch (item.syncAction) {
           case CartSyncAction.add:
-            debugPrint('🌐 ADD API → ${item.cartKey}');
+            debugPrint(
+                '🌐 ADD API → ${item.cartKey} | hasTiers: ${item.tieredPricing?.isNotEmpty}');
+
+            final Map<String, dynamic> body = {
+              'product_variant_id': int.parse(item.variantId),
+              'store_id': int.parse(item.vendorId),
+              'quantity': item.quantity,
+            };
+
+            if (item.tieredPricing != null && item.tieredPricing!.isNotEmpty) {
+              final applicableTiers = item.tieredPricing!
+                  .where((t) => item.quantity >= t.minQty)
+                  .toList();
+
+              if (applicableTiers.isNotEmpty) {
+                // Sort descending to pick the HIGHEST applicable tier
+                applicableTiers.sort((a, b) => b.minQty.compareTo(a.minQty));
+                final bestTier = applicableTiers.first;
+                body['tiered_pricing'] = [
+                  {'price': bestTier.price, 'quantity': bestTier.minQty}
+                ];
+                debugPrint(
+                    '🎯 SYNC ADD → Tier Selected: ${bestTier.minQty} pcs at ₹${bestTier.price}');
+              }
+            }
+
+            print("📤 FINAL REQUEST BODY (ADD) → $body");
+
             final res = await remoteRepo.addItemToCart(
-              productVariantId: int.parse(item.variantId),
-              storeId: int.parse(item.vendorId),
-              quantity: item.quantity,
+              body: body,
             );
             if (res['success'] == true && res['data'] != null) {
               final itemsList = res['data']['items'] as List<dynamic>?;
 
               if (itemsList != null) {
                 final addedServerItem = itemsList.firstWhere(
-                      (serverItem) =>
-                  serverItem['product_variant_id'].toString() == item.variantId &&
+                  (serverItem) =>
+                      serverItem['product_variant_id'].toString() ==
+                          item.variantId &&
                       serverItem['store_id'].toString() == item.vendorId,
                   orElse: () => null,
                 );
@@ -202,28 +239,33 @@ class CartBloc extends Bloc<CartEvent, CartState> {
                     serverCartItemId: serverCartItemId,
                   );
 
-                  debugPrint('✅ ADD synced locally with serverCartItemId: $serverCartItemId');
+                  debugPrint(
+                      '✅ ADD synced locally with serverCartItemId: $serverCartItemId');
                 } else {
-                  debugPrint('⚠️ Could not find matching item in server response');
+                  debugPrint(
+                      '⚠️ Could not find matching item in server response');
                 }
               }
             } else {
-              final errorMessage = res['message'] as String? ?? 'Failed to add item to cart';
+              final errorMessage =
+                  res['message'] as String? ?? 'Failed to add item to cart';
 
               localRepo.deleteLocally(item.cartKey);
               // ← THIS LINE MUST BE EXACTLY LIKE THIS
-              emit(CartLoaded(localRepo.getAllItems(), errorMessage: errorMessage));
+              emit(CartLoaded(localRepo.getAllItems(),
+                  errorMessage: errorMessage));
               return;
             }
 
             break;
 
           case CartSyncAction.update:
-          // ALWAYS get the absolute latest item from Hive
+            // ALWAYS get the absolute latest item from Hive
             final freshItem = localRepo.getItemByKey(item.cartKey);
             log('OFIEFBN');
             if (freshItem == null) {
-              debugPrint('❌ Item disappeared from local storage: ${item.cartKey}');
+              debugPrint(
+                  '❌ Item disappeared from local storage: ${item.cartKey}');
               break;
             }
 
@@ -235,23 +277,50 @@ class CartBloc extends Bloc<CartEvent, CartState> {
               break;
             }
 
-            debugPrint('🌐 UPDATE API → ${item.cartKey} (qty: ${freshItem.quantity}, serverCartItemId: ${freshItem.serverCartItemId})');
+            debugPrint(
+                '🌐 UPDATE API → ${item.cartKey} (qty: ${freshItem.quantity}, serverCartItemId: ${freshItem.serverCartItemId}, hasTiers: ${freshItem.tieredPricing?.isNotEmpty})');
+
+            final Map<String, dynamic> body = {
+              'quantity': freshItem.quantity,
+            };
+
+            if (freshItem.tieredPricing != null &&
+                freshItem.tieredPricing!.isNotEmpty) {
+              final applicableTiers = freshItem.tieredPricing!
+                  .where((t) => freshItem.quantity >= t.minQty)
+                  .toList();
+
+              if (applicableTiers.isNotEmpty) {
+                // Sort descending to pick the HIGHEST applicable tier
+                applicableTiers.sort((a, b) => b.minQty.compareTo(a.minQty));
+                final bestTier = applicableTiers.first;
+                body['tiered_pricing'] = [
+                  {'price': bestTier.price, 'quantity': bestTier.minQty}
+                ];
+                debugPrint(
+                    '🎯 SYNC UPDATE → Tier Selected: ${bestTier.minQty} pcs at ₹${bestTier.price}');
+              }
+            }
+
+            print("📤 FINAL REQUEST BODY (UPDATE) → $body");
 
             try {
               await remoteRepo.updateItemQuantity(
                 cartItemId: freshItem.serverCartItemId!,
-                quantity: freshItem.quantity,
+                body: body,
               );
 
               localRepo.markSynced(item.cartKey);
-              debugPrint('✅ UPDATE successful → qty: ${freshItem.quantity}, serverId: ${freshItem.serverCartItemId}');
+              debugPrint(
+                  '✅ UPDATE successful → qty: ${freshItem.quantity}, serverId: ${freshItem.serverCartItemId}');
             } catch (e) {
               debugPrint('❌ UPDATE API failed → $e');
             }
             break;
 
           case CartSyncAction.delete:
-            debugPrint('🌐 DELETE API → ${item.cartKey} (serverCartItemId: ${item.serverCartItemId})');
+            debugPrint(
+                '🌐 DELETE API → ${item.cartKey} (serverCartItemId: ${item.serverCartItemId})');
 
             if (item.serverCartItemId != null) {
               try {
@@ -284,17 +353,17 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     debugPrint('✅ SYNC COMPLETE');
     emit(CartLoaded(localRepo.getAllItems()));
 
-    if(event.isFromCartPage == true){
-      if(event.context.mounted){
+    if (event.isFromCartPage == true) {
+      if (event.context.mounted) {
         event.context.read<GetUserCartBloc>().add(FetchUserCart(
-          addressId: event.addressId,
-          rushDelivery: event.rushDelivery,
-          useWallet: event.useWallet,
-          promoCode: event.promoCode,
-        ));
+              addressId: event.addressId,
+              rushDelivery: event.rushDelivery,
+              useWallet: event.useWallet,
+              promoCode: event.promoCode,
+            ));
       }
     } else {
-      if(event.context.mounted){
+      if (event.context.mounted) {
         event.context.read<GetUserCartBloc>().add(FetchUserCart());
       }
     }

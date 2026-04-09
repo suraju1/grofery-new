@@ -7,7 +7,6 @@ import '../../../services/location/location_service.dart';
 import '../model/product_listing_type.dart';
 
 class CategoryProductRepository {
-
   Future<Map<String, dynamic>> fetchProductsByType({
     required ProductListingType type,
     required String identifier,
@@ -37,8 +36,8 @@ class CategoryProductRepository {
       final ratingQuery = rating != null ? '&ratings=${rating.toInt()}' : '';
       final indicatorQuery = indicator != null ? '&indicator=$indicator' : '';
 
-      final String filterQuery = '$brandQuery$categoryQuery$ratingQuery$indicatorQuery';
-
+      final String filterQuery =
+          '$brandQuery$categoryQuery$ratingQuery$indicatorQuery';
 
       final String searchApiUrl =
           '${ApiRoutes.searchApi}?search=$identifier&per_page=$perPage&page=$currentPage&latitude=$latitude&longitude=$longitude&sort=${sortType ?? SortType.relevance}$filterQuery';
@@ -52,15 +51,13 @@ class CategoryProductRepository {
       } else {
         apiUrl = switch (type) {
           ProductListingType.category =>
-          '${ApiRoutes.categoryProductApi}?categories=$identifier&per_page=$perPage&page=$currentPage&latitude=$latitude&longitude=$longitude&sort=${sortType ?? SortType.relevance}&include_child_categories=${includeChildCategories ?? '1'}$filterQuery',
+            '${ApiRoutes.categoryProductApi}?categories=$identifier&per_page=$perPage&page=$currentPage&latitude=$latitude&longitude=$longitude&sort=${sortType ?? SortType.relevance}&include_child_categories=${includeChildCategories ?? '1'}$filterQuery',
           ProductListingType.brand =>
-          '${ApiRoutes.categoryProductApi}?brands=$identifier&per_page=$perPage&page=$currentPage&latitude=$latitude&longitude=$longitude&sort=${sortType ?? SortType.relevance}$filterQuery',
-          ProductListingType.store =>
-          storeApiUrl,
-          ProductListingType.search =>
-          searchApiUrl,
+            '${ApiRoutes.categoryProductApi}?brands=$identifier&per_page=$perPage&page=$currentPage&latitude=$latitude&longitude=$longitude&sort=${sortType ?? SortType.relevance}$filterQuery',
+          ProductListingType.store => storeApiUrl,
+          ProductListingType.search => searchApiUrl,
           ProductListingType.featuredSection =>
-          '${ApiRoutes.specificFeatureSectionProductApi}$identifier/products?per_page=$perPage&page=$currentPage&latitude=$latitude&longitude=$longitude&sort=${sortType ?? SortType.relevance}$filterQuery',
+            '${ApiRoutes.specificFeatureSectionProductApi}$identifier/products?per_page=$perPage&page=$currentPage&latitude=$latitude&longitude=$longitude&sort=${sortType ?? SortType.relevance}$filterQuery',
         };
       }
 
@@ -68,7 +65,6 @@ class CategoryProductRepository {
       log('📋 Product Listing API: $apiUrl');
       log('📦 Response: ${response.data}');
       return response.data;
-
     } catch (e) {
       throw ApiException(e.toString());
     }

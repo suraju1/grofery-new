@@ -584,6 +584,30 @@ class _CartPageState extends State<CartPage> {
                                 final billSummaryData = cartData.first.data!.paymentSummary;
                                 deliveryZoneId = cartData.first.data?.deliveryZone!.zoneId;
                                 totalAmount = billSummaryData?.payableAmount?.toDouble() ?? 0.0;
+
+                                // Overriding inaccurate backend totals
+                                double calculatedItemsTotal = 0;
+                                double originalItemsTotal = 0;
+                                if (stateData.first.data?.items != null) {
+                                  for (var item in stateData.first.data!.items!) {
+                                    double unitPrice = (item.variant?.specialPrice ?? 0).toDouble();
+                                    if (item.variant?.tieredPricing != null && item.variant!.tieredPricing!.isNotEmpty) {
+                                      for (var tier in item.variant!.tieredPricing!) {
+                                        if ((item.quantity ?? 1) >= tier.minQty) {
+                                          unitPrice = tier.price / tier.minQty;
+                                        }
+                                      }
+                                    }
+                                    calculatedItemsTotal += unitPrice * (item.quantity ?? 1);
+                                    originalItemsTotal += (item.variant?.price ?? 0) * (item.quantity ?? 1);
+                                  }
+                                }
+
+                                double backendItemsTotal = billSummaryData?.itemsTotal?.toDouble() ?? 0;
+                                double priceDifference = backendItemsTotal - calculatedItemsTotal;
+                                double exactGrandTotal = (billSummaryData?.payableAmount?.toDouble() ?? 0) - priceDifference;
+                                double itemSavings = originalItemsTotal - calculatedItemsTotal;
+
                                 return Column(
                                   children: [
                                     RemovedItemsWidget(
@@ -697,17 +721,17 @@ class _CartPageState extends State<CartPage> {
                                     ),
 
                                     BillSummaryWidget(
-                                      itemsOriginalPrice: 0,
-                                      itemsDiscountedPrice: billSummaryData!.itemsTotal?.toDouble() ?? 0,
-                                      itemsSavings: 0,
-                                      deliveryChargeOriginal: billSummaryData.totalDeliveryCharges?.toDouble() ?? 0,
-                                      handlingCharge: billSummaryData.handlingCharges?.toDouble() ?? 0,
-                                      grandTotal: billSummaryData.payableAmount?.toDouble() ?? 0,
-                                      totalSavings: 0,
-                                      perStoreDropOffFees: billSummaryData.perStoreDropOffFee?.toDouble() ?? 0.0,
-                                      promoCode: billSummaryData.promoCode,
-                                      promoDiscount: double.parse(billSummaryData.promoDiscount!),
-                                      promoError: billSummaryData.promoError,
+                                      itemsOriginalPrice: originalItemsTotal > calculatedItemsTotal ? originalItemsTotal : -1,
+                                      itemsDiscountedPrice: calculatedItemsTotal,
+                                      itemsSavings: itemSavings > 0 ? itemSavings : 0,
+                                      deliveryChargeOriginal: billSummaryData?.totalDeliveryCharges?.toDouble() ?? 0,
+                                      handlingCharge: billSummaryData?.handlingCharges?.toDouble() ?? 0,
+                                      grandTotal: exactGrandTotal,
+                                      totalSavings: itemSavings > 0 ? itemSavings : 0,
+                                      perStoreDropOffFees: billSummaryData?.perStoreDropOffFee?.toDouble() ?? 0.0,
+                                      promoCode: billSummaryData?.promoCode,
+                                      promoDiscount: double.tryParse(billSummaryData?.promoDiscount ?? '0') ?? 0,
+                                      promoError: billSummaryData?.promoError,
                                       removeCoupon: (){
                                         setState(() {
                                           isCartLoading = true;
@@ -721,9 +745,9 @@ class _CartPageState extends State<CartPage> {
                                             promoCode: promoCode ?? ''
                                         ));
                                       },
-                                      promoMode: billSummaryData.promoApplied?.promoMode ?? '',
-                                      discountAmount: billSummaryData.promoApplied?.discountAmount ?? '',
-                                      isRushDelivery: billSummaryData.isRushDelivery,
+                                      promoMode: billSummaryData?.promoApplied?.promoMode ?? '',
+                                      discountAmount: billSummaryData?.promoApplied?.discountAmount ?? '',
+                                      isRushDelivery: billSummaryData?.isRushDelivery,
                                     )
                                   ],
                                 );
