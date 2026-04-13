@@ -91,9 +91,6 @@ class ProductListingBloc
         }
 
         totalProducts = int.parse(response['data']['total'].toString());
-        final currentTotal =
-            int.parse(response['data']['current_page'].toString());
-        final lastPageNum = int.parse(response['data']['last_page'].toString());
         /*categoryIds = response['data']['category_ids'] as String;
         brandIds = response['data']['brand_ids'] as String;*/
         List<BrandsData> brandsList = [];
@@ -111,10 +108,17 @@ class ProductListingBloc
           keywords = response['data']['keywords'] as List<dynamic>;
         }
 
-        hasReachedMax =
-            currentTotal >= lastPageNum || products.length < perPage;
+        // Correct hasReachedMax: check if current_page >= last_page
+        // We use int.tryParse to be safe with varied API response formats
+        final int currentPageNum =
+            int.tryParse(response['data']['current_page'].toString()) ?? 1;
+        final int lastPageNum =
+            int.tryParse(response['data']['last_page'].toString()) ?? 1;
 
-        log('Category and Brands Filter $categoryIds $brandIds');
+        // hasReachedMax if we are on the last page OR if we got fewer products than perPage
+        // (but only if we aren't filtering heavily on the frontend)
+        hasReachedMax = currentPageNum >= lastPageNum;
+
         if (response['success'] == true) {
           emit(ProductListingLoaded(
               message: response['message'],
@@ -145,11 +149,14 @@ class ProductListingBloc
 
   Future<void> _onFetchMoreListingProducts(
       FetchMoreListingProducts event, Emitter<ProductListingState> emit) async {
-    if (hasReachedMax || isLoadingMore) return;
-
     final currentState = state;
     if (currentState is ProductListingLoaded) {
+      if (hasReachedMax || isLoadingMore) return;
+
       isLoadingMore = true;
+      // Emit loading state so UI can show the bottom loader
+      emit(currentState.copyWith(isLoading: true));
+
       try {
         currentPage += 1;
         List<dynamic> keywords = [];
@@ -182,13 +189,14 @@ class ProductListingBloc
           if (event.type == ProductListingType.search) {
             keywords = response['data']['keywords'];
           }
-          // ✅ Update hasReachedMax based on response
-          final currentTotal =
-              int.parse(response['data']['current_page'].toString());
-          final lastPageNum =
-              int.parse(response['data']['last_page'].toString());
-          hasReachedMax =
-              currentTotal >= lastPageNum || newProducts.length < perPage;
+          // Correct hasReachedMax: check if current_page >= last_page
+          final int currentPageNum =
+              int.tryParse(response['data']['current_page'].toString()) ??
+                  currentPage;
+          final int lastPageNum =
+              int.tryParse(response['data']['last_page'].toString()) ??
+                  currentPage;
+          hasReachedMax = currentPageNum >= lastPageNum;
           /*categoryIds = response['data']['category_ids'] as String;
           brandIds = response['data']['brand_ids'] as String;*/
 
@@ -284,10 +292,12 @@ class ProductListingBloc
       }
 
       // ✅ Update pagination state
-      final currentTotal =
-          int.parse(response['data']['current_page'].toString());
-      final lastPageNum = int.parse(response['data']['last_page'].toString());
-      hasReachedMax = currentTotal >= lastPageNum || products.length < perPage;
+        // Correct hasReachedMax: check if current_page >= last_page
+        final int currentPageNum =
+            int.tryParse(response['data']['current_page'].toString()) ?? 1;
+        final int lastPageNum =
+            int.tryParse(response['data']['last_page'].toString()) ?? 1;
+        hasReachedMax = currentPageNum >= lastPageNum;
       /*categoryIds = response['data']['category_ids'] as String;
       brandIds = response['data']['brand_ids'] as String;*/
 
@@ -398,9 +408,12 @@ class ProductListingBloc
         }
 
         totalProducts = int.parse(response['data']['total'].toString());
-        final currentTotal =
-            int.parse(response['data']['current_page'].toString());
-        final lastPageNum = int.parse(response['data']['last_page'].toString());
+        // Correct hasReachedMax: check if current_page >= last_page
+        final int currentPageNum =
+            int.tryParse(response['data']['current_page'].toString()) ?? 1;
+        final int lastPageNum =
+            int.tryParse(response['data']['last_page'].toString()) ?? 1;
+        hasReachedMax = currentPageNum >= lastPageNum;
         /*categoryIds = response['data']['category_ids'] as String;
         brandIds = response['data']['brand_ids'] as String;*/
 
@@ -419,8 +432,7 @@ class ProductListingBloc
           keywords = response['data']['keywords'] as List<dynamic>;
         }
 
-        hasReachedMax =
-            currentTotal >= lastPageNum || products.length < perPage;
+        // hasReachedMax already calculated above
         currentSortType =
             SortOption.getSortOptionByApiValue(selectedSortingType).type;
 

@@ -42,6 +42,8 @@ import 'package:grofery_user/bloc/user_cart_bloc/user_cart_bloc.dart';
 import 'package:grofery_user/bloc/user_cart_bloc/user_cart_event.dart';
 import 'package:grofery_user/bloc/user_cart_bloc/user_cart_state.dart';
 import 'package:grofery_user/model/user_cart_model/user_cart.dart';
+import 'package:grofery_user/model/tiered_pricing.dart';
+import 'package:grofery_user/utils/widgets/animated_button.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final String productSlug;
@@ -142,16 +144,20 @@ class _ProductDetailPageState extends State<ProductDetailPage>
 
   UserCart? _getCartItem(
       CartState state, int productId, int productVariantId, int storeId) {
+    List<UserCart> items = [];
     if (state is CartLoaded) {
-      try {
-        return state.items.firstWhere(
-          (item) =>
-              int.parse(item.productId) == productId &&
-              int.parse(item.variantId) == productVariantId &&
-              int.parse(item.vendorId) == storeId,
-        );
-      } catch (_) {
-        return null;
+      items = state.items;
+    } else if (state is CartLoading) {
+      items = state.items;
+    } else {
+      return null;
+    }
+
+    for (var item in items) {
+      if ((int.tryParse(item.productId) ?? 0) == productId &&
+          (int.tryParse(item.variantId) ?? 0) == productVariantId &&
+          (int.tryParse(item.vendorId) ?? 0) == storeId) {
+        return item;
       }
     }
     return null;
@@ -984,7 +990,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                               final int currentQty = cartItem?.quantity ?? 0;
 
                               return AnimatedContainer(
-                                duration: const Duration(milliseconds: 400),
+                                duration: const Duration(milliseconds: 200),
                                 curve: Curves.easeInOut,
                                 height: 45,
                                 width: double.infinity,
@@ -1151,6 +1157,20 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                           width: double.infinity,
                                           child: CustomButton(
                                             onPressed: () {
+                                              final cartBloc =
+                                                  context.read<CartBloc>();
+                                              final existingItem = _getCartItem(
+                                                  cartBloc.state,
+                                                  product.id,
+                                                  activeVariant.id,
+                                                  activeVariant.storeId);
+                                              if (existingItem != null) {
+                                                cartBloc.add(RemoveFromCart(
+                                                    cartKey:
+                                                        existingItem.cartKey,
+                                                    context: context));
+                                                return;
+                                              }
                                               // 1️⃣ Auth check
                                               /*if (Global.userData == null) {
                                         AuthGuard.ensureLoggedIn(context);
@@ -1164,16 +1184,12 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                               final selectedVariant =
                                                   activeVariant;
 
-                                              // 3️⃣ SINGLE STORE VALIDATION (before quantity checks)
-                                              final cartBloc =
-                                                  context.read<CartBloc>();
-
-                                              // 4️⃣ PRODUCT VALIDATION
-                                              final requestedQty = cartItem !=
-                                                      null
-                                                  ? cartItem.quantity +
-                                                      product.quantityStepSize
-                                                  : product.quantityStepSize;
+                                              // 4️⃣ PRODUCT VALIDATION (Toggle check already handled above)
+                                              final requestedQty = (product
+                                                          .minimumOrderQuantity >
+                                                      0
+                                                  ? product.minimumOrderQuantity
+                                                  : 1);
 
                                               final productError =
                                                   CartValidation
@@ -1216,8 +1232,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                 originalPrice: selectedVariant
                                                     .price
                                                     .toDouble(),
-                                                quantity:
-                                                    product.quantityStepSize,
+                                                quantity: requestedQty,
                                                 serverCartItemId: null,
                                                 syncAction: CartSyncAction.add,
                                                 updatedAt: DateTime.now(),
@@ -1290,6 +1305,15 @@ class _ProductDetailPageState extends State<ProductDetailPage>
             cartState, product.id, activeVariant.id, activeVariant.storeId);
         final currentQty = cartItem?.quantity ?? 0;
 
+        TieredPricing? activeTier;
+        for (var tier in activeVariant.tieredPricing) {
+          if (currentQty >= tier.minQty) {
+            if (activeTier == null || tier.minQty > activeTier.minQty) {
+              activeTier = tier;
+            }
+          }
+        }
+
         return Container(
           margin: EdgeInsets.only(top: 16.h, bottom: 8.h),
           padding: EdgeInsets.symmetric(vertical: 8.h),
@@ -1303,8 +1327,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
               final tier = activeVariant.tieredPricing[index];
               final double perUnitPrice = tier.price / tier.minQty;
 
-              // Only highlight the tier that is an EXACT match for the current quantity
-              final bool isTierActive = currentQty == tier.minQty;
+              final bool isSelectedTier = activeTier == tier;
 
               return Column(
                 children: [
@@ -1342,16 +1365,18 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                         ),
                         Material(
                           color: Colors.transparent,
-                          child: InkWell(
+                          child: AnimatedButton(
+                            animationType: TapAnimationType.scale,
+                            duration: const Duration(milliseconds: 100),
+                            scaleAmount: 0.95,
                             onTap: () => _onTieredAddToCart(
                                 product, activeVariant, tier.minQty,
                                 isSetAbsolute: true),
-                            borderRadius: BorderRadius.circular(6.r),
                             child: Container(
                               padding: EdgeInsets.symmetric(
                                   horizontal: 16.w, vertical: 8.h),
                               decoration: BoxDecoration(
-                                color: isTierActive
+                                color: isSelectedTier
                                     ? const Color(0xFFE54A50)
                                     : Colors.white,
                                 borderRadius: BorderRadius.circular(6.r),
@@ -1363,7 +1388,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                 style: TextStyle(
                                   fontSize: 13.sp,
                                   fontWeight: FontWeight.bold,
-                                  color: isTierActive
+                                  color: isSelectedTier
                                       ? Colors.white
                                       : const Color(0xFFE54A50),
                                 ),
@@ -1393,8 +1418,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       ProductData product, ProductVariants variant, int quantity,
       {bool isSetAbsolute = false}) {
     final cartBloc = context.read<CartBloc>();
+    final cartState = cartBloc.state;
     final cartItem =
-        _getCartItem(cartBloc.state, product.id, variant.id, variant.storeId);
+        _getCartItem(cartState, product.id, variant.id, variant.storeId);
 
     final isStoreOpen = product.storeStatus?.isOpen ?? true;
     final int currentQty = cartItem?.quantity ?? 0;
@@ -1412,6 +1438,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       // Stepper behavior (Additive/Subtractive)
       targetQty = currentQty + quantity;
     }
+
+    HapticFeedback.lightImpact();
 
     if (targetQty <= 0) {
       if (cartItem != null) {
@@ -1467,7 +1495,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         maxQty: product.totalAllowedQuantity,
         isOutOfStock: variant.stock <= 0,
         isSynced: false,
-        tieredPricing: variant.tieredPricing ?? [],
+        tieredPricing: variant.tieredPricing,
       );
       cartBloc.add(AddToCart(item: item, context: context));
     }

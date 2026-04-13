@@ -1423,13 +1423,13 @@ abstract class AppLocalizations {
   /// No description provided for @rushDelivery.
   ///
   /// In en, this message translates to:
-  /// **'Rush Delivery'**
+  /// **'Quick Delivery'**
   String get rushDelivery;
 
   /// No description provided for @prioritizedDeliveryForYourUrgentNeeds.
   ///
   /// In en, this message translates to:
-  /// **'Prioritized delivery for your urgent needs.'**
+  /// **'Priority delivery within 4 hours.'**
   String get prioritizedDeliveryForYourUrgentNeeds;
 
   /// No description provided for @regularDelivery.
@@ -1789,7 +1789,7 @@ abstract class AppLocalizations {
   /// No description provided for @rushDeliveryActive.
   ///
   /// In en, this message translates to:
-  /// **'Rush Delivery Active'**
+  /// **'Quick Delivery Active'**
   String get rushDeliveryActive;
 
   /// No description provided for @cashbackApplied.

@@ -10,7 +10,16 @@ abstract class CartState extends Equatable {
 
 class CartInitial extends CartState {}
 
-class CartLoading extends CartState {}
+class CartLoading extends CartState {
+  final List<UserCart> items;
+  CartLoading({this.items = const []});
+
+  int get totalItems => items.fold(0, (sum, item) => sum + item.quantity);
+  double get totalAmount => items.fold(0, (sum, item) => sum + item.totalPrice);
+
+  @override
+  List<Object?> get props => [items];
+}
 
 class CartLoaded extends CartState {
   final List<UserCart> items;

@@ -59,29 +59,29 @@ class _AddMoneyPageState extends State<AddMoneyPage> {
   Widget build(BuildContext context) {
     return BlocConsumer<PaymentBloc, PaymentState>(
       listener: (context, state) {
-        if(state is PaymentSuccess) {
-          if(selectedPaymentMethod == 'flutterwave') {
+        if (state is PaymentSuccess) {
+          if (selectedPaymentMethod == 'flutterwave') {
             Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => WebViewPaymentPage(
-                  paymentUrl: state.orderId,
-                  onPaymentSuccess: () {},
-                  onPaymentFailure: () {
-                    GoRouter.of(context).pop();
-                    context.read<UserWalletBloc>().add(FetchUserWallet());
-                  },
-                ))
-            );
+                MaterialPageRoute(
+                    builder: (context) => WebViewPaymentPage(
+                          paymentUrl: state.orderId,
+                          onPaymentSuccess: () {},
+                          onPaymentFailure: () {
+                            GoRouter.of(context).pop();
+                            context
+                                .read<UserWalletBloc>()
+                                .add(FetchUserWallet());
+                          },
+                        )));
           } else {
             GoRouter.of(context).pop();
             context.read<UserWalletBloc>().add(FetchUserWallet());
           }
-        }
-        else if (state is PaymentFailure) {
+        } else if (state is PaymentFailure) {
           ToastManager.show(
-            context: context,
-            message: AppLocalizations.of(context)!.paymentFailed
-          );
+              context: context,
+              message: AppLocalizations.of(context)!.paymentFailed);
         }
       },
       builder: (context, state) {
@@ -100,7 +100,8 @@ class _AddMoneyPageState extends State<AddMoneyPage> {
                       height: isTablet(context) ? 300 : 250,
                       color: Theme.of(context).colorScheme.surface,
                       child: SingleChildScrollView(
-                        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 16.w, vertical: 10.h),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -119,7 +120,7 @@ class _AddMoneyPageState extends State<AddMoneyPage> {
                             CustomTextFormField(
                               controller: _amountController,
                               keyboardType: TextInputType.phone,
-                              onChanged: (value){
+                              onChanged: (value) {
                                 setState(() {
                                   _selectedAmount = int.tryParse(value);
                                 });
@@ -134,10 +135,13 @@ class _AddMoneyPageState extends State<AddMoneyPage> {
                                 return Expanded(
                                   child: Padding(
                                     padding: EdgeInsets.only(
-                                      right: amount != _suggestedAmounts.last ? 12.w : 0,
+                                      right: amount != _suggestedAmounts.last
+                                          ? 12.w
+                                          : 0,
                                     ),
                                     child: ElevatedButton(
-                                      onPressed: () => _onAmountSelected(amount),
+                                      onPressed: () =>
+                                          _onAmountSelected(amount),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: isSelected
                                             ? const Color(0xFFE3F2FD)
@@ -151,16 +155,19 @@ class _AddMoneyPageState extends State<AddMoneyPage> {
                                               : Colors.grey.shade300,
                                           width: 1.5,
                                         ),
-                                        padding: EdgeInsets.symmetric(vertical: 8.h),
+                                        padding:
+                                            EdgeInsets.symmetric(vertical: 8.h),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12.r),
+                                          borderRadius:
+                                              BorderRadius.circular(12.r),
                                         ),
                                         elevation: 0,
                                       ),
                                       child: Text(
                                         '$amount',
                                         style: TextStyle(
-                                          fontSize: isTablet(context) ? 18 : 14.sp,
+                                          fontSize:
+                                              isTablet(context) ? 18 : 14.sp,
                                           fontWeight: FontWeight.w500,
                                           fontFamily: AppTheme.fontFamily,
                                         ),
@@ -174,7 +181,8 @@ class _AddMoneyPageState extends State<AddMoneyPage> {
                         ),
                       ),
                     ),
-                    Expanded(child: Container(
+                    Expanded(
+                        child: Container(
                       color: Theme.of(context).colorScheme.surfaceContainer,
                       padding: EdgeInsets.all(16),
                       child: Column(
@@ -188,13 +196,17 @@ class _AddMoneyPageState extends State<AddMoneyPage> {
                               fontFamily: AppTheme.fontFamily,
                             ),
                           ),
-                          SizedBox(height: 10,),
+                          SizedBox(
+                            height: 10,
+                          ),
                           _buildBulletPoint(
-                            AppLocalizations.of(context)!.hyperlocalWalletBalanceValidFor1Year,
+                            AppLocalizations.of(context)!
+                                .hyperlocalWalletBalanceValidFor1Year,
                           ),
                           SizedBox(height: 8.h),
                           _buildBulletPoint(
-                            AppLocalizations.of(context)!.hyperlocalWalletBalanceCannotBeTransferred,
+                            AppLocalizations.of(context)!
+                                .hyperlocalWalletBalanceCannotBeTransferred,
                           ),
                         ],
                       ),
@@ -214,7 +226,8 @@ class _AddMoneyPageState extends State<AddMoneyPage> {
                       if (_selectedAmount == null || _selectedAmount! < 1) {
                         ToastManager.show(
                           context: context,
-                          message: AppLocalizations.of(context)!.pleaseEnterAnAmountGreaterThanOrEqualTo1,
+                          message: AppLocalizations.of(context)!
+                              .pleaseEnterAnAmountGreaterThanOrEqualTo1,
                           type: ToastType.error,
                         );
                         return;
@@ -228,8 +241,11 @@ class _AddMoneyPageState extends State<AddMoneyPage> {
                         },
                       );
 
-                      if (paymentMethodType != null && paymentMethodType is PaymentMethodType) {
-                        final paymentMethod = PaymentConfig.getPaymentMethodByType(paymentMethodType);
+                      if (paymentMethodType != null &&
+                          paymentMethodType is PaymentMethodType) {
+                        final paymentMethod =
+                            PaymentConfig.getPaymentMethodByType(
+                                paymentMethodType);
                         if (paymentMethod != null) {
                           setState(() {
                             selectedPaymentMethod = paymentMethod.id;
@@ -237,19 +253,19 @@ class _AddMoneyPageState extends State<AddMoneyPage> {
                           });
                         }
                       }
-                      if(context.mounted){
+                      if (context.mounted) {
                         context.read<PaymentBloc>().add(InitiatePaymentEvent(
                             amount: _selectedAmount!.toDouble(),
                             paymentMethodType: selectedPaymentMethodType!,
                             additionalData: {
-                              'customerName': Global.userData?.name.toString() ?? '',
+                              'customerName':
+                                  Global.userData?.name.toString() ?? '',
                               'email': Global.userData?.email.toString() ?? '',
                               'phone': Global.userData?.mobile.toString() ?? '',
                             },
                             description: '',
                             addMoneyToWallet: true,
-                            context: context
-                        ));
+                            context: context));
                       }
                     },
                     child: Row(
@@ -274,9 +290,7 @@ class _AddMoneyPageState extends State<AddMoneyPage> {
                 ),
               ),
             ),
-
-            if(state is PaymentLoading)
-              WholePageProgress()
+            if (state is PaymentLoading) WholePageProgress()
           ],
         );
       },

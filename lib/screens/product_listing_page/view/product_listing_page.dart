@@ -87,7 +87,7 @@ class _ProductListingPageState extends State<ProductListingPage> {
 
   void _onScroll() {
     if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
+        _scrollController.position.maxScrollExtent - 500) {
       context.read<ProductListingBloc>().add(FetchMoreListingProducts(
             identifier: _selectedSubCategorySlug ?? widget.identifier,
             type: widget.type,
@@ -705,10 +705,15 @@ class _ProductListingPageState extends State<ProductListingPage> {
                               (state.hasReachedMax ? 0 : 1),
                           itemBuilder: (context, index) {
                             if (index >= filteredProducts.length) {
-                              return Padding(
-                                padding: EdgeInsets.symmetric(vertical: 16.h),
-                                child: _buildShimmerItem(), // Use shimmer item for pagination too
-                              );
+                              // Only show shimmer if we are actually loading more
+                              if (state.isLoading) {
+                                return Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 16.h),
+                                  child: _buildShimmerItem(),
+                                );
+                              } else {
+                                return const SizedBox.shrink();
+                              }
                             }
                             final product = filteredProducts[index];
                             return Padding(

@@ -889,7 +889,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get on => 'ON';
 
   @override
-  String get rushDeliveryActive => 'Rush Delivery Active';
+  String get rushDeliveryActive => 'Quick Delivery Active';
 
   @override
   String get cashbackApplied => 'Cashback Applied';

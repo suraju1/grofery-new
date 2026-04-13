@@ -13,6 +13,7 @@ import '../../config/theme.dart';
 import '../../bloc/user_cart_bloc/user_cart_bloc.dart';
 import '../../bloc/user_cart_bloc/user_cart_state.dart';
 import 'connectivity_wrapper.dart';
+import '../../model/user_cart_model/user_cart.dart';
 
 class CustomScaffold extends StatefulWidget {
   final Widget body;
@@ -81,13 +82,13 @@ class _CustomScaffoldState extends State<CustomScaffold> with TickerProviderStat
 
     // Controller for slide up/down animation - made faster
     _slideController = AnimationController(
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 250),
       vsync: this,
     );
 
     // Controller for expand/collapse animation - made faster
     _expandController = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 200),
       vsync: this,
     );
 
@@ -153,14 +154,18 @@ class _CustomScaffoldState extends State<CustomScaffold> with TickerProviderStat
   }
 
   List<String> _getCartItems(CartState state) {
+    List<UserCart> items = [];
     if (state is CartLoaded) {
-      return state.items
-          .map((item) => item.image)
-          .where((image) => image.isNotEmpty)
-          .take(3)
-          .toList();
+      items = state.items;
+    } else if (state is CartLoading) {
+      items = state.items;
     }
-    return [];
+
+    return items
+        .map((item) => item.image)
+        .where((image) => image.isNotEmpty)
+        .take(3)
+        .toList();
   }
 
   Future<void> _animateIn() async {
@@ -210,24 +215,27 @@ class _CustomScaffoldState extends State<CustomScaffold> with TickerProviderStat
       notifyStatusChangeOnInit: widget.notifyConnectivityStatusOnInit,
       child: BlocBuilder<CartBloc, CartState>(
         builder: (context, cartBlocState) {
-          final hasCartItems = cartBlocState is CartLoaded &&
-              cartBlocState.items.isNotEmpty;
+          final hasCartItems = (cartBlocState is CartLoaded && cartBlocState.items.isNotEmpty) ||
+                               (cartBlocState is CartLoading && cartBlocState.items.isNotEmpty);
 
           int currentItemCount = 0;
           bool isValidCart = false;
 
           if (cartBlocState is CartLoaded) {
             currentItemCount = cartBlocState.totalItems;
-            // Valid only if items exist
+            isValidCart = currentItemCount > 0;
+          } else if (cartBlocState is CartLoading) {
+            currentItemCount = cartBlocState.totalItems;
             isValidCart = currentItemCount > 0;
           }
 
           if (isValidCart) {
             _stableItemCount = currentItemCount;
-          } else {}
+          }
 
-          // Only process animation logic when cart data is actually loaded
-          final isCartDataLoaded = cartBlocState is CartLoaded;
+          // Only skip process animation logic if it's truly the initial state (CartInitial)
+          // or if no items exist. If content is available (Loaded or Loading), we process it.
+          final isCartDataLoaded = cartBlocState is CartLoaded || cartBlocState is CartLoading;
 
           // Animation logic
           WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -399,7 +399,7 @@ class PaymentRepository {
           ),
         ),
       );
- 
+
       if (result != null && result['success'] == true) {
         // We assume success if we got the redirect signal.
         // Ideally verify on backend with reference.
@@ -557,7 +557,9 @@ class PaymentRepository {
         });
       }
 
-      if (response == null || response.data == null || response.data['success'] != true) {
+      if (response == null ||
+          response.data == null ||
+          response.data['success'] != true) {
         return {
           'success': false,
           'error': response.data['data']?['error'] ??

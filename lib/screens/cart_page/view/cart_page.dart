@@ -603,10 +603,28 @@ class _CartPageState extends State<CartPage> {
                                   }
                                 }
 
-                                double backendItemsTotal = billSummaryData?.itemsTotal?.toDouble() ?? 0;
-                                double priceDifference = backendItemsTotal - calculatedItemsTotal;
-                                double exactGrandTotal = (billSummaryData?.payableAmount?.toDouble() ?? 0) - priceDifference;
-                                double itemSavings = originalItemsTotal - calculatedItemsTotal;
+                                 double backendItemsTotal = billSummaryData?.itemsTotal?.toDouble() ?? 0;
+                                 double priceDifference = backendItemsTotal - calculatedItemsTotal;
+                                 double rawGrandTotal = (billSummaryData?.payableAmount?.toDouble() ?? 0) - priceDifference;
+                                 double itemSavings = originalItemsTotal - calculatedItemsTotal;
+
+                                 // Final delivery charge logic (Fix for FREE rush/regular delivery bug)
+                                 double rushCharge = stateData.first.data?.deliveryZone?.rushDeliveryCharges?.toDouble() ?? 99.0;
+                                 if (rushCharge < 99.0) rushCharge = 99.0;
+
+                                 double regularCharge = 30.0;
+
+                                 double currentDeliveryCharge = billSummaryData?.totalDeliveryCharges?.toDouble() ?? 0;
+                                 double exactGrandTotal = rawGrandTotal;
+
+                                 // Calculate correct charge and total based on selected type
+                                 double targetCharge = selectedDeliveryType == DeliveryType.rush ? rushCharge : regularCharge;
+
+                                 if (currentDeliveryCharge < targetCharge) {
+                                   double additionalFee = targetCharge - currentDeliveryCharge;
+                                   currentDeliveryCharge = targetCharge;
+                                   exactGrandTotal += additionalFee;
+                                 }
 
                                 return Column(
                                   children: [
@@ -650,18 +668,19 @@ class _CartPageState extends State<CartPage> {
                                         }
                                     ),
                                     SizedBox(height: 9.h,),
-                                    DeliveryTypeWidget(
-                                      selectedDeliveryType: selectedDeliveryType,
-                                      rushDeliveryCharge: 50.0,
-                                      isRushDeliveryDisabled: billSummaryData?.isRushDeliveryAvailable == false,
-                                      onDeliveryTypeChanged: (DeliveryType type) {
-                                        setState(() {
-                                          selectedDeliveryType = type;
-                                        });
-                                        // Update cart with new delivery type
-                                        _updateCartWithDeliveryType(type);
-                                      },
-                                    ),
+                                     DeliveryTypeWidget(
+                                       selectedDeliveryType: selectedDeliveryType,
+                                       rushDeliveryCharge: rushCharge,
+                                       regularDeliveryCharge: 30.0,
+                                       isRushDeliveryDisabled: billSummaryData?.isRushDeliveryAvailable == false,
+                                       onDeliveryTypeChanged: (DeliveryType type) {
+                                         setState(() {
+                                           selectedDeliveryType = type;
+                                         });
+                                         // Update cart with new delivery type
+                                         _updateCartWithDeliveryType(type);
+                                       },
+                                     ),
 
                                     BlocBuilder<CartUIBloc, CartUIState>(
                                       builder: (context, uiState) {
@@ -720,14 +739,14 @@ class _CartPageState extends State<CartPage> {
                                       isEnabled: !isCartLoading,
                                     ),
 
-                                    BillSummaryWidget(
-                                      itemsOriginalPrice: originalItemsTotal > calculatedItemsTotal ? originalItemsTotal : -1,
-                                      itemsDiscountedPrice: calculatedItemsTotal,
-                                      itemsSavings: itemSavings > 0 ? itemSavings : 0,
-                                      deliveryChargeOriginal: billSummaryData?.totalDeliveryCharges?.toDouble() ?? 0,
-                                      handlingCharge: billSummaryData?.handlingCharges?.toDouble() ?? 0,
-                                      grandTotal: exactGrandTotal,
-                                      totalSavings: itemSavings > 0 ? itemSavings : 0,
+                                     BillSummaryWidget(
+                                       itemsOriginalPrice: originalItemsTotal > calculatedItemsTotal ? originalItemsTotal : -1,
+                                       itemsDiscountedPrice: calculatedItemsTotal,
+                                       itemsSavings: itemSavings > 0 ? itemSavings : 0,
+                                       deliveryChargeOriginal: currentDeliveryCharge,
+                                       handlingCharge: billSummaryData?.handlingCharges?.toDouble() ?? 0,
+                                       grandTotal: exactGrandTotal,
+                                       totalSavings: itemSavings > 0 ? itemSavings : 0,
                                       perStoreDropOffFees: billSummaryData?.perStoreDropOffFee?.toDouble() ?? 0.0,
                                       promoCode: billSummaryData?.promoCode,
                                       promoDiscount: double.tryParse(billSummaryData?.promoDiscount ?? '0') ?? 0,

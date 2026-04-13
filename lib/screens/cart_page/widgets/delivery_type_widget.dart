@@ -227,6 +227,7 @@ class _DeliveryTypeWidgetState extends State<DeliveryTypeWidget> {
 }
 */
 
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:grofery_user/config/theme.dart';
@@ -239,6 +240,7 @@ class DeliveryTypeWidget extends StatelessWidget {
   final DeliveryType? selectedDeliveryType;
   final ValueChanged<DeliveryType> onDeliveryTypeChanged;
   final double? rushDeliveryCharge;
+  final double? regularDeliveryCharge;
   final bool isRushDeliveryDisabled;
 
   const DeliveryTypeWidget({
@@ -246,8 +248,33 @@ class DeliveryTypeWidget extends StatelessWidget {
     this.selectedDeliveryType,
     required this.onDeliveryTypeChanged,
     this.rushDeliveryCharge,
+    this.regularDeliveryCharge,
     this.isRushDeliveryDisabled = false,
   });
+
+  String _getRegularDeliverySubtitle(AppLocalizations? l10n) {
+    final now = DateTime.now();
+    const cutoffHour = 22; // 10 PM
+
+    DateTime deliveryDate;
+    bool isTomorrow = false;
+
+    if (now.hour < cutoffHour) {
+      deliveryDate = now.add(const Duration(days: 1));
+      isTomorrow = true;
+    } else {
+      deliveryDate = now.add(const Duration(days: 2));
+    }
+
+    final dayName = DateFormat('EEEE').format(deliveryDate);
+    final dateFormatted = DateFormat('d MMM').format(deliveryDate);
+
+    if (isTomorrow) {
+      return "Delivery by Tomorrow ($dayName, $dateFormatted)";
+    } else {
+      return "Delivery by $dayName, $dateFormatted";
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -297,9 +324,8 @@ class DeliveryTypeWidget extends StatelessWidget {
             context: context,
             deliveryType: DeliveryType.regular,
             title: l10n?.regularDelivery ?? 'Regular Delivery',
-            subtitle: l10n?.standardDeliveryWithNoExtraCharges ??
-                'Standard delivery with no extra charges.',
-            extraCharge: null,
+            subtitle: _getRegularDeliverySubtitle(l10n),
+            extraCharge: regularDeliveryCharge,
             l10n: l10n,
           ),
         ],

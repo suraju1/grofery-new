@@ -28,12 +28,11 @@ class CartBloc extends Bloc<CartEvent, CartState> {
   }
 
   void _onLoadCart(LoadCart event, Emitter<CartState> emit) {
-    emit(CartLoading());
+    emit(CartLoading(items: localRepo.getAllItems()));
     emit(CartLoaded(localRepo.getAllItems()));
   }
 
   void _onAddToCart(AddToCart event, Emitter<CartState> emit) {
-    emit(CartLoading());
     debugPrint('ADD → ${event.item.productId} ${event.item.variantId}');
     final bool isLoggedIn = Global.userData != null && Global.token!.isNotEmpty;
 
@@ -62,7 +61,6 @@ class CartBloc extends Bloc<CartEvent, CartState> {
   }
 
   void _onUpdateQty(UpdateCartQty event, Emitter<CartState> emit) {
-    emit(CartLoading());
     log('Update Quantity');
     final bool isLoggedIn = Global.userData != null;
 
@@ -100,7 +98,6 @@ class CartBloc extends Bloc<CartEvent, CartState> {
   }
 
   void _onRemoveItem(RemoveFromCart event, Emitter<CartState> emit) {
-    emit(CartLoading());
     debugPrint('🗑 REMOVE → ${event.cartKey}');
 
     final bool isLoggedIn = Global.userData != null && Global.token!.isNotEmpty;
@@ -130,7 +127,6 @@ class CartBloc extends Bloc<CartEvent, CartState> {
   }
 
   void _onRemoveLocally(RemoveLocally event, Emitter<CartState> emit) {
-    emit(CartLoading());
     debugPrint('🗑 REMOVE → ${event.cartKey}');
     localRepo.deleteLocally(event.cartKey);
     emit(CartLoaded(localRepo.getAllItems()));
@@ -140,7 +136,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
   }
 
   void _onClearCart(ClearCart event, Emitter<CartState> emit) {
-    emit(CartLoading());
+    emit(CartLoading(items: localRepo.getAllItems()));
     debugPrint('🧹 CLEAR CART');
     localRepo.clearLocalCart();
     emit(CartLoaded([]));

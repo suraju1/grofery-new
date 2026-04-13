@@ -701,11 +701,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deliveryType => 'Delivery Type';
 
   @override
-  String get rushDelivery => 'Rush Delivery';
+  String get rushDelivery => 'Quick Delivery';
 
   @override
   String get prioritizedDeliveryForYourUrgentNeeds =>
-      'Prioritized delivery for your urgent needs.';
+      'Priority delivery within 4 hours.';
 
   @override
   String get regularDelivery => 'Regular Delivery';
@@ -889,7 +889,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get on => 'ON';
 
   @override
-  String get rushDeliveryActive => 'Rush Delivery Active';
+  String get rushDeliveryActive => 'Quick Delivery Active';
 
   @override
   String get cashbackApplied => 'Cashback Applied';

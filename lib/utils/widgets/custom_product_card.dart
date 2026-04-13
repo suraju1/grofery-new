@@ -429,6 +429,16 @@ class CustomProductCard extends StatelessWidget {
                                     await HapticFeedback.lightImpact();
 
                                     if (context.mounted) {
+                                      // Toggle logic: If already in cart (rare case where button is still visible), remove it
+                                      if (isInCart) {
+                                        context.read<CartBloc>().add(
+                                              RemoveFromCart(
+                                                  cartKey: cartItem.cartKey,
+                                                  context: context),
+                                            );
+                                        return;
+                                      }
+
                                       final error = CartValidation
                                           .validateProductAddToCart(
                                         context: context,
@@ -544,19 +554,25 @@ class CustomProductCard extends StatelessWidget {
   }
 
   UserCart? _getCartItem(CartState state) {
+    List<UserCart> items = [];
     if (state is CartLoaded) {
-      try {
-        return state.items.firstWhere(
-          (item) =>
-              int.parse(item.productId) == productId &&
-              int.parse(item.variantId) == productVariantId &&
-              int.parse(item.vendorId) == storeId,
-        );
-      } catch (_) {
-        return null;
-      }
+      items = state.items;
+    } else if (state is CartLoading) {
+      items = state.items;
+    } else {
+      return null;
     }
-    return null;
+
+    try {
+      return items.firstWhere(
+        (item) =>
+            (int.tryParse(item.productId) ?? 0) == productId &&
+            (int.tryParse(item.variantId) ?? 0) == productVariantId &&
+            (int.tryParse(item.vendorId) ?? 0) == storeId,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   double _calculateEffectivePrice(int quantity) {
@@ -1014,9 +1030,24 @@ class CustomProductCard extends StatelessWidget {
     await HapticFeedback.lightImpact();
 
     if (context.mounted) {
+      if (isInCart && state is CartLoaded) {
+        // Toggle logic: Remove if already in cart
+        final cartItem = state.items.firstWhere(
+          (item) =>
+              (int.tryParse(item.productId) ?? 0) == productId &&
+              (int.tryParse(item.variantId) ?? 0) == productVariantId &&
+              (int.tryParse(item.vendorId) ?? 0) == storeId,
+          orElse: () => state.items.first,
+        );
+        context
+            .read<CartBloc>()
+            .add(RemoveFromCart(cartKey: cartItem.cartKey, context: context));
+        return;
+      }
+
       final error = CartValidation.validateProductAddToCart(
         context: context,
-        requestedQuantity: quantityStepSize,
+        requestedQuantity: minQty > 0 ? minQty : 1,
         minQty: minQty,
         maxQty: totalAllowedQuantity,
         stock: totalStocks,
@@ -1038,7 +1069,7 @@ class CustomProductCard extends StatelessWidget {
             type: ToastType.error);
         return;
       } else {
-        onAddToCart(quantityStepSize);
+        onAddToCart(minQty > 0 ? minQty : 1);
       }
     }
   }
@@ -1053,7 +1084,7 @@ class CustomProductCard extends StatelessWidget {
       if (context.mounted) {
         final error = CartValidation.validateProductAddToCart(
           context: context,
-          requestedQuantity: cartItem.quantity + quantityStepSize,
+          requestedQuantity: cartItem.quantity + 1,
           minQty: minQty,
           maxQty: totalAllowedQuantity,
           stock: totalStocks,
@@ -1068,7 +1099,7 @@ class CustomProductCard extends StatelessWidget {
           context.read<CartBloc>().add(
                 UpdateCartQty(
                     cartKey: cartItem.cartKey,
-                    quantity: cartItem.quantity + quantityStepSize,
+                    quantity: cartItem.quantity + 1,
                     cartItemId: cartItem.serverCartItemId,
                     context: context),
               );
@@ -1084,12 +1115,12 @@ class CustomProductCard extends StatelessWidget {
         onVariantSelectorRequested != null) {
       onVariantSelectorRequested!();
     } else {
-      if (cartItem.quantity > quantityStepSize) {
+      if (cartItem.quantity > minQty) {
         if (context.mounted) {
           context.read<CartBloc>().add(
                 UpdateCartQty(
                     cartKey: cartItem.cartKey,
-                    quantity: cartItem.quantity - quantityStepSize,
+                    quantity: cartItem.quantity - 1,
                     cartItemId: cartItem.serverCartItemId,
                     context: context),
               );
@@ -1462,7 +1493,9 @@ class _TieredPricingExpandableListState extends State<_TieredPricingExpandableLi
             child: Column(
               children: List.generate(tiersToShow.length, (index) {
                 final tier = tiersToShow[index];
-                final bool isExactMatch = widget.currentQty == tier.minQty; // ONLY highlight on strict numeric match
+                final bool isSelectedTier = activeTier == tier;
+                // isExactMatch is used to determine if we should "Toggle Off" or just "Reset to Tier Min"
+                final bool isExactMatch = widget.currentQty == tier.minQty;
 
                 return Column(
                   children: [
@@ -1475,7 +1508,7 @@ class _TieredPricingExpandableListState extends State<_TieredPricingExpandableLi
                             child: Text(
                               "₹${formatPriceLocally(tier.price / tier.minQty)}/pc for ${tier.minQty} pcs+",
                               style: TextStyle(
-                                fontSize: 9.sp, // Made font smaller as requested
+                                fontSize: 9.sp, 
                                 fontWeight: FontWeight.w600,
                                 color: const Color(0xFF1E5BB2),
                               ),
@@ -1486,22 +1519,32 @@ class _TieredPricingExpandableListState extends State<_TieredPricingExpandableLi
                           SizedBox(width: 4.w),
                           Material(
                             color: Colors.transparent,
-                            child: InkWell(
+                            child: AnimatedButton(
+                              animationType: TapAnimationType.scale,
+                              duration: const Duration(milliseconds: 100),
+                              scaleAmount: 0.95,
                               onTap: () {
                                 final cartBloc = context.read<CartBloc>();
-                                final cartItem = widget.getCartItem(cartBloc.state);
+                                final cartState = cartBloc.state;
+                                final cartItem = widget.getCartItem(cartState);
 
                                 int targetQty;
                                 if (isExactMatch) {
-                                  targetQty = widget.currentQty - tier.minQty; // Toggle off if perfectly matched
+                                  // Perfectly matched: Toggle off to remove
+                                  targetQty = 0;
                                 } else {
-                                  // Directly add that exact tier quantity, discarding current qty override
-                                  targetQty = tier.minQty; 
+                                  // Not exact: Either jump TO this tier or RESET to its minimum
+                                  targetQty = tier.minQty;
                                 }
+
+                                HapticFeedback.lightImpact();
 
                                 if (targetQty <= 0) {
                                   if (cartItem != null) {
-                                    cartBloc.add(RemoveFromCart(cartKey: cartItem.cartKey, context: context));
+                                    cartBloc.add(RemoveFromCart(
+                                      cartKey: cartItem.cartKey,
+                                      context: context,
+                                    ));
                                   }
                                   return;
                                 }
@@ -1517,20 +1560,19 @@ class _TieredPricingExpandableListState extends State<_TieredPricingExpandableLi
                                   widget.onAddToCart(targetQty);
                                 }
                               },
-                              borderRadius: BorderRadius.circular(4.r),
                               child: Container(
                                 padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
                                 decoration: BoxDecoration(
-                                  color: isExactMatch ? const Color(0xFFE54A50) : Colors.white,
+                                  color: isSelectedTier ? const Color(0xFFE54A50) : Colors.white,
                                   borderRadius: BorderRadius.circular(4.r),
                                   border: Border.all(color: const Color(0xFFE54A50), width: 1),
                                 ),
                                 child: Text(
                                   "Add ${tier.minQty}",
                                   style: TextStyle(
-                                    fontSize: 9.sp, // Smaller font for button
+                                    fontSize: 9.sp, 
                                     fontWeight: FontWeight.bold,
-                                    color: isExactMatch ? Colors.white : const Color(0xFFE54A50),
+                                    color: isSelectedTier ? Colors.white : const Color(0xFFE54A50),
                                   ),
                                 ),
                               ),
