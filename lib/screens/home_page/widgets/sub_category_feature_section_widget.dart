@@ -18,6 +18,54 @@ class SubCategoryFeatureSectionWidget extends StatefulWidget {
     this.showTitle = true,
   });
 
+  /// Static method to show all categories in a bottom sheet
+  static void show(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.70,
+          padding: const EdgeInsets.only(top: 10),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              // Small handle at the top of the modal
+              Container(
+                width: 60,
+                height: 6,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              Text(
+                AppLocalizations.of(context)?.shopByCategories ??
+                    "All Categories",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.tertiary,
+                ),
+              ),
+              const SizedBox(height: 14),
+              // Renders the category grid without the title
+              const Expanded(
+                child: SubCategoryFeatureSectionWidget(showTitle: false),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   State<SubCategoryFeatureSectionWidget> createState() =>
       _SubCategoryFeatureSectionWidgetState();
@@ -62,10 +110,7 @@ class _SubCategoryFeatureSectionWidgetState
                               InkWell(
                                 borderRadius: BorderRadius.circular(8.r),
                                 onTap: () {
-                                  final navigationShell =
-                                      StatefulNavigationShell.of(context);
-                                  navigationShell.goBranch(1,
-                                      initialLocation: false);
+                                  SubCategoryFeatureSectionWidget.show(context);
                                 },
                                 child: Padding(
                                   padding: EdgeInsets.symmetric(

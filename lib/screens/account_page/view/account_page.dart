@@ -527,7 +527,7 @@ class _AccountPageState extends State<AccountPage> {
                 children: [
                   Icon(TablerIcons.logout, color: Colors.orange[700]),
                   const SizedBox(width: 12),
-                  Text(l10n?.logout ?? "Logout"),
+                  Expanded(child: Text(l10n?.logout ?? "Logout")),
                 ],
               ),
               content: Text(l10n?.logoutConfirmation ??
@@ -594,8 +594,10 @@ class _AccountPageState extends State<AccountPage> {
                 children: [
                   Icon(TablerIcons.trash, color: Colors.red[700]),
                   const SizedBox(width: 12),
-                  Text(
-                    l10n?.deleteAccount ?? "Delete Account",
+                  Expanded(
+                    child: Text(
+                      l10n?.deleteAccount ?? "Delete Account",
+                    ),
                   ),
                 ],
               ),

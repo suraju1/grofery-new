@@ -97,12 +97,13 @@ class _HomePageState extends State<HomePage>
     _isTabControllerInitialized = true;
     _tabController.addListener(_onTabChanged);
     nestedScrollController.addListener(_scrollListener);
-    
+
     // Initialize location identifier to prevent redundant refresh on first build
     final box = Hive.box<dynamic>('userLocationBox');
     final storedLocation = box.get('user_location');
     if (storedLocation != null) {
-      _lastLocationIdentifier = '${storedLocation.latitude}_${storedLocation.longitude}_${storedLocation.fullAddress}_${storedLocation.area}_${storedLocation.city}_${storedLocation.pincode}';
+      _lastLocationIdentifier =
+          '${storedLocation.latitude}_${storedLocation.longitude}_${storedLocation.fullAddress}_${storedLocation.area}_${storedLocation.city}_${storedLocation.pincode}';
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -130,18 +131,20 @@ class _HomePageState extends State<HomePage>
             children: [
               Icon(Icons.info_outline, color: AppTheme.primaryColor),
               SizedBox(width: 8.w),
-              Text(
-                'Notice',
-                style: TextStyle(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: AppTheme.fontFamily,
+              Expanded(
+                child: Text(
+                  'Notice',
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: AppTheme.fontFamily,
+                  ),
                 ),
               ),
             ],
           ),
           content: Text(
-            'you are placing order without gst',
+            'This message will be updated soon.',
             style: TextStyle(
               fontSize: 15.sp,
               fontFamily: AppTheme.fontFamily,
@@ -164,7 +167,6 @@ class _HomePageState extends State<HomePage>
       },
     );
   }
-
 
   @override
   void didChangeDependencies() {
@@ -406,11 +408,12 @@ class _HomePageState extends State<HomePage>
     context
         .read<NearByStoreBloc>()
         .add(FetchNearByStores(perPage: 15, searchQuery: ''));
-    
+
     // Refresh all other sections based on the current tab
     if (_tabController.index == 0) {
       apiCalls('');
-    } else if (_categories.isNotEmpty && (_tabController.index - 1) < _categories.length) {
+    } else if (_categories.isNotEmpty &&
+        (_tabController.index - 1) < _categories.length) {
       final selectedCategory = _categories[_tabController.index - 1];
       apiCalls(selectedCategory.slug ?? '');
     }
@@ -871,49 +874,7 @@ class _HomePageState extends State<HomePage>
                 backgroundColor:
                     Theme.of(context).colorScheme.primary, // App primary color
                 onPressed: () {
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (context) {
-                      return Container(
-                        height: MediaQuery.of(context).size.height * 0.70,
-                        padding: const EdgeInsets.only(top: 10),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
-                          borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(24)),
-                        ),
-                        child: Column(
-                          children: [
-                            // Small handle at the top of the modal
-                            Container(
-                              width: 60,
-                              height: 6,
-                              margin: const EdgeInsets.only(bottom: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.withValues(alpha: 0.3),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            Text(
-                              "All Categories",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.tertiary,
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            // SubCategoryFeatureSectionWidget renders our beautiful category grid
-                            const Expanded(
-                                child: SubCategoryFeatureSectionWidget(
-                                    showTitle: false)),
-                          ],
-                        ),
-                      );
-                    },
-                  );
+                  SubCategoryFeatureSectionWidget.show(context);
                 },
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
@@ -1062,140 +1023,144 @@ class _HomePageState extends State<HomePage>
                                         physics:
                                             const AlwaysScrollableScrollPhysics(),
                                         slivers: [
-                                        SliverToBoxAdapter(
-                                          child: BlocBuilder<BannerBloc,
-                                              BannerState>(
-                                            builder: (BuildContext context,
-                                                BannerState state) {
-                                              if (state is BannerLoaded) {
-                                                if (state
-                                                    .topBannerData.isEmpty) {
-                                                  return const SizedBox
-                                                      .shrink();
+                                          SliverToBoxAdapter(
+                                            child: BlocBuilder<BannerBloc,
+                                                BannerState>(
+                                              builder: (BuildContext context,
+                                                  BannerState state) {
+                                                if (state is BannerLoaded) {
+                                                  if (state
+                                                      .topBannerData.isEmpty) {
+                                                    return const SizedBox
+                                                        .shrink();
+                                                  }
+                                                  return Column(
+                                                    children: [
+                                                      _buildTopPromoBanner(
+                                                          context),
+                                                      AutoPlayCarouselSlider(
+                                                        banners:
+                                                            state.topBannerData,
+                                                        viewportFraction: 0.85,
+                                                        enlargeCenterPage: true,
+                                                        enlargeFactor: 0.18,
+                                                      ),
+                                                    ],
+                                                  );
+                                                } else if (state
+                                                    is BannerLoading) {
+                                                  return Padding(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            20.0),
+                                                    child: ShimmerWidget
+                                                        .rectangular(
+                                                            isBorder: true,
+                                                            height: 220),
+                                                  );
                                                 }
-                                                return Column(
-                                                  children: [
-                                                    _buildTopPromoBanner(
-                                                        context),
-                                                    AutoPlayCarouselSlider(
-                                                      banners:
-                                                          state.topBannerData,
-                                                      viewportFraction: 0.85,
-                                                      enlargeCenterPage: true,
-                                                      enlargeFactor: 0.18,
-                                                    ),
-                                                  ],
-                                                );
-                                              } else if (state
-                                                  is BannerLoading) {
-                                                return Padding(
-                                                  padding: const EdgeInsets.all(
-                                                      20.0),
-                                                  child:
-                                                      ShimmerWidget.rectangular(
-                                                          isBorder: true,
-                                                          height: 220),
-                                                );
-                                              }
-                                              return SizedBox.shrink();
-                                            },
+                                                return SizedBox.shrink();
+                                              },
+                                            ),
                                           ),
-                                        ),
-                                        SliverToBoxAdapter(
-                                            child:
-                                                SubCategoryFeatureSectionWidget()),
-                                        SliverToBoxAdapter(
-                                          child: BlocBuilder<ExploreBloc,
-                                              ExploreState>(
-                                            builder: (context, exploreState) {
-                                              if (exploreState is ExploreLoaded) {
-                                                return ExploreMoreCarousel(
-                                                     banners: exploreState
-                                                         .exploreData,
-                                                     totalCount: exploreState
-                                                         .totalCount);
-                                              } else if (exploreState
-                                                  is ExploreLoading) {
-                                                return Padding(
-                                                  padding: EdgeInsets.symmetric(
-                                                      horizontal: 16.w,
-                                                      vertical: 8.h),
-                                                  child:
-                                                      ShimmerWidget.rectangular(
-                                                          isBorder: true,
-                                                          height: 170.h,
-                                                          width:
-                                                              double.infinity,
-                                                          borderRadius: 16.r),
-                                                );
-                                              }
-                                              return const SizedBox.shrink();
-                                            },
+                                          SliverToBoxAdapter(
+                                              child:
+                                                  SubCategoryFeatureSectionWidget()),
+                                          SliverToBoxAdapter(
+                                            child: BlocBuilder<ExploreBloc,
+                                                ExploreState>(
+                                              builder: (context, exploreState) {
+                                                if (exploreState
+                                                    is ExploreLoaded) {
+                                                  return ExploreMoreCarousel(
+                                                      banners: exploreState
+                                                          .exploreData,
+                                                      totalCount: exploreState
+                                                          .totalCount);
+                                                } else if (exploreState
+                                                    is ExploreLoading) {
+                                                  return Padding(
+                                                    padding:
+                                                        EdgeInsets.symmetric(
+                                                            horizontal: 16.w,
+                                                            vertical: 8.h),
+                                                    child: ShimmerWidget
+                                                        .rectangular(
+                                                            isBorder: true,
+                                                            height: 170.h,
+                                                            width:
+                                                                double.infinity,
+                                                            borderRadius: 16.r),
+                                                  );
+                                                }
+                                                return const SizedBox.shrink();
+                                              },
+                                            ),
                                           ),
-                                        ),
-                                        SliverToBoxAdapter(
-                                          child: BrandsSection(
-                                            brandsSectionTitle:
-                                                AppLocalizations.of(context)
-                                                        ?.topBrands ??
-                                                    'Top Brands',
-                                            categorySlug: '',
+                                          SliverToBoxAdapter(
+                                            child: BrandsSection(
+                                              brandsSectionTitle:
+                                                  AppLocalizations.of(context)
+                                                          ?.topBrands ??
+                                                      'Top Brands',
+                                              categorySlug: '',
+                                            ),
                                           ),
-                                        ),
-                                        SliverToBoxAdapter(
-                                          child: BlocBuilder<
-                                              FeatureSectionProductBloc,
-                                              FeatureSectionProductState>(
-                                            builder: (context, state) {
-                                              if (state
-                                                  is FeatureSectionProductLoaded) {
-                                                return ListView(
-                                                  padding:
-                                                      EdgeInsets.only(top: 5.h),
-                                                  shrinkWrap: true,
-                                                  physics:
-                                                      const NeverScrollableScrollPhysics(),
-                                                  children: [
-                                                    // Global check
-                                                    if (state
-                                                        .featureSectionProductData
-                                                        .any((s) => (s
-                                                                    .products ??
-                                                                [])
-                                                            .isNotEmpty)) ...[
+                                          SliverToBoxAdapter(
+                                            child: BlocBuilder<
+                                                FeatureSectionProductBloc,
+                                                FeatureSectionProductState>(
+                                              builder: (context, state) {
+                                                if (state
+                                                    is FeatureSectionProductLoaded) {
+                                                  return ListView(
+                                                    padding: EdgeInsets.only(
+                                                        top: 5.h),
+                                                    shrinkWrap: true,
+                                                    physics:
+                                                        const NeverScrollableScrollPhysics(),
+                                                    children: [
+                                                      // Global check
                                                       if (state
                                                           .featureSectionProductData
-                                                          .isNotEmpty)
-                                                        _buildFeatureSection(
-                                                            state.featureSectionProductData[
-                                                                0]),
-                                                      ...state
-                                                          .featureSectionProductData
-                                                          .skip(1)
-                                                          .map((section) {
-                                                        if ((section.products ??
-                                                                [])
-                                                            .isEmpty) {
-                                                          return const SizedBox
-                                                              .shrink();
-                                                        }
-                                                        return _buildFeatureSection(
-                                                            section);
-                                                      }),
-                                                      if (!state.hasReachedMax)
-                                                        const Padding(
-                                                          padding:
-                                                              EdgeInsets.all(
-                                                                  16.0),
-                                                          child: Center(
-                                                              child:
-                                                                  CustomCircularProgressIndicator()),
-                                                        ),
-                                                    ]
-                                                  ],
-                                                );
+                                                          .any((s) => (s
+                                                                      .products ??
+                                                                  [])
+                                                              .isNotEmpty)) ...[
+                                                        if (state
+                                                            .featureSectionProductData
+                                                            .isNotEmpty)
+                                                          _buildFeatureSection(
+                                                              state.featureSectionProductData[
+                                                                  0]),
+                                                        ...state
+                                                            .featureSectionProductData
+                                                            .skip(1)
+                                                            .map((section) {
+                                                          if ((section.products ??
+                                                                  [])
+                                                              .isEmpty) {
+                                                            return const SizedBox
+                                                                .shrink();
+                                                          }
+                                                          return _buildFeatureSection(
+                                                              section);
+                                                        }),
+                                                        if (!state
+                                                            .hasReachedMax)
+                                                          const Padding(
+                                                            padding:
+                                                                EdgeInsets.all(
+                                                                    16.0),
+                                                            child: Center(
+                                                                child:
+                                                                    CustomCircularProgressIndicator()),
+                                                          ),
+                                                      ]
+                                                    ],
+                                                  );
 
-                                                /*return ListView.builder(
+                                                  /*return ListView.builder(
                                                   padding: EdgeInsets.only(
                                                       top: 5.h),
                                                   shrinkWrap: true,
@@ -1264,22 +1229,22 @@ class _HomePageState extends State<HomePage>
                                                         : SizedBox.shrink();
                                                   },
                                                 );*/
-                                              } else if (state
-                                                  is FeatureSectionProductLoading) {
-                                                return productFeaturedSectionEmptyState();
-                                              }
-                                              return SizedBox.shrink();
-                                            },
+                                                } else if (state
+                                                    is FeatureSectionProductLoading) {
+                                                  return productFeaturedSectionEmptyState();
+                                                }
+                                                return SizedBox.shrink();
+                                              },
+                                            ),
                                           ),
-                                        ),
-                                        SliverToBoxAdapter(
-                                          child: SizedBox(
-                                            height: 70,
+                                          SliverToBoxAdapter(
+                                            child: SizedBox(
+                                              height: 70,
+                                            ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
+                                        ],
+                                      ),
+                                    );
                                   },
                                 );
                               },
@@ -1435,7 +1400,8 @@ class _HomePageState extends State<HomePage>
                                             AlwaysScrollableScrollPhysics(),
                                         slivers: [
                                           SliverToBoxAdapter(
-                                            child: BlocBuilder<BannerBloc, // Changed from ExploreBloc to BannerBloc
+                                            child: BlocBuilder<
+                                                BannerBloc, // Changed from ExploreBloc to BannerBloc
                                                 BannerState>(
                                               builder: (BuildContext context,
                                                   BannerState state) {
@@ -1478,23 +1444,26 @@ class _HomePageState extends State<HomePage>
                                               child:
                                                   SubCategoryFeatureSectionWidget()),
                                           SliverToBoxAdapter(
-                                           child: BlocBuilder<ExploreBloc, // This was already ExploreBloc, keeping it as is
-                                               ExploreState>(
-                                             builder: (context, exploreState) {
-                                               if (exploreState is ExploreLoaded) {
-                                                 return ExploreMoreCarousel(
-                                                     banners: exploreState
-                                                         .exploreData,
-                                                     totalCount: exploreState
-                                                         .totalCount);
+                                            child: BlocBuilder<
+                                                ExploreBloc, // This was already ExploreBloc, keeping it as is
+                                                ExploreState>(
+                                              builder: (context, exploreState) {
+                                                if (exploreState
+                                                    is ExploreLoaded) {
+                                                  return ExploreMoreCarousel(
+                                                      banners: exploreState
+                                                          .exploreData,
+                                                      totalCount: exploreState
+                                                          .totalCount);
                                                 } else if (exploreState
                                                     is ExploreLoading) {
                                                   return Padding(
-                                                    padding: EdgeInsets.symmetric(
-                                                        horizontal: 16.w,
-                                                        vertical: 8.h),
-                                                    child:
-                                                        ShimmerWidget.rectangular(
+                                                    padding:
+                                                        EdgeInsets.symmetric(
+                                                            horizontal: 16.w,
+                                                            vertical: 8.h),
+                                                    child: ShimmerWidget
+                                                        .rectangular(
                                                             isBorder: true,
                                                             height: 170.h,
                                                             width:
@@ -1870,7 +1839,7 @@ class _HomePageState extends State<HomePage>
   Widget _buildFeatureSection(FeatureSectionData section) {
     return ProductFeatureSectionWidget(
       featureSectionData: section,
-      featureSectionTitle: '',
+      featureSectionTitle: null,
       backgroundImage: section.mobileBackgroundImage ?? '',
       backgroundImageTablet: section.tabletBackgroundImage ?? '',
       featureSectionSlug: section.slug ?? '',

@@ -599,11 +599,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hyperlocalWalletBalanceValidFor1Year =>
-      'Hyperlocal Wallet balance is valid for 1 year from the date of money added';
+      'Grofery Wallet balance is valid for 1 year from the date of money added';
 
   @override
   String get hyperlocalWalletBalanceCannotBeTransferred =>
-      'Hyperlocal Wallet balance cannot be transfer to a bank account as per RBI guidelines';
+      'Grofery Wallet balance cannot be transfer to a bank account as per RBI guidelines';
 
   @override
   String get pleaseEnterAnAmountGreaterThanOrEqualTo1 =>

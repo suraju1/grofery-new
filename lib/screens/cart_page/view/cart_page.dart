@@ -1,4 +1,4 @@
-import 'dart:developer';
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -34,12 +34,14 @@ import '../../../services/address/selected_address_hive.dart';
 import '../../../services/user_cart/cart_validation.dart';
 import '../../../utils/widgets/whole_page_progress.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../utils/widgets/minimum_order_progress_bar.dart';
 import '../../my_orders/bloc/create_order/create_order_bloc.dart';
 import '../../payment_options/bloc/payment_bloc.dart';
 import '../../payment_options/bloc/payment_event.dart';
 import '../../payment_options/bloc/payment_state.dart';
 import '../../payment_options/widgets/webview_payment.dart';
 import '../../product_detail_page/bloc/similar_product_bloc/similar_product_bloc.dart';
+import '../../product_detail_page/model/product_detail_model.dart';
 import '../../address_list_page/model/get_address_list_model.dart';
 import '../../address_list_page/bloc/get_address_list_bloc/get_address_list_bloc.dart';
 import '../../wallet_page/bloc/user_wallet/user_wallet_bloc.dart';
@@ -73,6 +75,7 @@ class CartPage extends StatefulWidget {
 class _CartPageState extends State<CartPage> {
   AddressListData? selectedAddress;
   double totalAmount = 0.0;
+  double itemsTotal = 0.0;
   String? selectedPaymentMethod;
   dynamic selectedPaymentMethodType;
   bool isCartLoading = true;
@@ -187,7 +190,7 @@ class _CartPageState extends State<CartPage> {
                   listeners: [
                     BlocListener<SettingsBloc, SettingsState>(
                       listener: (context, settingsState) {
-                        log('Get Address List Bloc  $state');
+                        developer.log('Get Address List Bloc  $state');
                         if(settingsState is SettingsLoaded) {
                           final walletAllowed = SettingsData.instance.payment?.wallet ?? false;
                           if (!walletAllowed && _userWantsWallet) {
@@ -201,9 +204,22 @@ class _CartPageState extends State<CartPage> {
                         }
                       },
                     ),
+                    BlocListener<CartBloc, CartState>(
+                      listener: (context, cartState) {
+                        if (cartState is CartLoaded && cartState.errorMessage != null) {
+                          ToastManager.show(
+                            context: context,
+                            message: cartState.errorMessage!,
+                            type: ToastType.error,
+                          );
+                          // Refresh cart to get correct state from server
+                          _refreshCart();
+                        }
+                      },
+                    ),
                     BlocListener<GetAddressListBloc, GetAddressListState>(
                       listener: (context, addressState) {
-                        log('Get Address List Bloc  $state');
+                        developer.log('Get Address List Bloc  $state');
                         // Auto-select first address when addresses are loaded
                         if (addressState is GetAddressListLoaded &&
                             selectedAddress == null &&
@@ -226,7 +242,7 @@ class _CartPageState extends State<CartPage> {
                     ),
                     BlocListener<GetUserCartBloc, GetUserCartState>(
                         listener: (context, state) {
-                          log('Get User Cart Bloc  $state');
+                          developer.log('Get User Cart Bloc  $state');
 
                           if(state is GetUserCartLoaded) {
                             setState(() {
@@ -268,7 +284,7 @@ class _CartPageState extends State<CartPage> {
                     BlocListener<RemoveItemFromCartBloc, RemoveItemFromCartState>(
                       listener: (context, state){
 
-                        log('Remove Item From Cart Bloc  $state');
+                        developer.log('Remove Item From Cart Bloc  $state');
                         if(state is RemoveItemFromCartLoading){
                           setState(() {
                             isCartLoading = true;
@@ -292,7 +308,7 @@ class _CartPageState extends State<CartPage> {
                     ),
                     BlocListener<ClearCartBloc, ClearCartState>(
                       listener: (context, state) {
-                        log('Clear Cart Bloc  $state');
+                        developer.log('Clear Cart Bloc  $state');
                         if(state is ClearCartLoading) {
                           setState(() {
                             isCartLoading = true;
@@ -314,7 +330,7 @@ class _CartPageState extends State<CartPage> {
                     ),
                     BlocListener<SaveForLaterBloc, SaveForLaterState>(
                       listener: (context, state) {
-                        log('Save For Later Bloc  $state');
+                        developer.log('Save For Later Bloc  $state');
                         if(state is SaveForLaterLoading) {
                           setState(() {
                             isCartLoading = true;
@@ -344,7 +360,7 @@ class _CartPageState extends State<CartPage> {
                     ),
                     BlocListener<CreateOrderBloc, CreateOrderState>(
                       listener: (context, state) {
-                        log('Create Order Bloc  $state');
+                        developer.log('Create Order Bloc  $state');
                         if (state is CreateOrderSuccess) {
 
                           context.read<CartUIBloc>().add(SetWholePageProgress(true));
@@ -384,7 +400,7 @@ class _CartPageState extends State<CartPage> {
                                 : null;
 
                             GoRouter.of(context).pop();
-                            log('Payment successful: ${state.message}');
+                            developer.log('Payment successful: ${state.message}');
 
                             // Navigate to order success page
                             GoRouter.of(context).push(
@@ -419,8 +435,8 @@ class _CartPageState extends State<CartPage> {
                     // Payment BLoC Listener
                     BlocListener<PaymentBloc, PaymentState>(
                       listener: (context, state) {
-                        log('Payment Bloc  $state');
-                        log('Payment Success  $state');
+                        developer.log('Payment Bloc  $state');
+                        developer.log('Payment Success  $state');
                         if (state is PaymentSuccess) {
                           setState(() {
                             isWholePageProgress = false;
@@ -452,7 +468,7 @@ class _CartPageState extends State<CartPage> {
                     ),
                     BlocListener<UpdateItemQuantityBloc, UpdateItemQuantityState>(
                       listener: (context, state){
-                        log('Update Item Quantity Bloc  $state');
+                        developer.log('Update Item Quantity Bloc  $state');
                         if(state is UpdateItemQuantityLoading){
                           setState(() {
                             isCartLoading = true;
@@ -535,6 +551,7 @@ class _CartPageState extends State<CartPage> {
                             builder: (BuildContext context, GetUserCartState state) {
                               if(state is GetUserCartLoaded) {
                                 stateData = state.cartData;
+                                developer.log('🛒 Cart updated: ${stateData.length} sections found', name: 'CartPage');
                               }
                               if (isClearingCart) {
                                 return Center(
@@ -584,6 +601,8 @@ class _CartPageState extends State<CartPage> {
                                 final billSummaryData = cartData.first.data!.paymentSummary;
                                 deliveryZoneId = cartData.first.data?.deliveryZone!.zoneId;
                                 totalAmount = billSummaryData?.payableAmount?.toDouble() ?? 0.0;
+                                // Store items total (before wallet) for minimum order check
+                                itemsTotal = billSummaryData?.itemsTotal?.toDouble() ?? totalAmount;
 
                                 // Overriding inaccurate backend totals
                                 double calculatedItemsTotal = 0;
@@ -612,7 +631,7 @@ class _CartPageState extends State<CartPage> {
                                  double rushCharge = stateData.first.data?.deliveryZone?.rushDeliveryCharges?.toDouble() ?? 99.0;
                                  if (rushCharge < 99.0) rushCharge = 99.0;
 
-                                 double regularCharge = 30.0;
+                                 double regularCharge = 0.0;
 
                                  double currentDeliveryCharge = billSummaryData?.totalDeliveryCharges?.toDouble() ?? 0;
                                  double exactGrandTotal = rawGrandTotal;
@@ -651,17 +670,48 @@ class _CartPageState extends State<CartPage> {
                                     offerAndCouponButton(),
                                     SizedBox(height: 9.h,),
                                     BlocBuilder<SimilarProductBloc, SimilarProductState>(
-                                        builder: (context, state) {
-                                          if(state is SimilarProductLoaded) {
+                                        builder: (context, similarState) {
+                                          if(similarState is SimilarProductLoaded) {
+                                            // Collect active store IDs from the current cart state
+                                            final cartStoreIds = <int>{};
+                                            if (state is GetUserCartLoaded) {
+                                              for (var cartModel in state.cartData) {
+                                                if (cartModel.data?.items != null) {
+                                                  for (var item in cartModel.data!.items!) {
+                                                    if (item.storeId != null) cartStoreIds.add(item.storeId!);
+                                                    if (item.store?.id != null) cartStoreIds.add(item.store!.id!);
+                                                  }
+                                                }
+                                              }
+                                            }
+
+                                            developer.log('🏪 Active Cart Stores: $cartStoreIds', name: 'CartPage');
+                                            
+                                            // Filter: only show products from stores already serving this cart
+                                            final filteredProducts = cartStoreIds.isNotEmpty
+                                                ? similarState.similarProduct.where((product) {
+                                                    if (product.variants.isEmpty) return false;
+                                                    final pid = product.id;
+                                                    final sid = product.variants.first.storeId;
+                                                    final isAllowed = cartStoreIds.contains(sid);
+                                                    developer.log('🔍 Product "$pid" from store "$sid" allowed? $isAllowed', name: 'CartPage');
+                                                    return isAllowed;
+                                                  }).toList()
+                                                : <ProductData>[];
+
+                                            if (filteredProducts.isEmpty) {
+                                              return const SizedBox.shrink();
+                                            }
+
                                             return YouMightAlsoLikeProductWidget(
-                                              productData: state.similarProduct,
+                                              productData: filteredProducts,
                                               addressId: selectedAddress?.id,
                                               rushDelivery: selectedDeliveryType == DeliveryType.rush,
                                               useWallet: _userWantsWallet,
                                               promoCode: promoCode,
                                               isFromCartPage: true
                                             );
-                                          } else if(state is SimilarProductLoading) {
+                                          } else if(similarState is SimilarProductLoading) {
                                             return productListShimmer(3);
                                           }
                                           return SizedBox.shrink();
@@ -671,7 +721,7 @@ class _CartPageState extends State<CartPage> {
                                      DeliveryTypeWidget(
                                        selectedDeliveryType: selectedDeliveryType,
                                        rushDeliveryCharge: rushCharge,
-                                       regularDeliveryCharge: 30.0,
+                                       regularDeliveryCharge: 0.0,
                                        isRushDeliveryDisabled: billSummaryData?.isRushDeliveryAvailable == false,
                                        onDeliveryTypeChanged: (DeliveryType type) {
                                          setState(() {
@@ -739,6 +789,10 @@ class _CartPageState extends State<CartPage> {
                                       isEnabled: !isCartLoading,
                                     ),
 
+                                    Padding(
+                                      padding: EdgeInsets.symmetric(vertical: 16.h),
+                                      child: MinimumOrderProgressBar(currentTotal: itemsTotal),
+                                    ),
                                      BillSummaryWidget(
                                        itemsOriginalPrice: originalItemsTotal > calculatedItemsTotal ? originalItemsTotal : -1,
                                        itemsDiscountedPrice: calculatedItemsTotal,
@@ -1185,6 +1239,7 @@ class _CartPageState extends State<CartPage> {
             child: SizedBox(
               height: 50,
               child: CustomButton(
+                isDisabled: itemsTotal < AppConstant.minimumOrderValue,
                 onPressed: isCartLoading
                     ? () {}
                     : () {
@@ -1196,7 +1251,7 @@ class _CartPageState extends State<CartPage> {
 
                   final cartValidationError = CartValidation.validateCartForCheckout(
                     context: context,
-                    cartTotal: totalAmount,
+                    cartTotal: itemsTotal,
                     uniqueItemsCount: stateData.first.data!.itemsCount!,
                     storeIds: storeIds,
                   );

@@ -1237,13 +1237,13 @@ abstract class AppLocalizations {
   /// No description provided for @hyperlocalWalletBalanceValidFor1Year.
   ///
   /// In en, this message translates to:
-  /// **'Hyperlocal Wallet balance is valid for 1 year from the date of money added'**
+  /// **'Grofery Wallet balance is valid for 1 year from the date of money added'**
   String get hyperlocalWalletBalanceValidFor1Year;
 
   /// No description provided for @hyperlocalWalletBalanceCannotBeTransferred.
   ///
   /// In en, this message translates to:
-  /// **'Hyperlocal Wallet balance cannot be transfer to a bank account as per RBI guidelines'**
+  /// **'Grofery Wallet balance cannot be transfer to a bank account as per RBI guidelines'**
   String get hyperlocalWalletBalanceCannotBeTransferred;
 
   /// No description provided for @pleaseEnterAnAmountGreaterThanOrEqualTo1.

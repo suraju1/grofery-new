@@ -18,6 +18,7 @@ class AppConstant {
   static String baseUrl = 'https://grofery.in/api/';
   static String mediaBaseUrl = 'https://grofery.in/';
   static String appName = 'Grofery';
+  static const double minimumOrderValue = 2000.0;
   static String androidMapKey = 'AIzaSyDcGPon7dpfONgGUw8lBMOXveihNhaepVo';
   static String iosMapKey = 'AIzaSyDcGPon7dpfONgGUw8lBMOXveihNhaepVo';
   // <!-- Google Maps API Key -->

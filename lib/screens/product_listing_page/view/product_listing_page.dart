@@ -129,29 +129,33 @@ class _ProductListingPageState extends State<ProductListingPage> {
                   ),
                 ),
               ),
-            BlocBuilder<ProductListingBloc, ProductListingState>(
-              builder: (context, state) {
-                String count = widget.totalProduct;
-                if (state is ProductListingLoaded) {
-                  count = state.totalProducts.toString();
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.title,
-                      style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      "$count items",
-                      style: TextStyle(color: Colors.grey, fontSize: 12.sp),
-                    ),
-                  ],
-                );
-              },
+            Expanded(
+              child: BlocBuilder<ProductListingBloc, ProductListingState>(
+                builder: (context, state) {
+                  String count = widget.totalProduct;
+                  if (state is ProductListingLoaded) {
+                    count = state.totalProducts.toString();
+                  }
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        "$count items",
+                        style: TextStyle(color: Colors.grey, fontSize: 12.sp),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
           ],
         ),

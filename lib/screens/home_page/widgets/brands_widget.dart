@@ -95,7 +95,7 @@ class _BrandsSectionState extends State<BrandsSection> {
                   padding: EdgeInsets.only(
                       left: 10.0,
                       right: 10.0,
-                      bottom: 10.0.h,
+                      bottom: 4.0.h,
                       top: 10
                   ),
                   child: Row(
@@ -142,7 +142,7 @@ class _BrandsSectionState extends State<BrandsSection> {
                       left: 10.w,
                       right: 10.w,
                       top: 4.h,
-                      bottom: 10.h,
+                      bottom: 2.h,
                     ),
                     scrollDirection: Axis.horizontal,
                     itemCount: state.brandsData.length,

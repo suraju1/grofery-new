@@ -275,11 +275,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                       Expanded(
                                         child: Text(
                                           product.title,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
                                           style: TextStyle(
                                             fontSize:
-                                                isTablet(context) ? 24 : 14.sp,
+                                                isTablet(context) ? 24 : 13.sp,
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
@@ -1315,8 +1313,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         }
 
         return Container(
-          margin: EdgeInsets.only(top: 16.h, bottom: 8.h),
-          padding: EdgeInsets.symmetric(vertical: 8.h),
+          margin: EdgeInsets.symmetric(vertical: 8.h),
+          padding: EdgeInsets.symmetric(vertical: 4.h),
           decoration: BoxDecoration(
             color: const Color(0xFFF4F8FE), // Light blue background
             borderRadius: BorderRadius.circular(12.r),
@@ -1325,15 +1323,43 @@ class _ProductDetailPageState extends State<ProductDetailPage>
             children:
                 List.generate(activeVariant.tieredPricing.length, (index) {
               final tier = activeVariant.tieredPricing[index];
-              final double perUnitPrice = tier.price / tier.minQty;
-
               final bool isSelectedTier = activeTier == tier;
+              final bool isExactMatch = currentQty == tier.minQty;
 
-              return Column(
-                children: [
-                  Padding(
+              // Calculation: (BasePricePerUnit * currentQty) - (TierUnitPrice * currentQty)
+              final double unitBasePrice = activeVariant.price /
+                  (product.quantityStepSize > 0 ? product.quantityStepSize : 1);
+              final double tierUnitPrice = tier.price / tier.minQty;
+
+              // Use current quantity for savings display
+              final int effectiveQty =
+                  isSelectedTier ? currentQty : tier.minQty;
+              final double savings =
+                  (unitBasePrice - tierUnitPrice) * effectiveQty;
+
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 3.h),
+                decoration: BoxDecoration(
+                  color: isSelectedTier
+                      ? const Color(0xFFE7F6EB)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10.r),
+                  border: Border.all(
+                    color: isSelectedTier
+                        ? const Color(0xFFB9E4C2)
+                        : Colors.grey.shade200,
+                    width: 1,
+                  ),
+                ),
+                child: InkWell(
+                  onTap: () => _onTieredAddToCart(
+                      product, activeVariant, tier.minQty,
+                      isSetAbsolute: true),
+                  borderRadius: BorderRadius.circular(10.r),
+                  child: Padding(
                     padding:
-                        EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
+                        EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -1342,70 +1368,87 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "₹${perUnitPrice.toStringAsFixed(2)}/pc for ${tier.minQty} pcs+",
+                                "₹${tierUnitPrice.toStringAsFixed(2)}/pc for ${tier.minQty} pcs+",
                                 style: TextStyle(
-                                  fontSize: 12.sp,
+                                  fontSize: 13.sp,
                                   fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF1E5BB2),
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Text(
-                                "Total: ₹${tier.price.toStringAsFixed(2)}",
-                                style: TextStyle(
-                                  fontSize: 10.sp,
-                                  fontWeight: FontWeight.w500,
-                                  color: const Color(0xFF1E5BB2)
-                                      .withValues(alpha: 0.7),
+                                  color: isSelectedTier
+                                      ? const Color(0xFF1D8936)
+                                      : const Color(0xFF1E5BB2),
                                 ),
                               ),
+                              if (isSelectedTier && savings > 0)
+                                Padding(
+                                  padding: EdgeInsets.only(top: 4.h),
+                                  child: Text(
+                                    "₹${savings.toStringAsFixed(2)} saved on $currentQty pcs",
+                                    style: TextStyle(
+                                      fontSize: 10.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xFF1D8936),
+                                    ),
+                                  ),
+                                )
+                              else
+                                Text(
+                                  "Total: ₹${tier.price.toStringAsFixed(2)}",
+                                  style: TextStyle(
+                                    fontSize: 10.sp,
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFF1E5BB2)
+                                        .withValues(alpha: 0.7),
+                                  ),
+                                ),
                             ],
                           ),
                         ),
-                        Material(
-                          color: Colors.transparent,
-                          child: AnimatedButton(
-                            animationType: TapAnimationType.scale,
-                            duration: const Duration(milliseconds: 100),
-                            scaleAmount: 0.95,
-                            onTap: () => _onTieredAddToCart(
-                                product, activeVariant, tier.minQty,
-                                isSetAbsolute: true),
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 16.w, vertical: 8.h),
-                              decoration: BoxDecoration(
-                                color: isSelectedTier
-                                    ? const Color(0xFFE54A50)
-                                    : Colors.white,
-                                borderRadius: BorderRadius.circular(6.r),
-                                border: Border.all(
-                                    color: const Color(0xFFE54A50), width: 1),
-                              ),
-                              child: Text(
-                                "Add ${tier.minQty}",
-                                style: TextStyle(
-                                  fontSize: 13.sp,
-                                  fontWeight: FontWeight.bold,
-                                  color: isSelectedTier
-                                      ? Colors.white
-                                      : const Color(0xFFE54A50),
+                        if (isSelectedTier)
+                          Container(
+                            padding: EdgeInsets.all(4.r),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF1D8936),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.check,
+                              size: 16.sp,
+                              color: Colors.white,
+                            ),
+                          )
+                        else
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 12.w, vertical: 5.h),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8.r),
+                              border: Border.all(
+                                  color: const Color(0xFFEAB9BC), width: 1.2),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  "Add ${tier.minQty}",
+                                  style: TextStyle(
+                                    fontSize: 13.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFFE54A50),
+                                  ),
                                 ),
-                              ),
+                                SizedBox(width: 6.w),
+                                Icon(
+                                  TablerIcons.plus,
+                                  size: 18.sp,
+                                  color: const Color(0xFFE54A50),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
                       ],
                     ),
                   ),
-                  if (index < activeVariant.tieredPricing.length - 1)
-                    Divider(
-                      height: 12.h,
-                      thickness: 1,
-                      color: const Color(0xFFDFEDFD),
-                    ),
-                ],
+                ),
               );
             }),
           ),

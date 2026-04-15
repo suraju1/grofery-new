@@ -62,7 +62,7 @@ class _EditWishlistDialogState extends State<EditWishlistDialog> {
         children: [
           Icon(Icons.edit_outlined, color: AppTheme.primaryColor, size: 24),
           SizedBox(width: 12),
-          Text(AppLocalizations.of(context)!.editWishlist),
+          Expanded(child: Text(AppLocalizations.of(context)!.editWishlist)),
         ],
       ),
       content: Form(

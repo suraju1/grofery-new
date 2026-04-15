@@ -190,9 +190,24 @@ class _ExploreMoreCarouselState extends State<ExploreMoreCarousel> {
 
   void _navigateToDetail(BuildContext context, ExploreData banner) {
     debugPrint(
-        'EXPLORE_DEBUG: id=${banner.id}, type=${banner.type}, categoryId=${banner.categoryId}, productSlug=${banner.productSlug}, bannerTitle=${banner.title}');
+        'EXPLORE_DEBUG: id=${banner.id}, type=${banner.type}, categoryId=${banner.categoryId}, categorySlug=${banner.categorySlug}, productSlug=${banner.productSlug}, bannerTitle=${banner.title}');
 
-    // 1. Priority: Explicit Category ID
+    // 1. Priority: Explicit Category Slug
+    if (banner.categorySlug != null && banner.categorySlug!.isNotEmpty) {
+      debugPrint(
+          'EXPLORE_DEBUG: Navigating to category via Slug: ${banner.categorySlug}');
+      GoRouter.of(context).push(AppRoutes.productListing, extra: {
+        'isTheirMoreCategory': false,
+        'title': banner.categoryName ?? banner.title ?? 'Category',
+        'logo': banner.image ?? '',
+        'totalProduct': '',
+        'type': ProductListingType.category,
+        'identifier': banner.categorySlug!,
+      });
+      return;
+    }
+
+    // 2. Secondary: Explicit Category ID
     if (banner.categoryId != null && banner.categoryId != 0) {
       debugPrint(
           'EXPLORE_DEBUG: Navigating to category via ID: ${banner.categoryId}');

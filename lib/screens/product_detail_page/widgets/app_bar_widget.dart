@@ -19,6 +19,7 @@ import 'package:grofery_user/services/auth_guard.dart';
 import 'package:grofery_user/screens/wishlist_page/bloc/get_user_wishlist_bloc/get_user_wishlist_bloc.dart';
 import 'package:grofery_user/screens/wishlist_page/bloc/get_user_wishlist_bloc/get_user_wishlist_state.dart';
 import 'package:grofery_user/screens/wishlist_page/widgets/wishlist_bottom_sheet.dart';
+import 'package:grofery_user/screens/wishlist_page/bloc/wishlist_product_bloc/wishlist_product_bloc.dart';
 import '../bloc/product_detail_bloc/product_detail_bloc.dart';
 import '../bloc/product_detail_bloc/product_detail_state.dart';
 import '../model/product_detail_model.dart';
@@ -186,6 +187,38 @@ class _AppBarWidgetState extends State<AppBarWidget> {
                 return AnimatedButton(
                   onTap: () async {
                     if (Global.userData != null) {
+                      final wishlistBloc = context.read<UserWishlistBloc>();
+
+                      // CASE 1: Product is already wishlisted -> Remove it directly
+                      if (finalIsWishListed &&
+                          finalWishlistItemId != null &&
+                          finalWishlistItemId != 0) {
+                        wishlistBloc.add(
+                            RemoveItemFromWishlist(itemId: finalWishlistItemId));
+
+                        // Sync with local wishlist product listing if needed
+                        context.read<WishlistProductBloc>().add(
+                            RemoveProductLocally(itemId: finalWishlistItemId));
+                        return;
+                      }
+
+                      // CASE 2: Product not wishlisted -> Try to add directly if only one wishlist exists
+                      if (!finalIsWishListed &&
+                          wishlistState is UserWishlistLoaded &&
+                          wishlistState.wishlistData.length == 1) {
+                        final wishlist = wishlistState.wishlistData.first;
+                        wishlistBloc.add(
+                          AddItemInWishlist(
+                            wishlistTitle: wishlist.title ?? '',
+                            productId: productId,
+                            productVariantId: productVariantId,
+                            storeId: storeId,
+                          ),
+                        );
+                        return;
+                      }
+
+                      // CASE 3: Fallback -> Show bottom sheet (multiple wishlists or no wishlist loaded)
                       context
                           .read<UserWishlistBloc>()
                           .add(GetUserWishlistRequest());

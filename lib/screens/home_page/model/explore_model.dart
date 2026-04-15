@@ -69,6 +69,7 @@ class ExploreData {
   String? title;
   int? categoryId;
   String? categoryName;
+  String? categorySlug;
 
   ExploreData({
     this.id,
@@ -81,6 +82,7 @@ class ExploreData {
     this.title,
     this.categoryId,
     this.categoryName,
+    this.categorySlug,
   });
 
   ExploreData.fromJson(Map<String, dynamic> json) {
@@ -94,6 +96,7 @@ class ExploreData {
     title = json['title']?.toString();
     categoryId = _parseInt(json['category_id']);
     categoryName = json['category_name']?.toString();
+    categorySlug = json['category_slug']?.toString();
   }
 
   Map<String, dynamic> toJson() {
@@ -108,6 +111,7 @@ class ExploreData {
     data['title'] = title;
     data['category_id'] = categoryId;
     data['category_name'] = categoryName;
+    data['category_slug'] = categorySlug;
     return data;
   }
 

@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:grofery_user/screens/product_detail_page/model/product_detail_model.dart';
+import 'package:grofery_user/bloc/user_cart_bloc/user_cart_bloc.dart';
+import 'package:grofery_user/bloc/user_cart_bloc/user_cart_event.dart';
+import 'package:grofery_user/model/user_cart_model/user_cart.dart';
+import 'package:grofery_user/model/user_cart_model/cart_sync_action.dart';
 import '../../../utils/widgets/custom_product_card.dart';
 import '../bloc/similar_product_bloc/similar_product_bloc.dart';
 import '../widgets/product_detail_shimmer.dart';
@@ -49,7 +53,7 @@ class SimilarProductWidget extends StatelessWidget {
           ),
         ),
         SizedBox(
-          height: 300.h,
+          height: 260.h,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.symmetric(horizontal: 16.w),
@@ -57,7 +61,7 @@ class SimilarProductWidget extends StatelessWidget {
             itemBuilder: (context, index) {
               final product = similarProducts[index];
               return Container(
-                width: 185.w,
+                width: 175.w,
                 margin: EdgeInsets.only(right: 12.w),
                 child: CustomProductCard(
                   productId: product.id,
@@ -70,7 +74,33 @@ class SimilarProductWidget extends StatelessWidget {
                   estimatedDeliveryTime: product.estimatedDeliveryTime,
                   ratings: product.ratings.toDouble(),
                   ratingCount: product.ratingCount,
-                  onAddToCart: (qty) {},
+                  onAddToCart: (qty) {
+                    final variant = product.variants.first;
+                    context.read<CartBloc>().add(
+                          AddToCart(
+                            context: context,
+                            item: UserCart(
+                              productId: product.id.toString(),
+                              variantId: variant.id.toString(),
+                              variantName: variant.title,
+                              vendorId: variant.storeId.toString(),
+                              name: product.title,
+                              image: product.mainImage,
+                              price: variant.getEffectivePrice(qty),
+                              originalPrice:
+                                  variant.price.toDouble(),
+                              quantity: qty,
+                              minQty: product.minimumOrderQuantity,
+                              maxQty: product.totalAllowedQuantity,
+                              isOutOfStock: variant.stock <= 0,
+                              isSynced: false,
+                              updatedAt: DateTime.now(),
+                              syncAction: CartSyncAction.add,
+                              tieredPricing: variant.tieredPricing,
+                            ),
+                          ),
+                        );
+                  },
                   isStoreOpen: product.storeStatus?.isOpen ?? true,
                   isWishListed: product.favorite != null &&
                       product.favorite!.any((f) => f.wishlistId == 1),
@@ -91,11 +121,13 @@ class SimilarProductWidget extends StatelessWidget {
                   totalAllowedQuantity: product.totalAllowedQuantity,
                   tieredPricing: product.variants.first.tieredPricing,
                   indicator: product.indicator,
+                  isSimilarProductLayout: true,
                 ),
               );
             },
           ),
         ),
+        SizedBox(height: 100.h),
       ],
     );
   }

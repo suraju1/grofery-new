@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:grofery_user/bloc/user_cart_bloc/user_cart_bloc.dart';
+import 'package:grofery_user/bloc/user_cart_bloc/user_cart_event.dart';
+import 'package:grofery_user/model/user_cart_model/user_cart.dart';
+import 'package:grofery_user/model/user_cart_model/cart_sync_action.dart';
 import '../../product_detail_page/model/product_detail_model.dart';
 import '../../../utils/widgets/custom_product_card.dart';
 
@@ -37,7 +42,7 @@ class YouMightAlsoLikeProductWidget extends StatelessWidget {
           ),
         ),
         SizedBox(
-          height: 300.h,
+          height: 270.h,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.symmetric(horizontal: 16.w),
@@ -45,7 +50,7 @@ class YouMightAlsoLikeProductWidget extends StatelessWidget {
             itemBuilder: (context, index) {
               final product = productData![index];
               return Container(
-                width: 185.w,
+                width: 175.w,
                 margin: EdgeInsets.only(right: 12.w),
                 child: CustomProductCard(
                   productId: product.id,
@@ -58,7 +63,39 @@ class YouMightAlsoLikeProductWidget extends StatelessWidget {
                   estimatedDeliveryTime: product.estimatedDeliveryTime,
                   ratings: product.ratings.toDouble(),
                   ratingCount: product.ratingCount,
-                  onAddToCart: (qty) {},
+                  onAddToCart: (qty) {
+                    final variant = product.variants.first;
+                    debugPrint('YMAL: Adding to cart - Product: ${product.id}, Qty: $qty, addressId: $addressId, isFromCartPage: $isFromCartPage');
+                    context.read<CartBloc>().add(
+                          AddToCart(
+                            context: context,
+                            addressId: addressId,
+                            rushDelivery: rushDelivery,
+                            useWallet: useWallet,
+                            promoCode: promoCode,
+                            isFromCartPage: isFromCartPage,
+                            item: UserCart(
+                              productId: product.id.toString(),
+                              variantId: variant.id.toString(),
+                              variantName: variant.title,
+                              vendorId: variant.storeId.toString(),
+                              name: product.title,
+                              image: product.mainImage,
+                              price: variant.getEffectivePrice(qty),
+                              originalPrice:
+                                  variant.price.toDouble(),
+                              quantity: qty,
+                              minQty: product.minimumOrderQuantity,
+                              maxQty: product.totalAllowedQuantity,
+                              isOutOfStock: variant.stock <= 0,
+                              isSynced: false,
+                              updatedAt: DateTime.now(),
+                              syncAction: CartSyncAction.add,
+                              tieredPricing: variant.tieredPricing,
+                            ),
+                          ),
+                        );
+                  },
                   isStoreOpen: product.storeStatus?.isOpen ?? true,
                   isWishListed: product.favorite != null &&
                       product.favorite!.any((f) => f.wishlistId == 1),
@@ -79,11 +116,13 @@ class YouMightAlsoLikeProductWidget extends StatelessWidget {
                   totalAllowedQuantity: product.totalAllowedQuantity,
                   tieredPricing: product.variants.first.tieredPricing,
                   indicator: product.indicator,
+                  isSimilarProductLayout: true,
                 ),
               );
             },
           ),
         ),
+        SizedBox(height: 12.h),
       ],
     );
   }

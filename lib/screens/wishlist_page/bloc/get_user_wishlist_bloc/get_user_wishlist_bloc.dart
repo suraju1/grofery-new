@@ -239,9 +239,21 @@ class UserWishlistBloc extends Bloc<UserWishlistEvent, UserWishlistState> {
       if (wishlistIndex != -1) {
         originalWishlist = currentState.wishlistData[wishlistIndex];
         
-        // Update only itemsCount optimistically, keep items array unchanged
+        // Create a temporary item for optimistic search/removal
+        // This allows the removal logic to find the item instantly if clicked again
+        final tempItem = Items(
+          id: -1, // Temporary identifier
+          wishlistId: originalWishlist.id,
+          product: WishlistProduct(id: event.productId),
+          variant: WishlistVariant(id: event.productVariantId),
+          store: Store(id: event.storeId),
+        );
+
+        final updatedItems = List<Items>.from(originalWishlist.items ?? []);
+        updatedItems.add(tempItem);
+
         final updatedWishlist = originalWishlist.copyWith(
-          items: originalWishlist.items, // Keep original items, don't add temp item
+          items: updatedItems,
           itemsCount: (originalWishlist.itemsCount ?? 0) + 1,
         );
         

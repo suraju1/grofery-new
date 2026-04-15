@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:grofery_user/config/global.dart';
 import 'package:grofery_user/router/app_routes.dart';
 import 'package:grofery_user/utils/widgets/animated_button.dart';
+import 'package:grofery_user/utils/widgets/minimum_order_progress_bar.dart';
 import 'package:grofery_user/utils/widgets/custom_image_container.dart';
 import '../../config/constant.dart';
 import '../../config/theme.dart';
@@ -480,6 +481,18 @@ class _CustomScaffoldState extends State<CustomScaffold> with TickerProviderStat
                       ),
                     ],
                   ),
+                ),
+              ),
+
+            // Mini Progress Line at bottom
+            if (_widthAnimation.value > 150.w)
+              Positioned(
+                bottom: 0,
+                left: 16.w,
+                right: 16.w,
+                child: MinimumOrderProgressBar(
+                  currentTotal: cartBlocState is CartLoaded ? cartBlocState.totalAmount : 0.0,
+                  isSmall: true,
                 ),
               ),
           ],

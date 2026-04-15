@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/settings_data_instance.dart';
+import '../../config/constant.dart';
 import '../../l10n/app_localizations.dart';
 
 class CartValidation {
@@ -17,8 +18,8 @@ class CartValidation {
   }) {
     final l10n = AppLocalizations.of(context)!;
 
-    // Out of stock
-    if (stock <= 0) {
+    // Out of stock (stock < 0 means truly unavailable; stock == 0 means unlimited/not tracked)
+    if (stock < 0) {
       return l10n.outOfStock;
     }
 
@@ -32,13 +33,13 @@ class CartValidation {
       return l10n.minimumQuantityRequired(minQty);
     }
 
-    // Exceeds max allowed per product
-    if (requestedQuantity > maxQty) {
+    // Exceeds max allowed per product (skip check if maxQty is 0 = no limit set)
+    if (maxQty > 0 && requestedQuantity > maxQty) {
       return l10n.maximumQuantityAllowed(maxQty);
     }
 
-    // Exceeds available stock
-    if (requestedQuantity > stock) {
+    // Exceeds available stock (skip check if stock is 0 = unconstrained)
+    if (stock > 0 && requestedQuantity > stock) {
       return l10n.onlyXItemsInStock(stock);
     }
 
@@ -89,8 +90,8 @@ class CartValidation {
     final system = SettingsData.instance.system!;
 
     // Minimum cart amount
-    if (cartTotal < system.minimumCartAmount) {
-      final minAmount = system.minimumCartAmount;
+    const double minAmount = AppConstant.minimumOrderValue;
+    if (cartTotal < minAmount) {
       return l10n.minimumCartAmountRequired(minAmount - cartTotal, minAmount);
     }
 
