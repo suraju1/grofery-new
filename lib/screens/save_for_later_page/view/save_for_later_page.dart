@@ -177,6 +177,7 @@ class _SaveForLaterPageState extends State<SaveForLaterPage> {
       assetImage: '',
       ratings: double.parse(product.product!.ratings.toString()),
       ratingCount: product.product!.ratingCount!,
+      quickDeliveryAvailable: product.product!.quickDeliveryAvailable ?? false,
       onAddToCart: (quantity) {
         final item = UserCart(
             productId: product.id.toString(),
@@ -217,6 +218,8 @@ class _SaveForLaterPageState extends State<SaveForLaterPage> {
       minQty: product.product!.minimumOrderQuantity!,
       totalAllowedQuantity: product.product!.totalAllowedQuantity!,
       tieredPricing: product.variant!.tieredPricing,
+      mrp: product.variant!.mrp?.toString(),
+      mrpStatus: product.variant!.mrpStatus,
     );
   }
 

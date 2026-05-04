@@ -14,12 +14,11 @@ class ShoppingListWidget extends StatelessWidget {
   final List<ProductData> product;
   final String title;
   final int totalProducts;
-  const ShoppingListWidget({
-    super.key,
-    required this.product,
-    required this.title,
-    required this.totalProducts
-  });
+  const ShoppingListWidget(
+      {super.key,
+      required this.product,
+      required this.title,
+      required this.totalProducts});
 
   @override
   Widget build(BuildContext context) {
@@ -32,117 +31,156 @@ class ShoppingListWidget extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: 10.w),
             child: Text(
               'Result for "$title"',
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.bold
-              ),
+              style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
             ),
           ),
-          SizedBox(height: 10.h,),
+          SizedBox(
+            height: 10.h,
+          ),
           SizedBox(
             height: 200.h,
             child: ListView.builder(
-              shrinkWrap: true,
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.only(left: 12.w),
-              itemCount: totalProducts > 30 ? 30 : totalProducts,
-              itemBuilder: (context, index) {
-                final productData = product[index];
-                return Padding(
-                  padding: EdgeInsets.only(right: 8.w),
-                  child: SizedBox(
-                    width: 140,
-                    child: CustomProductCard(
-                      productId: productData.id,
-                      productImage: productData.mainImage,
-                      productSlug: productData.slug,
-                      productName: productData.title,
-                      productPrice: productData.variants.first.price.toString(),
-                      specialPrice: productData.variants.first.specialPrice.toString(),
-                      productTags: [],
-                      estimatedDeliveryTime: productData.estimatedDeliveryTime.toString(),
-                      assetImage: '',
-                      ratings: double.parse(productData.ratings.toString()),
-                      ratingCount: productData.ratingCount,
-                      onAddToCart: (quantity) {
-                        if (productData.variants.length > 1) {
-                          showVariantBottomSheet(
-                            variantsList: productData.variants,
-                            productData: productData,
-                            productImage: productData.mainImage,
-                            quantityStepSize: productData.quantityStepSize,
-                            context: context,
-                          );
-                        } else {
-                          final item = UserCart(
+                shrinkWrap: true,
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.only(left: 12.w),
+                itemCount: totalProducts > 30 ? 30 : totalProducts,
+                itemBuilder: (context, index) {
+                  final productData = product[index];
+                  return Padding(
+                    padding: EdgeInsets.only(right: 8.w),
+                    child: SizedBox(
+                      width: 140,
+                      child: CustomProductCard(
+                        productId: productData.id,
+                        productImage: productData.mainImage,
+                        productSlug: productData.slug,
+                        productName: productData.title,
+                        productPrice:
+                            productData.variants.first.price.toString(),
+                        specialPrice:
+                            productData.variants.first.specialPrice.toString(),
+                        productTags: [],
+                        estimatedDeliveryTime:
+                            productData.estimatedDeliveryTime.toString(),
+                        assetImage: '',
+                        ratings: double.parse(productData.ratings.toString()),
+                        ratingCount: productData.ratingCount,
+                        quickDeliveryAvailable:
+                            productData.quickDeliveryAvailable,
+                        onAddToCart: (quantity) {
+                          if (productData.variants.length > 1) {
+                            showVariantBottomSheet(
+                              variantsList: productData.variants,
+                              productData: productData,
+                              productImage: productData.mainImage,
+                              quantityStepSize: productData.quantityStepSize,
+                              context: context,
+                            );
+                          } else {
+                            final item = UserCart(
                               productId: productData.id.toString(),
-                              variantId: productData.variants.firstWhere((variant) => variant.isDefault).id.toString(),
-                              variantName: productData.variants.firstWhere((variant) => variant.isDefault).title.toString(),
-                              vendorId: productData.variants.firstWhere((variant) => variant.isDefault).storeId.toString(),
+                              variantId: productData.variants
+                                  .firstWhere((variant) => variant.isDefault)
+                                  .id
+                                  .toString(),
+                              variantName: productData.variants
+                                  .firstWhere((variant) => variant.isDefault)
+                                  .title
+                                  .toString(),
+                              vendorId: productData.variants
+                                  .firstWhere((variant) => variant.isDefault)
+                                  .storeId
+                                  .toString(),
                               name: productData.title,
                               image: productData.mainImage,
-                              price: productData.variants.firstWhere((variant) => variant.isDefault).specialPrice.toDouble(),
-                              originalPrice: productData.variants.firstWhere((variant) => variant.isDefault).price.toDouble(),
+                              price: productData.variants
+                                  .firstWhere((variant) => variant.isDefault)
+                                  .specialPrice
+                                  .toDouble(),
+                              originalPrice: productData.variants
+                                  .firstWhere((variant) => variant.isDefault)
+                                  .price
+                                  .toDouble(),
                               quantity: quantity,
                               serverCartItemId: null,
                               syncAction: CartSyncAction.add,
                               updatedAt: DateTime.now(),
                               minQty: productData.minimumOrderQuantity,
                               maxQty: productData.totalAllowedQuantity,
-                              isOutOfStock: productData.variants.firstWhere((variant) => variant.isDefault).stock <= 0,
+                              isOutOfStock: productData.variants
+                                      .firstWhere(
+                                          (variant) => variant.isDefault)
+                                      .stock <=
+                                  0,
                               isSynced: false,
                               tieredPricing: productData.variants
                                   .firstWhere((variant) => variant.isDefault)
                                   .tieredPricing,
-                          );
+                            );
 
-                          context.read<CartBloc>().add(AddToCart(item: item, context:  context));
+                            context
+                                .read<CartBloc>()
+                                .add(AddToCart(item: item, context: context));
 
-                          /*context.read<AddToCartBloc>().add(
+                            /*context.read<AddToCartBloc>().add(
                             AddItemToCart(
                               productVariantId: productData.variants.first.id,
                               storeId: productData.variants.first.storeId,
                               quantity: productData.quantityStepSize,
                             ),
                           );*/
-                        }
-                      },
-                      variantCount: productData.variants.length,
-                      onVariantSelectorRequested: productData.variants.length > 1
-                          ? () => showVariantBottomSheet(
-                        variantsList: productData.variants,
-                        productData: productData,
-                        productImage: productData.mainImage,
+                          }
+                        },
+                        variantCount: productData.variants.length,
+                        onVariantSelectorRequested:
+                            productData.variants.length > 1
+                                ? () => showVariantBottomSheet(
+                                      variantsList: productData.variants,
+                                      productData: productData,
+                                      productImage: productData.mainImage,
+                                      quantityStepSize:
+                                          productData.quantityStepSize,
+                                      context: context,
+                                    )
+                                : null,
+                        isStoreOpen: productData.storeStatus?.isOpen ?? true,
+                        isWishListed: productData.favorite != null &&
+                            productData.favorite!.any((f) => f.wishlistId == 1),
+                        productVariantId: productData.variants
+                            .firstWhere((variant) => variant.isDefault)
+                            .id,
+                        storeId: productData.variants
+                            .firstWhere((variant) => variant.isDefault)
+                            .storeId,
+                        wishlistItemId: (productData.favorite
+                                    ?.any((f) => f.wishlistId == 1) ??
+                                false)
+                            ? productData.favorite!
+                                    .firstWhere((f) => f.wishlistId == 1)
+                                    .id ??
+                                0
+                            : 0,
+                        totalStocks: productData.variants
+                            .firstWhere((variant) => variant.isDefault)
+                            .stock,
+                        imageFit: productData.imageFit,
                         quantityStepSize: productData.quantityStepSize,
-                        context: context,
-                      )
-                          : null,
-                      isStoreOpen: productData.storeStatus?.isOpen ?? true,
-                      isWishListed: productData.favorite != null &&
-                          productData.favorite!.any((f) => f.wishlistId == 1),
-                      productVariantId: productData.variants.firstWhere((variant) => variant.isDefault).id,
-                      storeId: productData.variants.firstWhere((variant) => variant.isDefault).storeId,
-                      wishlistItemId: (productData.favorite
-                                  ?.any((f) => f.wishlistId == 1) ??
-                              false)
-                          ? productData.favorite!
-                                  .firstWhere((f) => f.wishlistId == 1)
-                                  .id ??
-                              0
-                          : 0,
-                      totalStocks: productData.variants.firstWhere((variant) => variant.isDefault).stock,
-                      imageFit: productData.imageFit,
-                      quantityStepSize: productData.quantityStepSize,
-                      minQty: productData.minimumOrderQuantity,
-                      totalAllowedQuantity: productData.totalAllowedQuantity,
-                      tieredPricing: productData.variants
-                          .firstWhere((v) => v.isDefault)
-                          .tieredPricing,
+                        minQty: productData.minimumOrderQuantity,
+                        totalAllowedQuantity: productData.totalAllowedQuantity,
+                        tieredPricing: productData.variants
+                            .firstWhere((v) => v.isDefault)
+                            .tieredPricing,
+                        mrp: productData.variants
+                            .firstWhere((v) => v.isDefault)
+                            .mrp
+                            .toString(),
+                        mrpStatus: productData.variants
+                            .firstWhere((v) => v.isDefault)
+                            .mrpStatus,
+                      ),
                     ),
-                  ),
-                );
-              }
-            ),
+                  );
+                }),
           )
         ],
       ),

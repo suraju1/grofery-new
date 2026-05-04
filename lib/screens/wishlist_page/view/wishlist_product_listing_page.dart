@@ -18,24 +18,23 @@ import 'package:grofery_user/screens/wishlist_page/model/wishlist_product_model.
 
 class WishlistProductListingPage extends StatefulWidget {
   final int wishlistId;
-  const WishlistProductListingPage({
-    super.key,
-    required this.wishlistId
-  });
+  const WishlistProductListingPage({super.key, required this.wishlistId});
 
   @override
-  State<WishlistProductListingPage> createState() => _WishlistProductListingPageState();
+  State<WishlistProductListingPage> createState() =>
+      _WishlistProductListingPageState();
 }
 
-class _WishlistProductListingPageState extends State<WishlistProductListingPage> {
+class _WishlistProductListingPageState
+    extends State<WishlistProductListingPage> {
   @override
   void initState() {
     super.initState();
     context.read<WishlistProductBloc>().add(
-      FetchWishlistProductData(
-        wishlistId: widget.wishlistId,
-      ),
-    );
+          FetchWishlistProductData(
+            wishlistId: widget.wishlistId,
+          ),
+        );
   }
 
   @override
@@ -48,7 +47,6 @@ class _WishlistProductListingPageState extends State<WishlistProductListingPage>
         centerTitle: false,
         title: BlocBuilder<WishlistProductBloc, WishlistProductState>(
           builder: (BuildContext context, WishlistProductState state) {
-
             if (state is WishlistProductLoaded) {
               return Row(
                 children: [
@@ -60,7 +58,7 @@ class _WishlistProductListingPageState extends State<WishlistProductListingPage>
                         style: TextStyle(
                           fontSize: isTablet(context) ? 24 : 20.sp,
                           fontFamily: AppTheme.fontFamily,
-                         ),
+                        ),
                       ),
                       Text(
                         '${state.totalProducts} items',
@@ -82,10 +80,10 @@ class _WishlistProductListingPageState extends State<WishlistProductListingPage>
       body: CustomRefreshIndicator(
         onRefresh: () async {
           context.read<WishlistProductBloc>().add(
-            FetchWishlistProductData(
-              wishlistId: widget.wishlistId,
-            ),
-          );
+                FetchWishlistProductData(
+                  wishlistId: widget.wishlistId,
+                ),
+              );
         },
         child: BlocConsumer<WishlistProductBloc, WishlistProductState>(
           listener: (BuildContext context, WishlistProductState state) {},
@@ -121,12 +119,12 @@ class _WishlistProductListingPageState extends State<WishlistProductListingPage>
               return CustomCircularProgressIndicator();
             }
             return NoProductPage(
-              onRetry: (){
+              onRetry: () {
                 context.read<WishlistProductBloc>().add(
-                  FetchWishlistProductData(
-                    wishlistId: widget.wishlistId,
-                  ),
-                );
+                      FetchWishlistProductData(
+                        wishlistId: widget.wishlistId,
+                      ),
+                    );
               },
             );
           },
@@ -148,18 +146,17 @@ class _WishlistProductListingPageState extends State<WishlistProductListingPage>
   }
 
   Widget _buildContent(
-      List<WishlistProductItems> productData,
-      bool hasReachedMax,
-      ) {
-
+    List<WishlistProductItems> productData,
+    bool hasReachedMax,
+  ) {
     if (productData.isEmpty) {
       return NoProductPage(
-        onRetry: (){
+        onRetry: () {
           context.read<WishlistProductBloc>().add(
-            FetchWishlistProductData(
-              wishlistId: widget.wishlistId,
-            ),
-          );
+                FetchWishlistProductData(
+                  wishlistId: widget.wishlistId,
+                ),
+              );
         },
       );
     }
@@ -167,7 +164,8 @@ class _WishlistProductListingPageState extends State<WishlistProductListingPage>
     return _buildProductGrid(productData, hasReachedMax);
   }
 
-  Widget _buildProductGrid(List<WishlistProductItems> productData, bool hasReachedMax) {
+  Widget _buildProductGrid(
+      List<WishlistProductItems> productData, bool hasReachedMax) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
       child: GridView.builder(
@@ -185,7 +183,6 @@ class _WishlistProductListingPageState extends State<WishlistProductListingPage>
   }
 
   Widget _buildGridItem(List<WishlistProductItems> productData, int index) {
-
     final product = productData[index];
     return CustomProductCard(
       productId: product.product!.id!,
@@ -199,6 +196,7 @@ class _WishlistProductListingPageState extends State<WishlistProductListingPage>
       assetImage: '',
       ratings: double.parse(product.product!.ratings.toString()),
       ratingCount: product.product!.ratingCount!,
+      quickDeliveryAvailable: product.product!.quickDeliveryAvailable ?? false,
       onAddToCart: (quantity) {
         final item = UserCart(
             productId: product.id.toString(),
@@ -217,9 +215,8 @@ class _WishlistProductListingPageState extends State<WishlistProductListingPage>
             maxQty: product.product!.totalAllowedQuantity!,
             isOutOfStock: product.variant!.stock! <= 0,
             tieredPricing: product.variant!.tieredPricing,
-            isSynced: false
-        );
-        context.read<CartBloc>().add(AddToCart(item: item,context:  context));
+            isSynced: false);
+        context.read<CartBloc>().add(AddToCart(item: item, context: context));
         /*context.read<AddToCartBloc>().add(
             AddItemToCart(
               productVariantId: product.variant!.id!,
@@ -240,6 +237,8 @@ class _WishlistProductListingPageState extends State<WishlistProductListingPage>
       minQty: product.product!.minimumOrderQuantity!,
       totalAllowedQuantity: product.product!.totalAllowedQuantity!,
       tieredPricing: product.variant!.tieredPricing,
+      mrp: product.variant!.mrp?.toString(),
+      mrpStatus: product.variant!.mrpStatus,
     );
 
     /*return WishlistProductCard(
@@ -279,5 +278,4 @@ class _WishlistProductListingPageState extends State<WishlistProductListingPage>
       ],
     );
   }
-
 }

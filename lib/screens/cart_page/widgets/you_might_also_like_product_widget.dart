@@ -63,9 +63,11 @@ class YouMightAlsoLikeProductWidget extends StatelessWidget {
                   estimatedDeliveryTime: product.estimatedDeliveryTime,
                   ratings: product.ratings.toDouble(),
                   ratingCount: product.ratingCount,
+                  quickDeliveryAvailable: product.quickDeliveryAvailable,
                   onAddToCart: (qty) {
                     final variant = product.variants.first;
-                    debugPrint('YMAL: Adding to cart - Product: ${product.id}, Qty: $qty, addressId: $addressId, isFromCartPage: $isFromCartPage');
+                    debugPrint(
+                        'YMAL: Adding to cart - Product: ${product.id}, Qty: $qty, addressId: $addressId, isFromCartPage: $isFromCartPage');
                     context.read<CartBloc>().add(
                           AddToCart(
                             context: context,
@@ -82,8 +84,7 @@ class YouMightAlsoLikeProductWidget extends StatelessWidget {
                               name: product.title,
                               image: product.mainImage,
                               price: variant.getEffectivePrice(qty),
-                              originalPrice:
-                                  variant.price.toDouble(),
+                              originalPrice: variant.price.toDouble(),
                               quantity: qty,
                               minQty: product.minimumOrderQuantity,
                               maxQty: product.totalAllowedQuantity,
@@ -101,14 +102,13 @@ class YouMightAlsoLikeProductWidget extends StatelessWidget {
                       product.favorite!.any((f) => f.wishlistId == 1),
                   productVariantId: product.variants.first.id,
                   storeId: product.variants.first.storeId,
-                  wishlistItemId: (product.favorite?.any(
-                              (f) => f.wishlistId == 1) ??
-                          false)
-                      ? product.favorite!
-                              .firstWhere((f) => f.wishlistId == 1)
-                              .id ??
-                          0
-                      : 0,
+                  wishlistItemId:
+                      (product.favorite?.any((f) => f.wishlistId == 1) ?? false)
+                          ? product.favorite!
+                                  .firstWhere((f) => f.wishlistId == 1)
+                                  .id ??
+                              0
+                          : 0,
                   totalStocks: product.variants.first.stock,
                   imageFit: product.imageFit,
                   quantityStepSize: product.quantityStepSize,
@@ -117,6 +117,8 @@ class YouMightAlsoLikeProductWidget extends StatelessWidget {
                   tieredPricing: product.variants.first.tieredPricing,
                   indicator: product.indicator,
                   isSimilarProductLayout: true,
+                  mrp: product.variants.first.mrp.toString(),
+                  mrpStatus: product.variants.first.mrpStatus,
                 ),
               );
             },

@@ -3,7 +3,8 @@ enum ProductListingType {
   brand,
   store,
   search,
-  featuredSection
+  featuredSection,
+  recommended
 }
 
 extension ProductListingTypeX on ProductListingType {
@@ -19,6 +20,8 @@ extension ProductListingTypeX on ProductListingType {
         return 'search';
       case ProductListingType.featuredSection:
         return 'feature-section';
+      case ProductListingType.recommended:
+        return 'recommended';
     }
   }
 }

@@ -6,6 +6,7 @@ import 'package:grofery_user/screens/home_page/model/brands_model.dart';
 import 'package:grofery_user/screens/product_detail_page/model/product_detail_model.dart';
 //
 import '../../../../model/sorting_model/sorting_model.dart';
+import '../../../../services/location/location_service.dart';
 import '../../repo/category_product_repo.dart';
 import '../../model/product_listing_type.dart';
 
@@ -50,6 +51,12 @@ class ProductListingBloc
       FetchListingProducts event, Emitter<ProductListingState> emit) async {
     emit(ProductListingLoading());
     try {
+      final location = LocationService.getStoredLocation();
+      if (location == null) {
+        emit(ProductListingFailed(error: 'Location not found. Please select a delivery location.'));
+        return;
+      }
+
       appliedCategorySlugs = event.categorySlugs ?? [];
       appliedBrandSlugs = event.brandSlugs ?? [];
       appliedIndicator = event.indicator;
@@ -79,9 +86,31 @@ class ProductListingBloc
           indicator: appliedIndicator,
           rating: appliedRating);
 
-      if (response['data'].isNotEmpty) {
+      final dynamic responseData = response['data'];
+
+      if (responseData != null && 
+          ((responseData is Map && (responseData['data'] != null || responseData['products'] != null)) || 
+           (responseData is List && responseData.isNotEmpty))) {
+        
+        List<dynamic> rawList = [];
+        if (responseData is Map) {
+          rawList = (responseData['data'] ?? responseData['products'] ?? []) as List<dynamic>;
+          totalProducts = int.tryParse((responseData['total'] ?? responseData['products_count'] ?? rawList.length).toString()) ?? 0;
+          final int currentPageNum = int.tryParse(responseData['current_page'].toString()) ?? 1;
+          final int lastPageNum = int.tryParse(responseData['last_page'].toString()) ?? 1;
+          hasReachedMax = currentPageNum >= lastPageNum;
+          
+          if (event.type == ProductListingType.search && responseData['keywords'] != null) {
+            keywords = responseData['keywords'] as List<dynamic>;
+          }
+        } else {
+          rawList = responseData;
+          totalProducts = rawList.length;
+          hasReachedMax = true; // Non-paginated list is usually complete
+        }
+
         var products = List<ProductData>.from(
-            response['data']['data'].map((data) => ProductData.fromJson(data)));
+            rawList.map((data) => ProductData.fromJson(data)));
 
         if (appliedIndicator != null && appliedIndicator!.isNotEmpty) {
           products = products.where((p) => p.indicator == appliedIndicator).toList();
@@ -90,34 +119,15 @@ class ProductListingBloc
           products = products.where((p) => p.ratings >= appliedRating!).toList();
         }
 
-        totalProducts = int.parse(response['data']['total'].toString());
-        /*categoryIds = response['data']['category_ids'] as String;
-        brandIds = response['data']['brand_ids'] as String;*/
         List<BrandsData> brandsList = [];
-        if (response['data']['brands'] != null) {
+        if (responseData is Map && responseData['brands'] != null) {
           brandsList = List<BrandsData>.from(
-              response['data']['brands'].map((v) => BrandsData.fromJson(v)));
+              responseData['brands'].map((v) => BrandsData.fromJson(v)));
         }
-        // Fallback: extract brands from products if API doesn't return a brands list
+        
         if (brandsList.isEmpty) {
-          brandsList = _extractBrandsFromProducts(
-              response['data']['data'] as List<dynamic>);
+          brandsList = _extractBrandsFromProducts(rawList);
         }
-
-        if (event.type == ProductListingType.search) {
-          keywords = response['data']['keywords'] as List<dynamic>;
-        }
-
-        // Correct hasReachedMax: check if current_page >= last_page
-        // We use int.tryParse to be safe with varied API response formats
-        final int currentPageNum =
-            int.tryParse(response['data']['current_page'].toString()) ?? 1;
-        final int lastPageNum =
-            int.tryParse(response['data']['last_page'].toString()) ?? 1;
-
-        // hasReachedMax if we are on the last page OR if we got fewer products than perPage
-        // (but only if we aren't filtering heavily on the frontend)
-        hasReachedMax = currentPageNum >= lastPageNum;
 
         if (response['success'] == true) {
           emit(ProductListingLoaded(
@@ -142,8 +152,8 @@ class ProductListingBloc
             error: response['message'] ?? 'No products found'));
       }
     } catch (e, err) {
-      log('Hello from Product list  ${err.toString()}');
-      emit(ProductListingFailed(error: e.toString()));
+      log('Error in ProductListingBloc: $e\n$err');
+      emit(ProductListingFailed(error: 'Something went wrong while loading products.'));
     }
   }
 
@@ -176,9 +186,25 @@ class ProductListingBloc
             indicator: appliedIndicator,
             rating: appliedRating);
 
-        if (response['data'].isNotEmpty) {
-          var newProducts = List<ProductData>.from(response['data']['data']
-              .map((data) => ProductData.fromJson(data)));
+        final dynamic responseData = response['data'];
+
+        if (responseData != null && 
+            ((responseData is Map && (responseData['data'] != null || responseData['products'] != null)) || 
+             (responseData is List && responseData.isNotEmpty))) {
+          
+          List<dynamic> rawList = [];
+          if (responseData is Map) {
+            rawList = (responseData['data'] ?? responseData['products'] ?? []) as List<dynamic>;
+            final int currentPageNum = int.tryParse(responseData['current_page'].toString()) ?? currentPage;
+            final int lastPageNum = int.tryParse(responseData['last_page'].toString()) ?? currentPage;
+            hasReachedMax = currentPageNum >= lastPageNum;
+          } else {
+            rawList = responseData;
+            hasReachedMax = true;
+          }
+
+          var newProducts = List<ProductData>.from(
+              rawList.map((data) => ProductData.fromJson(data)));
 
           if (appliedIndicator != null && appliedIndicator!.isNotEmpty) {
             newProducts = newProducts.where((p) => p.indicator == appliedIndicator).toList();
@@ -281,62 +307,70 @@ class ProductListingBloc
           indicator: appliedIndicator,
           rating: appliedRating);
 
-      var products = List<ProductData>.from(
-          response['data']['data'].map((data) => ProductData.fromJson(data)));
+      final dynamic responseData = response['data'];
 
-      if (appliedIndicator != null && appliedIndicator!.isNotEmpty) {
-        products = products.where((p) => p.indicator == appliedIndicator).toList();
-      }
-      if (appliedRating != null) {
-        products = products.where((p) => p.ratings >= appliedRating!).toList();
-      }
+      if (responseData != null && 
+          ((responseData is Map && (responseData['data'] != null || responseData['products'] != null)) || 
+           (responseData is List && responseData.isNotEmpty))) {
+        
+        List<dynamic> rawList = [];
+        if (responseData is Map) {
+          rawList = (responseData['data'] ?? responseData['products'] ?? []) as List<dynamic>;
+          totalProducts = int.tryParse((responseData['total'] ?? responseData['products_count'] ?? rawList.length).toString()) ?? 0;
+          final int currentPageNum = int.tryParse(responseData['current_page']?.toString() ?? '1') ?? 1;
+          final int lastPageNum = int.tryParse(responseData['last_page']?.toString() ?? '1') ?? 1;
+          hasReachedMax = currentPageNum >= lastPageNum;
+        } else {
+          rawList = responseData;
+          totalProducts = rawList.length;
+          hasReachedMax = true;
+        }
 
-      // ✅ Update pagination state
-        // Correct hasReachedMax: check if current_page >= last_page
-        final int currentPageNum =
-            int.tryParse(response['data']['current_page'].toString()) ?? 1;
-        final int lastPageNum =
-            int.tryParse(response['data']['last_page'].toString()) ?? 1;
-        hasReachedMax = currentPageNum >= lastPageNum;
-      /*categoryIds = response['data']['category_ids'] as String;
-      brandIds = response['data']['brand_ids'] as String;*/
+        var products = List<ProductData>.from(
+            rawList.map((data) => ProductData.fromJson(data)));
 
-      totalProducts = int.parse(response['data']['total'].toString());
-      List<BrandsData> brandsList = [];
-      if (response['data']['brands'] != null) {
-        brandsList = List<BrandsData>.from(
-            response['data']['brands'].map((v) => BrandsData.fromJson(v)));
-      }
-      // Fallback: extract brands from product items
-      if (brandsList.isEmpty) {
-        brandsList = _extractBrandsFromProducts(
-            response['data']['data'] as List<dynamic>);
-      }
+        if (appliedIndicator != null && appliedIndicator!.isNotEmpty) {
+          products = products.where((p) => p.indicator == appliedIndicator).toList();
+        }
+        if (appliedRating != null) {
+          products = products.where((p) => p.ratings >= appliedRating!).toList();
+        }
 
-      if (event.type == ProductListingType.search) {
-        keywords = response['data']['keywords'];
-      }
-      currentSortType = SortOption.getSortOptionByApiValue(event.sortType).type;
+        List<BrandsData> brandsList = [];
+        if (responseData is Map && responseData['brands'] != null) {
+          brandsList = List<BrandsData>.from(
+              responseData['brands'].map((v) => BrandsData.fromJson(v)));
+        }
+        
+        if (brandsList.isEmpty) {
+          brandsList = _extractBrandsFromProducts(rawList);
+        }
 
-      if (response['success'] == true) {
-        emit(ProductListingLoaded(
-            message: response['message'],
-            productList: _applyFrontendFilters(products),
-            fullProductList: products,
-            hasReachedMax: hasReachedMax,
-            isFilterLoading: false,
-            isLoading: false,
-            currentSortType: currentSortType,
-            totalProducts: totalProducts,
-            keywords: keywords,
-            categoryIds: categoryIds,
-            brandIds: brandIds,
-            brandsList: brandsList,
-            appliedDeliveryMinutes: appliedMaxDeliveryMinutes));
+        currentSortType = SortOption.getSortOptionByApiValue(event.sortType).type;
+
+        if (response['success'] == true) {
+          emit(ProductListingLoaded(
+              message: response['message'],
+              productList: _applyFrontendFilters(products),
+              fullProductList: products,
+              hasReachedMax: hasReachedMax,
+              isFilterLoading: false,
+              isLoading: false,
+              currentSortType: currentSortType,
+              totalProducts: totalProducts,
+              keywords: keywords,
+              categoryIds: categoryIds,
+              brandIds: brandIds,
+              brandsList: brandsList,
+              appliedDeliveryMinutes: appliedMaxDeliveryMinutes));
+        } else {
+          emit(ProductListingFailed(error: response['message']));
+        }
       } else {
-        emit(ProductListingFailed(error: response['message']));
+        emit(ProductListingFailed(error: response['message'] ?? 'No products found'));
       }
     } catch (e) {
+      log('Error in _onFetchSortedListingProducts: $e');
       emit(ProductListingFailed(error: e.toString()));
     }
   }
@@ -396,9 +430,31 @@ class ProductListingBloc
           indicator: appliedIndicator,
           rating: appliedRating);
 
-      if (response['data'].isNotEmpty) {
+      final dynamic responseData = response['data'];
+
+      if (responseData != null && 
+          ((responseData is Map && (responseData['data'] != null || responseData['products'] != null)) || 
+           (responseData is List && responseData.isNotEmpty))) {
+        
+        List<dynamic> rawList = [];
+        if (responseData is Map) {
+          rawList = (responseData['data'] ?? responseData['products'] ?? []) as List<dynamic>;
+          totalProducts = int.tryParse((responseData['total'] ?? responseData['products_count'] ?? rawList.length).toString()) ?? 0;
+          final int currentPageNum = int.tryParse(responseData['current_page']?.toString() ?? '1') ?? 1;
+          final int lastPageNum = int.tryParse(responseData['last_page']?.toString() ?? '1') ?? 1;
+          hasReachedMax = currentPageNum >= lastPageNum;
+          
+          if (event.type == ProductListingType.search && responseData['keywords'] != null) {
+            keywords = responseData['keywords'] as List<dynamic>;
+          }
+        } else {
+          rawList = responseData;
+          totalProducts = rawList.length;
+          hasReachedMax = true;
+        }
+
         var products = List<ProductData>.from(
-            response['data']['data'].map((data) => ProductData.fromJson(data)));
+            rawList.map((data) => ProductData.fromJson(data)));
 
         if (appliedIndicator != null && appliedIndicator!.isNotEmpty) {
           products = products.where((p) => p.indicator == appliedIndicator).toList();
@@ -407,34 +463,17 @@ class ProductListingBloc
           products = products.where((p) => p.ratings >= appliedRating!).toList();
         }
 
-        totalProducts = int.parse(response['data']['total'].toString());
-        // Correct hasReachedMax: check if current_page >= last_page
-        final int currentPageNum =
-            int.tryParse(response['data']['current_page'].toString()) ?? 1;
-        final int lastPageNum =
-            int.tryParse(response['data']['last_page'].toString()) ?? 1;
-        hasReachedMax = currentPageNum >= lastPageNum;
-        /*categoryIds = response['data']['category_ids'] as String;
-        brandIds = response['data']['brand_ids'] as String;*/
-
         List<BrandsData> brandsList = [];
-        if (response['data']['brands'] != null) {
+        if (responseData is Map && responseData['brands'] != null) {
           brandsList = List<BrandsData>.from(
-              response['data']['brands'].map((v) => BrandsData.fromJson(v)));
+              responseData['brands'].map((v) => BrandsData.fromJson(v)));
         }
-        // Fallback: extract brands from product items
+        
         if (brandsList.isEmpty) {
-          brandsList = _extractBrandsFromProducts(
-              response['data']['data'] as List<dynamic>);
+          brandsList = _extractBrandsFromProducts(rawList);
         }
 
-        if (event.type == ProductListingType.search) {
-          keywords = response['data']['keywords'] as List<dynamic>;
-        }
-
-        // hasReachedMax already calculated above
-        currentSortType =
-            SortOption.getSortOptionByApiValue(selectedSortingType).type;
+        currentSortType = SortOption.getSortOptionByApiValue(selectedSortingType).type;
 
         if (response['success'] == true) {
           emit(ProductListingLoaded(
@@ -455,11 +494,10 @@ class ProductListingBloc
           emit(ProductListingFailed(error: response['message']));
         }
       } else {
-        emit(ProductListingFailed(
-            error: response['message'] ??
-                'No products found with applied filters'));
+        emit(ProductListingFailed(error: response['message'] ?? 'No products found'));
       }
     } catch (e) {
+      log('Error in _onFetchFilteredListingProducts: $e');
       emit(ProductListingFailed(error: e.toString()));
     }
   }

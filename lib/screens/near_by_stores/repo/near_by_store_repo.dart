@@ -46,6 +46,7 @@ class NearByStoreRepo {
 
       if (data is Map<String, dynamic>) {
         log('API SUCCESS: Stores fetched');
+        log('STORES API RESPONSE: ${jsonEncode(data)}');
         return data;
       } else {
         return null;

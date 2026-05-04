@@ -37,7 +37,22 @@ void showVariantBottomSheet({
                   return ListTile(
                     leading: Image.network(variant.image.isNotEmpty ? variant.image : productImage, width: 40.w),
                     title: Text(variant.title),
-                    subtitle: Text("₹${variant.specialPrice}"),
+                    subtitle: Row(
+                      children: [
+                        Text("₹${variant.specialPrice}"),
+                        if (variant.mrpStatus == 1 && variant.mrp > 0) ...[
+                          SizedBox(width: 8.w),
+                          Text(
+                            "₹${variant.mrp}",
+                            style: TextStyle(
+                              decoration: TextDecoration.lineThrough,
+                              color: Colors.grey,
+                              fontSize: 12.sp,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                     trailing: Radio<int>(
                       value: variant.id,
                       groupValue: productData.variants.firstWhere((v) => v.isDefault).id,

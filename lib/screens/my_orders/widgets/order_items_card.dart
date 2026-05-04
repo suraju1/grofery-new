@@ -112,18 +112,19 @@ class StoreCartSection extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Text(
-                storeName,
-                style: TextStyle(
-                  fontSize: isTablet(context) ? 24 : 16.sp,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: AppTheme.fontFamily,
-                ),
+          Expanded(
+            child: Text(
+              storeName,
+              style: TextStyle(
+                fontSize: isTablet(context) ? 24 : 16.sp,
+                fontWeight: FontWeight.w600,
+                fontFamily: AppTheme.fontFamily,
               ),
-            ],
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
+          SizedBox(width: 8.w),
           Text(
             '${items.length} Product${items.length != 1 ? 's' : ''}',
             style: TextStyle(

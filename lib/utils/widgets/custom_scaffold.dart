@@ -343,7 +343,42 @@ class _CustomScaffoldState extends State<CustomScaffold> with TickerProviderStat
                             child: Opacity(
                               opacity: _opacityAnimation.value,
                               child: Center(
-                                child: _buildCartButton(context, cartBlocState),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (_widthAnimation.value > 150.w)
+                                      Padding(
+                                        padding: EdgeInsets.only(
+                                            left: 20.w,
+                                            right: 20.w,
+                                            bottom: 12.h),
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                              horizontal: 16.w, vertical: 8.h),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius:
+                                                BorderRadius.circular(12.r),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black
+                                                    .withValues(alpha: 0.1),
+                                                blurRadius: 10,
+                                                offset: const Offset(0, 4),
+                                              ),
+                                            ],
+                                          ),
+                                          child: MinimumOrderProgressBar(
+                                            currentTotal:
+                                                cartBlocState is CartLoaded
+                                                    ? cartBlocState.totalAmount
+                                                    : 0.0,
+                                          ),
+                                        ),
+                                      ),
+                                    _buildCartButton(context, cartBlocState),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -484,17 +519,7 @@ class _CustomScaffoldState extends State<CustomScaffold> with TickerProviderStat
                 ),
               ),
 
-            // Mini Progress Line at bottom
-            if (_widthAnimation.value > 150.w)
-              Positioned(
-                bottom: 0,
-                left: 16.w,
-                right: 16.w,
-                child: MinimumOrderProgressBar(
-                  currentTotal: cartBlocState is CartLoaded ? cartBlocState.totalAmount : 0.0,
-                  isSmall: true,
-                ),
-              ),
+
           ],
         ),
       ),

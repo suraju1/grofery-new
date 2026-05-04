@@ -18,6 +18,8 @@ class ProductFeatureSectionWidget extends StatelessWidget {
   final String? backgroundColor;
   final String? backgroundType;
 
+  final VoidCallback? onSeeAllTap;
+
   const ProductFeatureSectionWidget({
     super.key,
     this.featureSectionData,
@@ -28,18 +30,21 @@ class ProductFeatureSectionWidget extends StatelessWidget {
     required this.featureSectionStyle,
     this.backgroundColor,
     this.backgroundType,
+    this.onSeeAllTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (featureSectionData == null || featureSectionData!.products == null) {
+    if (featureSectionData == null ||
+        featureSectionData!.products == null ||
+        featureSectionData!.products!.isEmpty) {
       return const SizedBox.shrink();
     }
 
     final section = featureSectionData!;
 
     return Container(
-      padding: EdgeInsets.only(top: 8.h, bottom: 16.h),
+      padding: EdgeInsets.only(top: 2.h, bottom: 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -55,19 +60,39 @@ class ProductFeatureSectionWidget extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Icon(Icons.arrow_forward_ios, size: 16.sp, color: Colors.grey),
+                if (onSeeAllTap != null)
+                  InkWell(
+                    onTap: onSeeAllTap,
+                    borderRadius: BorderRadius.circular(8.r),
+                    child: Padding(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                      child: Text(
+                        "See All",
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.tertiary,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14.sp,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  Icon(Icons.arrow_forward_ios,
+                      size: 16.sp, color: Colors.grey),
               ],
             ),
           ),
-          SizedBox(height: 16.h),
+          SizedBox(height: 6.h),
           SizedBox(
-            height: 280.h,
+            height: 245.h,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: EdgeInsets.symmetric(horizontal: 16.w),
               itemCount: section.products!.length,
               itemBuilder: (context, index) {
                 final product = section.products![index];
+                final variant = product.variants.first;
                 return Container(
                   width: 175.w,
                   margin: EdgeInsets.only(right: 12.w),
@@ -83,8 +108,8 @@ class ProductFeatureSectionWidget extends StatelessWidget {
                     estimatedDeliveryTime: product.estimatedDeliveryTime,
                     ratings: product.ratings.toDouble(),
                     ratingCount: product.ratingCount,
+                    quickDeliveryAvailable: product.quickDeliveryAvailable,
                     onAddToCart: (qty) {
-                      final variant = product.variants.first;
                       context.read<CartBloc>().add(
                             AddToCart(
                               context: context,
@@ -96,8 +121,7 @@ class ProductFeatureSectionWidget extends StatelessWidget {
                                 name: product.title,
                                 image: product.mainImage,
                                 price: variant.getEffectivePrice(qty),
-                                originalPrice:
-                                    variant.price.toDouble(),
+                                originalPrice: variant.price.toDouble(),
                                 quantity: qty,
                                 minQty: product.minimumOrderQuantity,
                                 maxQty: product.totalAllowedQuantity,
@@ -115,21 +139,23 @@ class ProductFeatureSectionWidget extends StatelessWidget {
                         product.favorite!.any((f) => f.wishlistId == 1),
                     productVariantId: product.variants.first.id,
                     storeId: product.variants.first.storeId,
-                    wishlistItemId: (product.favorite?.any(
-                                (f) => f.wishlistId == 1) ??
-                            false)
-                        ? product.favorite!
-                                .firstWhere((f) => f.wishlistId == 1)
-                                .id ??
-                            0
-                        : 0,
+                    wishlistItemId:
+                        (product.favorite?.any((f) => f.wishlistId == 1) ??
+                                false)
+                            ? product.favorite!
+                                    .firstWhere((f) => f.wishlistId == 1)
+                                    .id ??
+                                0
+                            : 0,
                     totalStocks: product.variants.first.stock,
                     imageFit: product.imageFit,
                     quantityStepSize: product.quantityStepSize,
                     minQty: product.minimumOrderQuantity,
                     totalAllowedQuantity: product.totalAllowedQuantity,
-                    tieredPricing: product.variants.first.tieredPricing,
+                    tieredPricing: null, // Removed from UI as requested
                     indicator: product.indicator,
+                    mrp: variant.mrp.toString(),
+                    mrpStatus: variant.mrpStatus,
                   ),
                 );
               },

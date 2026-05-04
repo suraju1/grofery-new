@@ -227,9 +227,14 @@ class CartLocalRepository {
 
     // Update quantity AND mark for update in ONE operation
     // Only mark for update if it has serverCartItemId
-    final syncAction = item.serverCartItemId != null
-        ? CartSyncAction.update
-        : CartSyncAction.add;
+    CartSyncAction syncAction;
+    if (item.serverCartItemId != null) {
+      syncAction = CartSyncAction.update;
+    } else if (item.syncAction == CartSyncAction.none) {
+      syncAction = CartSyncAction.add;
+    } else {
+      syncAction = item.syncAction; // preserve CartSyncAction.add
+    }
 
     final newPrice =
         _calculateEffectivePrice(quantity, item.tieredPricing, item.price);
@@ -314,15 +319,15 @@ class CartLocalRepository {
       return;
     }
 
-    // If item has serverCartItemId, mark it for deletion (to sync with server)
-    // Otherwise, just delete it locally
-    if (item.serverCartItemId != null) {
+    if (item.serverCartItemId != null ||
+        item.syncAction == CartSyncAction.add ||
+        item.syncAction == CartSyncAction.update) {
       box.put(
         cartKey,
         item.copyWith(syncAction: CartSyncAction.delete),
       );
       debugPrint(
-          '🛒 LOCAL MARKED FOR DELETE → $cartKey (serverCartItemId: ${item.serverCartItemId})');
+          '🛒 LOCAL MARKED FOR DELETE → $cartKey (pending state or server ID present)');
     } else {
       // Item was never synced to server, safe to delete immediately
       box.delete(cartKey);
@@ -381,9 +386,17 @@ class CartLocalRepository {
       return;
     }
 
+    CartSyncAction currentAction = item.syncAction;
+    CartSyncAction newAction = CartSyncAction.none;
+    if (currentAction == CartSyncAction.delete) {
+      newAction = CartSyncAction.delete;
+    } else if (currentAction == CartSyncAction.update) {
+      newAction = CartSyncAction.update;
+    }
+
     final updatedItem = item.copyWith(
       serverCartItemId: serverCartItemId ?? item.serverCartItemId,
-      syncAction: CartSyncAction.none,
+      syncAction: newAction,
     );
 
     box.put(cartKey, updatedItem);

@@ -63,6 +63,7 @@ class ProductData {
   late String estimatedDeliveryTime;
   late dynamic ratings;
   late int ratingCount;
+  bool quickDeliveryAvailable = false;
   late String mainImage;
   late String imageFit;
   late String itemTotalInCart;
@@ -106,6 +107,7 @@ class ProductData {
     String? estimatedDeliveryTime,
     double? ratings,
     int? ratingCount,
+    bool? quickDeliveryAvailable,
     String? mainImage,
     String? imageFit,
     String? itemTotalInCart,
@@ -149,6 +151,7 @@ class ProductData {
     this.estimatedDeliveryTime = estimatedDeliveryTime ?? '';
     this.ratings = ratings ?? 0.0;
     this.ratingCount = ratingCount ?? 0;
+    this.quickDeliveryAvailable = quickDeliveryAvailable ?? false;
     this.mainImage = mainImage ?? '';
     this.imageFit = imageFit ?? '';
     this.itemTotalInCart = itemTotalInCart ?? '';
@@ -197,10 +200,13 @@ class ProductData {
       } else {
         favorite = null;
       }
-      estimatedDeliveryTime = json['estimated_delivery_time'].toString();
-      ratings = double.parse(json['ratings'].toString());
-      ratingCount = json['rating_count'] ?? 0;
-      ratingCount = json['rating_count'] ?? 0;
+      estimatedDeliveryTime = json['estimated_delivery_time']?.toString() ?? '';
+      ratings = double.tryParse(json['ratings']?.toString() ?? '0') ?? 0.0;
+      ratingCount = int.tryParse(json['rating_count']?.toString() ?? '0') ?? 0;
+      ratingCount = int.tryParse(json['rating_count']?.toString() ?? '0') ?? 0;
+      quickDeliveryAvailable = json['quick_delivery_available'] == true ||
+          json['quick_delivery_available'] == 1 ||
+          json['quick_delivery_available'] == '1';
 
       String? fixUrl(String? url) {
         if (url == null) return url;
@@ -234,10 +240,16 @@ class ProductData {
       // Handle tags - can be String or List
       if (json['tags'] != null) {
         if (json['tags'] is String) {
-          tags =
-              json['tags'].toString().split(',').map((e) => e.trim()).toList();
+          tags = json['tags']
+              .toString()
+              .split(',')
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty && e != '[]')
+              .toList();
         } else if (json['tags'] is List) {
-          tags = List<String>.from(json['tags']);
+          tags = List<String>.from(json['tags'])
+              .where((e) => e.isNotEmpty && e != '[]')
+              .toList();
         } else {
           tags = [];
         }
@@ -275,12 +287,16 @@ class ProductData {
           : [];
 
       // Check for product-level tiered pricing as a fallback
-      final dynamic productTieredPricing = json['tiered_pricing'] ?? json['tieredPricing'] ?? json['tiered_prices'];
-      if (productTieredPricing != null && productTieredPricing is List && productTieredPricing.isNotEmpty) {
+      final dynamic productTieredPricing = json['tiered_pricing'] ??
+          json['tieredPricing'] ??
+          json['tiered_prices'];
+      if (productTieredPricing != null &&
+          productTieredPricing is List &&
+          productTieredPricing.isNotEmpty) {
         final List<TieredPricing> productTiers = productTieredPricing
             .map((v) => TieredPricing.fromJson(v as Map<String, dynamic>))
             .toList();
-        
+
         // If variants don't have tiered pricing, give them the product-level ones
         for (var v in variants) {
           if (v.tieredPricing.isEmpty) {
@@ -319,6 +335,7 @@ class ProductData {
     estimatedDeliveryTime = '';
     ratings = 0;
     ratingCount = 0;
+    quickDeliveryAvailable = false;
     mainImage = '';
     imageFit = '';
     additionalImages = [];
@@ -365,6 +382,7 @@ class ProductData {
     data['estimated_delivery_time'] = estimatedDeliveryTime.toString();
     data['ratings'] = ratings;
     data['rating_count'] = ratingCount;
+    data['quick_delivery_available'] = quickDeliveryAvailable;
     data['main_image'] = mainImage;
     data['image_fit'] = imageFit;
     data['additional_images'] = additionalImages;
@@ -493,6 +511,8 @@ class ProductVariants {
   late bool isDefault;
   late double price;
   late double specialPrice;
+  late double mrp;
+  late int mrpStatus;
   late int storeId;
   late String storeSlug;
   late String storeName;
@@ -500,7 +520,6 @@ class ProductVariants {
   late String sku;
   late List<TieredPricing> tieredPricing;
   late Map<String, dynamic> attributes;
-
   ProductVariants({
     int? id,
     String? title,
@@ -515,6 +534,8 @@ class ProductVariants {
     bool? isDefault,
     double? price,
     double? specialPrice,
+    double? mrp,
+    int? mrpStatus,
     int? storeId,
     String? storeSlug,
     String? storeName,
@@ -536,8 +557,10 @@ class ProductVariants {
     this.isDefault = isDefault ?? false;
     this.price = price ?? 0.0;
     this.specialPrice = specialPrice ?? 0.0;
+    this.mrp = mrp ?? 0.0;
+    this.mrpStatus = mrpStatus ?? 0;
     this.storeId = storeId ?? 0;
-    this.storeSlug = storeSlug ?? '';
+    this.storeSlug = storeSlug?.toString() ?? '';
     this.storeName = storeName ?? '';
     this.stock = stock ?? 0;
     this.sku = sku ?? '';
@@ -558,7 +581,10 @@ class ProductVariants {
     barcode = json['barcode'] ?? '';
     isDefault = json['is_default'] ?? false;
     price = double.tryParse(json['price']?.toString() ?? '0') ?? 0.0;
-    specialPrice = double.tryParse(json['special_price']?.toString() ?? '0') ?? 0.0;
+    specialPrice =
+        double.tryParse(json['special_price']?.toString() ?? '0') ?? 0.0;
+    mrp = double.tryParse(json['mrp']?.toString() ?? '0') ?? 0.0;
+    mrpStatus = int.tryParse(json['mrp_status']?.toString() ?? '0') ?? 0;
     storeId = json['store_id'] ?? 0;
     storeSlug = json['store_slug'] ?? '';
     storeName = json['store_name'] ?? '';
@@ -566,7 +592,10 @@ class ProductVariants {
     sku = json['sku'] ?? '';
 
     // Tiered Pricing Parsing
-    final dynamic tieredData = json['tiered_pricing'] ?? json['tieredPricing'] ?? json['tiered_prices'] ?? json['bulk_pricing'];
+    final dynamic tieredData = json['tiered_pricing'] ??
+        json['tieredPricing'] ??
+        json['tiered_prices'] ??
+        json['bulk_pricing'];
     if (tieredData != null && tieredData is List) {
       tieredPricing = <TieredPricing>[];
       for (var v in tieredData) {
@@ -606,6 +635,8 @@ class ProductVariants {
     data['is_default'] = isDefault;
     data['price'] = price;
     data['special_price'] = specialPrice;
+    data['mrp'] = mrp;
+    data['mrp_status'] = mrpStatus;
     data['store_id'] = storeId;
     data['store_slug'] = storeSlug;
     data['store_name'] = storeName;

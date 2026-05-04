@@ -16,6 +16,8 @@ class CreateOrderRequest extends CreateOrderEvent {
   final String? orderNote;
   final Map<String, dynamic>? paymentDetails;
   final Map<int, CartItemAttachment?>? attachments;
+  final double? usedAmountValue;
+  final String? deliveryTimeSlotId;
 
   CreateOrderRequest({
     required this.paymentType,
@@ -26,7 +28,9 @@ class CreateOrderRequest extends CreateOrderEvent {
     this.useWallet,
     this.orderNote,
     this.paymentDetails,
-    this.attachments
+    this.attachments,
+    this.usedAmountValue,
+    this.deliveryTimeSlotId,
   });
 
   @override
@@ -40,6 +44,8 @@ class CreateOrderRequest extends CreateOrderEvent {
     useWallet,
     orderNote,
     paymentDetails,
-    attachments
+    attachments,
+    usedAmountValue,
+    deliveryTimeSlotId,
   ];
 }

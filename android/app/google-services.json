@@ -1,49 +1,50 @@
 {
   "project_info": {
-    "project_number": "710283966065",
-    "project_id": "grofery-user",
-    "storage_bucket": "grofery-user.firebasestorage.app"
+    "project_number": "513816891063",
+    "project_id": "grofery-a5e02",
+    "storage_bucket": "grofery-a5e02.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:710283966065:android:f5c4618614e6e32acbcdd0",
+        "mobilesdk_app_id": "1:513816891063:android:8d1dcc68430db0b294c732",
         "android_client_info": {
           "package_name": "com.axolotls.grofery_user"
         }
       },
       "oauth_client": [
         {
-          "client_id": "710283966065-3q5b5a80d1md9h8tfnagi4gpkhn6i830.apps.googleusercontent.com",
+          "client_id": "513816891063-b7v1me8resuofefs32ebhk99ph341t1r.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.axolotls.grofery_user",
-            "certificate_hash": "978efb930c9db7757da7427c7759b8c95d097167"
+            "certificate_hash": "31aa3c66996ec12a2e7d5673598caea74bfb3836"
           }
         },
         {
-          "client_id": "710283966065-u2ojbneph18cvmd69tobcj4vldpa64jh.apps.googleusercontent.com",
+          "client_id": "513816891063-kib72tsjchshhdf062qjdp600giai7t0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.axolotls.grofery_user",
+            "certificate_hash": "978efb930c9db7757da7427c7759b8c9aa9dedee"
+          }
+        },
+        {
+          "client_id": "513816891063-sc4vjtf8rff2rmlhtpah8g899bsvhsre.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyCzxCL40VUTwK6HPjNCBjL791Uo3cUdzp8"
+          "current_key": "AIzaSyA4XdyG7gGEI2lQyZEZ0w34cu3E-G91MYc"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "710283966065-u2ojbneph18cvmd69tobcj4vldpa64jh.apps.googleusercontent.com",
+              "client_id": "513816891063-sc4vjtf8rff2rmlhtpah8g899bsvhsre.apps.googleusercontent.com",
               "client_type": 3
-            },
-            {
-              "client_id": "710283966065-5pehu7ucphte7i38p4avvmjlv9qgp9n1.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.axolotls.merawalashopuser"
-              }
             }
           ]
         }

@@ -28,18 +28,24 @@ class CreateOrderBloc extends Bloc<CreateOrderEvent, CreateOrderState> {
         useWallet: event.useWallet ?? false,
         orderNote: event.orderNote ?? '',
         paymentDetails: event.paymentDetails,
-        attachments: event.attachments!
+        attachments: event.attachments!,
+        usedAmountValue: event.usedAmountValue,
+        deliveryTimeSlotId: event.deliveryTimeSlotId,
       );
 
-      if(response['success'] == true) {
+      print('📦 Create Order Response: $response');
+
+      if (response['success'] == true) {
         isLoading = false;
         emit(CreateOrderSuccess(
-          message:  response['message'],
-          orderSlug: response['data']['slug'],
-          paymentUrl: event.paymentType == 'flutterwave' ? response['data']['payment_response']['link'] : ''
-        ));
+            message: response['message'],
+            orderSlug: response['data']['slug'],
+            paymentUrl: event.paymentType == 'flutterwave'
+                ? response['data']['payment_response']['link']
+                : ''));
       } else {
-        emit(CreateOrderFailure(error: response['message']));
+        isLoading = false;
+        emit(CreateOrderFailure(error: response['message'] ?? 'Something went wrong (Success False)'));
       }
     } catch(e) {
       isLoading = false;

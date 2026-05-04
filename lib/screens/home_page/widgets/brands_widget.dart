@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -15,68 +14,18 @@ class BrandsSection extends StatefulWidget {
   final String brandsSectionTitle;
   final String categorySlug;
 
-  const BrandsSection({super.key, required this.brandsSectionTitle, required this.categorySlug});
+  const BrandsSection(
+      {super.key,
+      required this.brandsSectionTitle,
+      required this.categorySlug});
 
   @override
   State<BrandsSection> createState() => _BrandsSectionState();
 }
 
 class _BrandsSectionState extends State<BrandsSection> {
-  final ScrollController _scrollController = ScrollController();
-  Timer? _scrollTimer;
-  bool _scrollForward = true;
-
-  @override
-  void initState() {
-    super.initState();
-    // Start the infinite scroll after the frame is built
-    WidgetsBinding.instance.addPostFrameCallback((_) => _startInfiniteScroll());
-  }
-
-  void _startInfiniteScroll() {
-    // Cancel any existing timer to avoid duplicates
-    _scrollTimer?.cancel();
-
-    // Start a periodic timer to toggle scroll direction
-    _scrollTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-
-      if (_scrollController.hasClients) {
-        double maxExtent = _scrollController.position.maxScrollExtent;
-        double minExtent = _scrollController.position.minScrollExtent;
-
-        if (maxExtent <= 0) {
-          return;
-        }
-
-        if (_scrollForward) {
-          // Scroll to the end
-          _scrollController.animateTo(
-            maxExtent,
-            duration: const Duration(seconds: 12),
-            curve: Curves.linear,
-          );
-        } else {
-          // Scroll back to the start
-          _scrollController.animateTo(
-            minExtent,
-            duration: const Duration(seconds: 12),
-            curve: Curves.linear,
-          );
-        }
-        // Toggle direction for next cycle
-        _scrollForward = !_scrollForward;
-      }
-    });
-  }
-
   @override
   void dispose() {
-    _scrollTimer?.cancel();
-    _scrollController.dispose();
     super.dispose();
   }
 
@@ -87,98 +36,95 @@ class _BrandsSectionState extends State<BrandsSection> {
         if (state is BrandsLoaded) {
           return state.brandsData.isNotEmpty
               ? SizedBox(
-            width: double.infinity,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: EdgeInsets.only(
-                      left: 10.0,
-                      right: 10.0,
-                      bottom: 4.0.h,
-                      top: 10
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  width: double.infinity,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        widget.brandsSectionTitle,
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
+                      Padding(
+                        padding: EdgeInsets.only(
+                            left: 10.0, right: 10.0, bottom: 4.0.h, top: 10),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              widget.brandsSectionTitle,
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            InkWell(
+                              borderRadius: BorderRadius.circular(8.r),
+                              onTap: () {
+                                GoRouter.of(context)
+                                    .push(AppRoutes.brandsListPage, extra: {
+                                  'category-slug': widget.categorySlug
+                                });
+                              },
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 6.w, vertical: 2.h),
+                                child: Text(
+                                  AppLocalizations.of(context)?.seeAll ??
+                                      'See All',
+                                  style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .tertiary,
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 14),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      InkWell(
-                        borderRadius: BorderRadius.circular(8.r),
-                        onTap: () {
-                          GoRouter.of(context).push(
-                            AppRoutes.brandsListPage,
-                            extra: {
-                              'category-slug': widget.categorySlug
-                            }
-                          );
-                        },
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                          child: Text(
-                            AppLocalizations.of(context)?.seeAll ?? 'See All',
-                            style: TextStyle(
-                                color: Theme.of(context).colorScheme.tertiary,
-                                fontWeight: FontWeight.w500,
-                                fontSize: 14
-                            ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 10.w),
+                        child: GridView.builder(
+                          padding: EdgeInsets.only(top: 4.h, bottom: 4.h),
+                          physics: const NeverScrollableScrollPhysics(),
+                          shrinkWrap: true,
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 10.w,
+                            mainAxisSpacing: 10.h,
+                            childAspectRatio: 1.3,
                           ),
+                          itemCount: state.brandsData.length > 6
+                              ? 6
+                              : state.brandsData.length,
+                          itemBuilder: (context, index) {
+                            final brandsData = state.brandsData[index];
+                            return GestureDetector(
+                              onTap: () {
+                                GoRouter.of(context).push(
+                                  AppRoutes.productListing,
+                                  extra: {
+                                    'isTheirMoreCategory': false,
+                                    'title': brandsData.title,
+                                    'logo': brandsData.logo,
+                                    'totalProduct': 10,
+                                    'type': ProductListingType.brand,
+                                    'identifier': brandsData.slug,
+                                  },
+                                );
+                              },
+                              child: CustomBrandsCard(
+                                brandName:
+                                    state.brandsData[index].title ?? 'Brand',
+                                brandImage: state.brandsData[index].logo ?? '',
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ],
                   ),
-                ),
-                SizedBox(
-                  height: MediaQueryHelper.screenHeight(context) * 0.145,
-                  width: double.infinity,
-                  child: ListView.builder(
-                    // controller: _scrollController,
-                    padding: EdgeInsets.only(
-                      left: 10.w,
-                      right: 10.w,
-                      top: 4.h,
-                      bottom: 2.h,
-                    ),
-                    scrollDirection: Axis.horizontal,
-                    itemCount: state.brandsData.length,
-                    itemBuilder: (context, index) {
-                      final brandsData = state.brandsData[index];
-                      return Padding(
-                        padding: EdgeInsets.only(right: 15.0.w),
-                        child: GestureDetector(
-                          onTap: (){
-                            GoRouter.of(context).push(
-                              AppRoutes.productListing,
-                              extra: {
-                                'isTheirMoreCategory': false,
-                                'title': brandsData.title,
-                                'logo': brandsData.logo,
-                                'totalProduct': 10,
-                                'type': ProductListingType.brand,
-                                'identifier': brandsData.slug,
-                              }
-                            );
-                          },
-                          child: CustomBrandsCard(
-                            brandName: state.brandsData[index].title ?? 'Brand',
-                            brandImage: state.brandsData[index].logo ?? '',
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          )
+                )
               : const SizedBox.shrink();
-        }
-        else if (state is BrandsLoading) {
+        } else if (state is BrandsLoading) {
           return SizedBox(
             width: double.infinity,
             child: Column(
@@ -196,31 +142,25 @@ class _BrandsSectionState extends State<BrandsSection> {
                     borderRadius: 15,
                   ),
                 ),
-                SizedBox(
-                  height: 105.h,
-                  width: double.infinity,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.only(
-                      left: 20,
-                      right: 5,
-                      top: 4,
-                      bottom: 4,
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 10.w),
+                  child: GridView.builder(
+                    physics: const NeverScrollableScrollPhysics(),
+                    shrinkWrap: true,
+                    padding: EdgeInsets.only(top: 4.h, bottom: 4.h),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 10.w,
+                      mainAxisSpacing: 10.h,
+                      childAspectRatio: 1.3,
                     ),
-                    scrollDirection: Axis.horizontal,
-                    itemCount: 8,
+                    itemCount: 6,
                     itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 15.0),
-                        child: Column(
-                          children: [
-                            ShimmerWidget.rectangular(
-                              isBorder: true,
-                              height: 95,
-                              width: 90.w,
-                              borderRadius: 15,
-                            ),
-                          ],
-                        ),
+                      return ShimmerWidget.rectangular(
+                        isBorder: true,
+                        height: 80,
+                        width: double.infinity,
+                        borderRadius: 10,
                       );
                     },
                   ),

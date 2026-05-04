@@ -25,7 +25,7 @@ class AppConstant {
   //     <meta-data android:name="com.google.android.geo.API_KEY"
   //         android:value="AIzaSyDcGPon7dpfONgGUw8lBMOXveihNhaepVo"/>
   static String serverClientId =
-      '75806050392-m4fdavp6a1t1v2lceqm89h5msqlcnlp2.apps.googleusercontent.com';
+      '513816891063-sc4vjtf8rff2rmlhtpah8g899bsvhsre.apps.googleusercontent.com';
 
 //108715949891683731475
   static String localUserLocationHiveBoxName = 'userLocationBox';

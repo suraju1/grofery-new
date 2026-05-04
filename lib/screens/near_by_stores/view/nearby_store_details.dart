@@ -480,6 +480,7 @@ class _NearbyStoreDetailsState extends State<_NearbyStoreDetailsView> {
       estimatedDeliveryTime: product.estimatedDeliveryTime,
       ratings: product.ratings?.toDouble() ?? 0.0,
       ratingCount: product.ratingCount,
+      quickDeliveryAvailable: product.quickDeliveryAvailable,
       onAddToCart: (quantity) {
         if (product.variants.length > 1) {
           showVariantBottomSheet(
@@ -561,6 +562,8 @@ class _NearbyStoreDetailsState extends State<_NearbyStoreDetailsView> {
       minQty: product.minimumOrderQuantity,
       totalAllowedQuantity: product.totalAllowedQuantity,
       tieredPricing: variant.tieredPricing,
+      mrp: variant.mrp.toString(),
+      mrpStatus: variant.mrpStatus,
     );
   }
 

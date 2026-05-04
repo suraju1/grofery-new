@@ -11,12 +11,16 @@ class WalletUsageWidget extends StatefulWidget {
   final bool isWalletEnabled;
   final Function(bool) onWalletToggle;
   final bool isLoading;
+  final double? walletAmountUsed;
+  final double? remainingBalance;
 
   const WalletUsageWidget({
     super.key,
     required this.isWalletEnabled,
     required this.onWalletToggle,
     this.isLoading = false,
+    this.walletAmountUsed,
+    this.remainingBalance,
   });
 
   @override
@@ -60,8 +64,8 @@ class _WalletUsageWidgetState extends State<WalletUsageWidget> {
               BlocBuilder<GetUserCartBloc, GetUserCartState>(
                 builder: (context, state){
                   if(state is GetUserCartLoaded) {
-                    usedBalance = double.parse(state.cartData.first.data!.paymentSummary!.walletAmountUsed!.toStringAsFixed(2));
-                    remainingBalance = double.parse(state.cartData.first.data!.paymentSummary!.walletBalance!.toStringAsFixed(2)) - usedBalance;
+                    usedBalance = widget.walletAmountUsed ?? double.parse(state.cartData.first.data!.paymentSummary!.walletAmountUsed!.toStringAsFixed(2));
+                    remainingBalance = widget.remainingBalance ?? (double.parse(state.cartData.first.data!.paymentSummary!.walletBalance!.toStringAsFixed(2)) - usedBalance);
                   }
 
                   return state is GetUserCartLoading

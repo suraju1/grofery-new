@@ -1,4 +1,5 @@
 import '../../../model/tiered_pricing.dart';
+
 class WishlistProductModel {
   bool? success;
   String? message;
@@ -34,12 +35,12 @@ class WishlistData {
 
   WishlistData(
       {this.id,
-        this.title,
-        this.slug,
-        this.itemsCount,
-        this.items,
-        this.createdAt,
-        this.updatedAt});
+      this.title,
+      this.slug,
+      this.itemsCount,
+      this.items,
+      this.createdAt,
+      this.updatedAt});
 
   WishlistData.fromJson(Map<String, dynamic> json) {
     id = json['id'];
@@ -82,20 +83,20 @@ class WishlistProductItems {
 
   WishlistProductItems(
       {this.id,
-        this.wishlistId,
-        this.product,
-        this.variant,
-        this.store,
-        this.createdAt,
-        this.updatedAt});
+      this.wishlistId,
+      this.product,
+      this.variant,
+      this.store,
+      this.createdAt,
+      this.updatedAt});
 
   WishlistProductItems.fromJson(Map<String, dynamic> json) {
     id = json['id'];
     wishlistId = json['wishlist_id'];
     product =
-    json['product'] != null ? Product.fromJson(json['product']) : null;
+        json['product'] != null ? Product.fromJson(json['product']) : null;
     variant =
-    json['variant'] != null ? Variant.fromJson(json['variant']) : null;
+        json['variant'] != null ? Variant.fromJson(json['variant']) : null;
     store = json['store'] != null ? Store.fromJson(json['store']) : null;
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
@@ -134,21 +135,23 @@ class Product {
   StoreStatus? storeStatus;
   int? ratings;
   int? ratingCount;
+  bool? quickDeliveryAvailable;
 
   Product(
       {this.id,
-        this.title,
-        this.slug,
-        this.image,
-        this.minimumOrderQuantity,
-        this.quantityStepSize,
-        this.totalAllowedQuantity,
-        this.shortDescription,
-        this.estimatedDeliveryTime,
-        this.imageFit,
-        this.storeStatus,
-        this.ratings,
-        this.ratingCount});
+      this.title,
+      this.slug,
+      this.image,
+      this.minimumOrderQuantity,
+      this.quantityStepSize,
+      this.totalAllowedQuantity,
+      this.shortDescription,
+      this.estimatedDeliveryTime,
+      this.imageFit,
+      this.storeStatus,
+      this.ratings,
+      this.ratingCount,
+      this.quickDeliveryAvailable});
 
   Product.fromJson(Map<String, dynamic> json) {
     id = json['id'];
@@ -166,6 +169,9 @@ class Product {
         : null;
     ratings = json['ratings'];
     ratingCount = json['rating_count'];
+    quickDeliveryAvailable = json['quick_delivery_available'] == true ||
+        json['quick_delivery_available'] == 1 ||
+        json['quick_delivery_available'] == '1';
   }
 
   Map<String, dynamic> toJson() {
@@ -185,6 +191,7 @@ class Product {
     }
     data['ratings'] = ratings;
     data['rating_count'] = ratingCount;
+    data['quick_delivery_available'] = quickDeliveryAvailable;
     return data;
   }
 }
@@ -214,6 +221,8 @@ class Variant {
   String? image;
   int? price;
   int? specialPrice;
+  int? mrp;
+  int? mrpStatus;
   int? storeId;
   String? storeSlug;
   String? storeName;
@@ -222,15 +231,17 @@ class Variant {
 
   Variant(
       {this.id,
-        this.sku,
-        this.image,
-        this.price,
-        this.specialPrice,
-        this.storeId,
-        this.storeSlug,
-        this.storeName,
-        this.stock,
-        this.tieredPricing});
+      this.sku,
+      this.image,
+      this.price,
+      this.specialPrice,
+      this.mrp,
+      this.mrpStatus,
+      this.storeId,
+      this.storeSlug,
+      this.storeName,
+      this.stock,
+      this.tieredPricing});
 
   Variant.fromJson(Map<String, dynamic> json) {
     id = json['id'];
@@ -238,11 +249,16 @@ class Variant {
     image = json['image'];
     price = json['price'];
     specialPrice = json['special_price'];
+    mrp = json['mrp'];
+    mrpStatus = json['mrp_status'];
     storeId = json['store_id'];
     storeSlug = json['store_slug'];
     storeName = json['store_name'];
     stock = json['stock'];
-    final dynamic tieredData = json['tiered_pricing'] ?? json['tieredPricing'] ?? json['tiered_prices'] ?? json['bulk_pricing'];
+    final dynamic tieredData = json['tiered_pricing'] ??
+        json['tieredPricing'] ??
+        json['tiered_prices'] ??
+        json['bulk_pricing'];
     if (tieredData != null && tieredData is List) {
       tieredPricing = <TieredPricing>[];
       for (var v in tieredData) {
@@ -261,6 +277,8 @@ class Variant {
     data['image'] = image;
     data['price'] = price;
     data['special_price'] = specialPrice;
+    data['mrp'] = mrp;
+    data['mrp_status'] = mrpStatus;
     data['store_id'] = storeId;
     data['store_slug'] = storeSlug;
     data['store_name'] = storeName;

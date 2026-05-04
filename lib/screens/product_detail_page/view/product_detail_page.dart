@@ -282,15 +282,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                           ),
                                         ),
                                       ),
-                                      Padding(
-                                        padding: EdgeInsetsGeometry.directional(
-                                          top: 4,
-                                          start: 4,
-                                        ),
-                                        child: DeliveryTimeWidget(
-                                            time: product.estimatedDeliveryTime
-                                                .toString()),
-                                      ),
+                                      _buildQuickDeliveryBadge(product.quickDeliveryAvailable),
                                     ],
                                   ),
 
@@ -381,9 +373,13 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                   : 1;
                                               final totalPrice =
                                                   effectivePrice * displayQty;
-                                              final totalOriginalPrice =
-                                                  activeVariant.price *
-                                                      displayQty;
+                                              final double totalOriginalPrice =
+                                                  (activeVariant.mrpStatus ==
+                                                              1 &&
+                                                          activeVariant.mrp > 0)
+                                                      ? (activeVariant.mrp *
+                                                          displayQty)
+                                                      : 0.0;
 
                                               return Column(
                                                 crossAxisAlignment:
@@ -391,8 +387,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                 children: [
                                                   PriceRowWidget(
                                                     originalPrice:
-                                                        totalOriginalPrice
-                                                            .toDouble(),
+                                                        totalOriginalPrice,
                                                     salePrice:
                                                         totalPrice.toDouble(),
                                                     fontSize: 12.sp,
@@ -408,7 +403,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                   ),
                                                   if (product
                                                           .minimumOrderQuantity >
-                                                      0)
+                                                      1)
                                                     Padding(
                                                       padding: EdgeInsets.only(
                                                           top: 4.h),
@@ -855,7 +850,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                     product: state.similarProduct);
                               }
                               return SizedBox.shrink();
-                            })
+                            }),
+                            SizedBox(height: 120.h),
                           ],
                         ),
                       ),
@@ -928,11 +924,15 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                 activeVariant.getEffectivePrice(currentQty);
                             final displayQty = currentQty > 0 ? currentQty : 1;
                             final totalPrice = effectivePrice * displayQty;
-                            final totalOriginalPrice =
-                                activeVariant.price * displayQty;
+
+                            final double totalOriginalPrice =
+                                (activeVariant.mrpStatus == 1 &&
+                                        activeVariant.mrp > 0)
+                                    ? (activeVariant.mrp * displayQty)
+                                    : 0.0;
 
                             return PriceRowWidget(
-                              originalPrice: totalOriginalPrice.toDouble(),
+                              originalPrice: totalOriginalPrice,
                               salePrice: totalPrice.toDouble(),
                               fontSize: 12.sp,
                               originalFontSize: 10.sp,
@@ -950,7 +950,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                           color: Colors.grey.shade600,
                         ),
                       ),
-                      if (product.minimumOrderQuantity > 0)
+                      if (product.minimumOrderQuantity > 1)
                         Padding(
                           padding: EdgeInsets.only(top: 2),
                           child: Text(
@@ -1911,6 +1911,42 @@ class _ProductDetailPageState extends State<ProductDetailPage>
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildQuickDeliveryBadge(bool available) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: available ? const Color(0xFFE8F5E9) : const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(6.r),
+        border: Border.all(
+          color: available ? const Color(0xFFC8E6C9) : const Color(0xFFE0E0E0),
+          width: 0.8,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            available ? Icons.bolt_rounded : Icons.local_shipping_rounded,
+            color:
+                available ? const Color(0xFF2E7D32) : const Color(0xFF757575),
+            size: 16.sp,
+          ),
+          SizedBox(width: 4.w),
+          Text(
+            available ? "Quick Delivery" : "Standard Delivery",
+            style: TextStyle(
+              color:
+                  available ? const Color(0xFF2E7D32) : const Color(0xFF757575),
+              fontSize: 10.sp,
+              fontWeight: FontWeight.w800,
+              fontFamily: AppTheme.fontFamily,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,4 +1,5 @@
 import '../../../model/tiered_pricing.dart';
+
 class SaveForLaterModel {
   bool? success;
   String? message;
@@ -9,7 +10,8 @@ class SaveForLaterModel {
   SaveForLaterModel.fromJson(Map<String, dynamic> json) {
     success = json['success'];
     message = json['message'];
-    data = json['data'] != null ? SaveForLaterData.fromJson(json['data']) : null;
+    data =
+        json['data'] != null ? SaveForLaterData.fromJson(json['data']) : null;
   }
 
   Map<String, dynamic> toJson() {
@@ -35,13 +37,13 @@ class SaveForLaterData {
 
   SaveForLaterData(
       {this.id,
-        this.uuid,
-        this.userId,
-        this.itemsCount,
-        this.totalQuantity,
-        this.items,
-        this.createdAt,
-        this.updatedAt});
+      this.uuid,
+      this.userId,
+      this.itemsCount,
+      this.totalQuantity,
+      this.items,
+      this.createdAt,
+      this.updatedAt});
 
   SaveForLaterData.fromJson(Map<String, dynamic> json) {
     id = json['id'];
@@ -91,17 +93,17 @@ class SavedItems {
 
   SavedItems(
       {this.id,
-        this.cartId,
-        this.productId,
-        this.productVariantId,
-        this.storeId,
-        this.quantity,
-        this.saveForLater,
-        this.product,
-        this.variant,
-        this.store,
-        this.createdAt,
-        this.updatedAt});
+      this.cartId,
+      this.productId,
+      this.productVariantId,
+      this.storeId,
+      this.quantity,
+      this.saveForLater,
+      this.product,
+      this.variant,
+      this.store,
+      this.createdAt,
+      this.updatedAt});
 
   SavedItems.fromJson(Map<String, dynamic> json) {
     id = json['id'];
@@ -112,9 +114,10 @@ class SavedItems {
     quantity = json['quantity'];
     saveForLater = json['save_for_later'];
     product =
-    json['product'] != null ? SavedProduct.fromJson(json['product']) : null;
-    variant =
-    json['variant'] != null ? SavedProductVariant.fromJson(json['variant']) : null;
+        json['product'] != null ? SavedProduct.fromJson(json['product']) : null;
+    variant = json['variant'] != null
+        ? SavedProductVariant.fromJson(json['variant'])
+        : null;
     store = json['store'] != null ? Store.fromJson(json['store']) : null;
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
@@ -157,20 +160,22 @@ class SavedProduct {
   StoreStatus? storeStatus;
   int? ratings;
   int? ratingCount;
+  bool? quickDeliveryAvailable;
 
   SavedProduct(
       {this.id,
-        this.name,
-        this.slug,
-        this.minimumOrderQuantity,
-        this.quantityStepSize,
-        this.totalAllowedQuantity,
-        this.image,
-        this.estimatedDeliveryTime,
-        this.imageFit,
-        this.storeStatus,
-        this.ratings,
-        this.ratingCount});
+      this.name,
+      this.slug,
+      this.minimumOrderQuantity,
+      this.quantityStepSize,
+      this.totalAllowedQuantity,
+      this.image,
+      this.estimatedDeliveryTime,
+      this.imageFit,
+      this.storeStatus,
+      this.ratings,
+      this.ratingCount,
+      this.quickDeliveryAvailable});
 
   SavedProduct.fromJson(Map<String, dynamic> json) {
     id = json['id'];
@@ -187,6 +192,9 @@ class SavedProduct {
         : null;
     ratings = json['ratings'];
     ratingCount = json['rating_count'];
+    quickDeliveryAvailable = json['quick_delivery_available'] == true ||
+        json['quick_delivery_available'] == 1 ||
+        json['quick_delivery_available'] == '1';
   }
 
   Map<String, dynamic> toJson() {
@@ -205,6 +213,7 @@ class SavedProduct {
     }
     data['ratings'] = ratings;
     data['rating_count'] = ratingCount;
+    data['quick_delivery_available'] = quickDeliveryAvailable;
     return data;
   }
 }
@@ -235,20 +244,24 @@ class SavedProductVariant {
   String? image;
   int? price;
   int? specialPrice;
+  int? mrp;
+  int? mrpStatus;
   int? stock;
   String? sku;
   List<TieredPricing>? tieredPricing;
 
   SavedProductVariant(
       {this.id,
-        this.title,
-        this.slug,
-        this.image,
-        this.price,
-        this.specialPrice,
-        this.stock,
-        this.sku,
-        this.tieredPricing});
+      this.title,
+      this.slug,
+      this.image,
+      this.price,
+      this.specialPrice,
+      this.mrp,
+      this.mrpStatus,
+      this.stock,
+      this.sku,
+      this.tieredPricing});
 
   SavedProductVariant.fromJson(Map<String, dynamic> json) {
     id = json['id'];
@@ -257,9 +270,14 @@ class SavedProductVariant {
     image = json['image'];
     price = json['price'];
     specialPrice = json['special_price'];
+    mrp = json['mrp'];
+    mrpStatus = json['mrp_status'];
     stock = json['stock'];
     sku = json['sku'];
-    final dynamic tieredData = json['tiered_pricing'] ?? json['tieredPricing'] ?? json['tiered_prices'] ?? json['bulk_pricing'];
+    final dynamic tieredData = json['tiered_pricing'] ??
+        json['tieredPricing'] ??
+        json['tiered_prices'] ??
+        json['bulk_pricing'];
     if (tieredData != null && tieredData is List) {
       tieredPricing = <TieredPricing>[];
       for (var v in tieredData) {
@@ -279,6 +297,8 @@ class SavedProductVariant {
     data['image'] = image;
     data['price'] = price;
     data['special_price'] = specialPrice;
+    data['mrp'] = mrp;
+    data['mrp_status'] = mrpStatus;
     data['stock'] = stock;
     data['sku'] = sku;
     if (tieredPricing != null) {
@@ -302,9 +322,8 @@ class Store {
     name = json['name'];
     slug = json['slug'];
     totalProducts = json['total_products'];
-    status = json['status'] != null
-        ? StoreStatus.fromJson(json['status'])
-        : null;
+    status =
+        json['status'] != null ? StoreStatus.fromJson(json['status']) : null;
   }
 
   Map<String, dynamic> toJson() {

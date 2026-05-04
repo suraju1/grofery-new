@@ -85,92 +85,94 @@ class _SubCategoryFeatureSectionWidgetState
     return BlocBuilder<CategoryBloc, CategoryState>(
       builder: (BuildContext context, CategoryState state) {
         if (state is CategoryLoaded) {
-          return state.categoryData.isNotEmpty
-              ? SizedBox(
-                  width: double.infinity,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          Widget categoryContent = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (widget.showTitle)
+                Padding(
+                  padding: EdgeInsets.only(
+                      left: 10.w, right: 10.w, bottom: 10.h, top: 10.h),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      if (widget.showTitle)
-                        Padding(
-                          padding: EdgeInsets.only(
-                              left: 10.w, right: 10.w, bottom: 10.h, top: 10.h),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                AppLocalizations.of(context)
-                                        ?.shopByCategories ??
-                                    'Shop by categories',
-                                style: TextStyle(
-                                  fontSize: 17.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              InkWell(
-                                borderRadius: BorderRadius.circular(8.r),
-                                onTap: () {
-                                  SubCategoryFeatureSectionWidget.show(context);
-                                },
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: 6.w, vertical: 2.h),
-                                  child: Text(
-                                    AppLocalizations.of(context)?.seeAll ??
-                                        'See All',
-                                    style: TextStyle(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .tertiary,
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 14.sp),
-                                  ),
-                                ),
-                              ),
-                            ],
+                      Text(
+                        AppLocalizations.of(context)?.shopByCategories ??
+                            'Shop by categories',
+                        style: TextStyle(
+                          fontSize: 17.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8.r),
+                        onTap: () {
+                          SubCategoryFeatureSectionWidget.show(context);
+                        },
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 6.w, vertical: 2.h),
+                          child: Text(
+                            AppLocalizations.of(context)?.seeAll ?? 'See All',
+                            style: TextStyle(
+                                color: Theme.of(context).colorScheme.tertiary,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 14.sp),
                           ),
                         ),
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        padding: EdgeInsets.only(
-                            left: 10.w, right: 10.w, bottom: 15.h),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: _getCrossAxisCount(context),
-                          crossAxisSpacing: 10.w,
-                          mainAxisSpacing: 10.h,
-                          childAspectRatio: 0.65, // Ajusted to prevent overflow
-                        ),
-                        itemCount: state.categoryData.length >= 32
-                            ? 32
-                            : state.categoryData.length,
-                        itemBuilder: (context, index) {
-                          final categoryData = state.categoryData[index];
-                          return InkWell(
-                            onTap: () {
-                              GoRouter.of(context)
-                                  .push(AppRoutes.productListing, extra: {
-                                'isTheirMoreCategory':
-                                    (categoryData.subcategoryCount ?? 0) > 0
-                                        ? true
-                                        : false,
-                                'title': categoryData.title ?? '',
-                                'logo': categoryData.image ?? '',
-                                'totalProduct': categoryData.productCount,
-                                'type': ProductListingType.category,
-                                'identifier': categoryData.slug,
-                              });
-                            },
-                            borderRadius: BorderRadius.circular(12.r),
-                            child: CustomSubCategoryCard(
-                              categoryImage: categoryData.image ?? '',
-                              categoryName: categoryData.title ?? '',
-                            ),
-                          );
-                        },
                       ),
                     ],
                   ),
+                ),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.only(left: 10.w, right: 10.w, bottom: 15.h),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: _getCrossAxisCount(context),
+                  crossAxisSpacing: 10.w,
+                  mainAxisSpacing: 10.h,
+                  childAspectRatio: 0.65, // Ajusted to prevent overflow
+                ),
+                itemCount: state.categoryData.length >= 32
+                    ? 32
+                    : state.categoryData.length,
+                itemBuilder: (context, index) {
+                  final categoryData = state.categoryData[index];
+                  return InkWell(
+                    onTap: () {
+                      GoRouter.of(context)
+                          .push(AppRoutes.productListing, extra: {
+                        'isTheirMoreCategory':
+                            (categoryData.subcategoryCount ?? 0) > 0
+                                ? true
+                                : false,
+                        'title': categoryData.title ?? '',
+                        'logo': categoryData.image ?? '',
+                        'totalProduct': categoryData.productCount,
+                        'type': ProductListingType.category,
+                        'identifier': categoryData.slug,
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(12.r),
+                    child: CustomSubCategoryCard(
+                      categoryImage: categoryData.image ?? '',
+                      categoryName: categoryData.title ?? '',
+                    ),
+                  );
+                },
+              ),
+            ],
+          );
+
+          return state.categoryData.isNotEmpty
+              ? SizedBox(
+                  width: double.infinity,
+                  child: widget.showTitle
+                      ? categoryContent
+                      : SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          child: categoryContent,
+                        ),
                 )
               : const SizedBox.shrink();
         } else if (state is CategoryLoading) {

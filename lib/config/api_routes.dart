@@ -100,4 +100,5 @@ class ApiRoutes {
       '${AppConstant.baseUrl}flutterwave/create-order';
   static String cartSyncApi = '${AppConstant.baseUrl}user/cart/sync';
   static String exploreApi = '${AppConstant.baseUrl}explores';
+  static String recommendedProductsApi = '${AppConstant.baseUrl}user/orders/recommendations';
 }

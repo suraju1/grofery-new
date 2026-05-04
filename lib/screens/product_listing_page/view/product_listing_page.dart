@@ -20,7 +20,6 @@ import '../../../utils/widgets/custom_refresh_indicator.dart';
 import 'package:go_router/go_router.dart';
 import '../../../router/app_routes.dart';
 
-
 class ProductListingPage extends StatefulWidget {
   final bool isTheirMoreCategory;
   final String title;
@@ -702,7 +701,8 @@ class _ProductListingPageState extends State<ProductListingPage> {
                           key: ValueKey('no_products'),
                           child: Text("No products found"))
                       : ListView.builder(
-                          key: ValueKey('product_list_${filteredProducts.length}'),
+                          key: ValueKey(
+                              'product_list_${filteredProducts.length}'),
                           controller: _scrollController,
                           padding: EdgeInsets.only(bottom: 20.h),
                           itemCount: filteredProducts.length +
@@ -720,6 +720,12 @@ class _ProductListingPageState extends State<ProductListingPage> {
                               }
                             }
                             final product = filteredProducts[index];
+                            final variant = product.variants.isNotEmpty
+                                ? product.variants.first
+                                : null;
+
+                            if (variant == null) return const SizedBox.shrink();
+
                             return Padding(
                               padding: EdgeInsets.symmetric(
                                   horizontal: 8.w, vertical: 4.h),
@@ -728,17 +734,16 @@ class _ProductListingPageState extends State<ProductListingPage> {
                                 productImage: product.mainImage,
                                 productName: product.title,
                                 productSlug: product.slug,
-                                productPrice:
-                                    product.variants.first.price.toString(),
+                                productPrice: variant.price.toString(),
                                 productTags: product.tags,
-                                specialPrice: product.variants.first.specialPrice
-                                    .toString(),
+                                specialPrice: variant.specialPrice.toString(),
                                 estimatedDeliveryTime:
                                     product.estimatedDeliveryTime,
                                 ratings: product.ratings.toDouble(),
                                 ratingCount: product.ratingCount,
+                                quickDeliveryAvailable:
+                                    product.quickDeliveryAvailable,
                                 onAddToCart: (qty) {
-                                  final variant = product.variants.first;
                                   context.read<CartBloc>().add(
                                         AddToCart(
                                           context: context,
@@ -746,48 +751,56 @@ class _ProductListingPageState extends State<ProductListingPage> {
                                             productId: product.id.toString(),
                                             variantId: variant.id.toString(),
                                             variantName: variant.title,
-                                            vendorId: variant.storeId.toString(),
+                                            vendorId:
+                                                variant.storeId.toString(),
                                             name: product.title,
                                             image: product.mainImage,
-                                            price: variant.getEffectivePrice(qty),
+                                            price:
+                                                variant.getEffectivePrice(qty),
                                             originalPrice:
                                                 variant.price.toDouble(),
                                             quantity: qty,
-                                            minQty: product.minimumOrderQuantity,
-                                            maxQty: product.totalAllowedQuantity,
+                                            minQty:
+                                                product.minimumOrderQuantity,
+                                            maxQty:
+                                                product.totalAllowedQuantity,
                                             isOutOfStock: variant.stock <= 0,
                                             isSynced: false,
                                             updatedAt: DateTime.now(),
                                             syncAction: CartSyncAction.add,
-                                            tieredPricing: variant.tieredPricing,
+                                            tieredPricing:
+                                                variant.tieredPricing,
                                           ),
                                         ),
                                       );
                                 },
-                                isStoreOpen: product.storeStatus?.isOpen ?? true,
+                                isStoreOpen:
+                                    product.storeStatus?.isOpen ?? true,
                                 isWishListed: product.favorite != null &&
                                     product.favorite!
                                         .any((f) => f.wishlistId == 1),
-                                productVariantId: product.variants.first.id,
-                                storeId: product.variants.first.storeId,
-                                wishlistItemId: (product.favorite?.any(
-                                            (f) => f.wishlistId == 1) ??
+                                productVariantId: variant.id,
+                                storeId: variant.storeId,
+                                wishlistItemId: (product.favorite
+                                            ?.any((f) => f.wishlistId == 1) ??
                                         false)
                                     ? product.favorite!
-                                            .firstWhere((f) => f.wishlistId == 1)
+                                            .firstWhere(
+                                                (f) => f.wishlistId == 1)
                                             .id ??
                                         0
                                     : 0,
-                                totalStocks: product.variants.first.stock,
+                                totalStocks: variant.stock,
                                 imageFit: product.imageFit,
                                 quantityStepSize: product.quantityStepSize,
                                 minQty: product.minimumOrderQuantity,
                                 totalAllowedQuantity:
                                     product.totalAllowedQuantity,
-                                tieredPricing:
-                                    product.variants.first.tieredPricing,
+                                tieredPricing: variant.tieredPricing,
                                 indicator: product.indicator,
                                 useHorizontalLayout: true,
+                                mrp: variant.mrp.toString(),
+                                mrpStatus: variant.mrpStatus,
                               ),
                             );
                           },
@@ -801,6 +814,7 @@ class _ProductListingPageState extends State<ProductListingPage> {
       },
     );
   }
+
   Widget _buildShimmerList({Key? key}) {
     return ListView.builder(
       key: key,
@@ -833,55 +847,55 @@ class _ProductListingPageState extends State<ProductListingPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-          ShimmerWidget.rectangular(
-            isBorder: true,
-            height: 12.h,
-            width: 80.w,
-            borderRadius: 4,
-          ),
-          SizedBox(height: 12.h),
-          ShimmerWidget.rectangular(
-            isBorder: true,
-            height: 18.h,
-            width: 150.w,
-            borderRadius: 4,
-          ),
-          SizedBox(height: 8.h),
-          ShimmerWidget.rectangular(
-            isBorder: true,
-            height: 14.h,
-            width: 60.w,
-            borderRadius: 4,
-          ),
-          const Spacer(),
-          Row(
-            children: [
-              ShimmerWidget.rectangular(
-                isBorder: true,
-                height: 20.h,
-                width: 60.w,
-                borderRadius: 4,
-              ),
-              SizedBox(width: 8.w),
-              ShimmerWidget.rectangular(
-                isBorder: true,
-                height: 14.h,
-                width: 40.w,
-                borderRadius: 4,
-              ),
-            ],
-          ),
-          SizedBox(height: 12.h),
-          Row(
-            children: [
-              ShimmerWidget.rectangular(
-                isBorder: true,
-                height: 32.h,
-                width: 70.w,
-                borderRadius: 8,
-              ),
-            ],
-          ),
+                  ShimmerWidget.rectangular(
+                    isBorder: true,
+                    height: 12.h,
+                    width: 80.w,
+                    borderRadius: 4,
+                  ),
+                  SizedBox(height: 12.h),
+                  ShimmerWidget.rectangular(
+                    isBorder: true,
+                    height: 18.h,
+                    width: 150.w,
+                    borderRadius: 4,
+                  ),
+                  SizedBox(height: 8.h),
+                  ShimmerWidget.rectangular(
+                    isBorder: true,
+                    height: 14.h,
+                    width: 60.w,
+                    borderRadius: 4,
+                  ),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      ShimmerWidget.rectangular(
+                        isBorder: true,
+                        height: 20.h,
+                        width: 60.w,
+                        borderRadius: 4,
+                      ),
+                      SizedBox(width: 8.w),
+                      ShimmerWidget.rectangular(
+                        isBorder: true,
+                        height: 14.h,
+                        width: 40.w,
+                        borderRadius: 4,
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 12.h),
+                  Row(
+                    children: [
+                      ShimmerWidget.rectangular(
+                        isBorder: true,
+                        height: 32.h,
+                        width: 70.w,
+                        borderRadius: 8,
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),

@@ -1,5 +1,32 @@
 import 'package:grofery_user/screens/cart_page/model/promo_code_model.dart';
-import 'package:grofery_user/model/tiered_pricing.dart';class GetCartModel {
+import 'package:grofery_user/model/tiered_pricing.dart';
+
+class TimeSlot {
+  int? id;
+  String? name;
+  String? from;
+  String? to;
+
+  TimeSlot({this.id, this.name, this.from, this.to});
+
+  TimeSlot.fromJson(Map<String, dynamic> json) {
+    id = json['id'] != null ? int.tryParse(json['id'].toString()) : null;
+    name = json['name'];
+    from = json['from'];
+    to = json['to'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['id'] = id;
+    data['name'] = name;
+    data['from'] = from;
+    data['to'] = to;
+    return data;
+  }
+}
+
+class GetCartModel {
   bool? success;
   String? message;
   CartData? data;
@@ -38,6 +65,7 @@ class CartData {
   List<RemovedItems>? removedItems;
   int? removedCount;
   DeliveryZone? deliveryZone;
+  List<TimeSlot>? timeSlots;
   String? createdAt;
   String? updatedAt;
 
@@ -49,6 +77,8 @@ class CartData {
         this.totalQuantity,
         this.items,
         this.paymentSummary,
+        this.deliveryZone,
+        this.timeSlots,
         this.createdAt,
         this.updatedAt});
 
@@ -77,6 +107,12 @@ class CartData {
     deliveryZone = json['delivery_zone'] != null
         ? DeliveryZone.fromJson(json['delivery_zone'])
         : null;
+    if (json['time_slots'] != null) {
+      timeSlots = <TimeSlot>[];
+      json['time_slots'].forEach((v) {
+        timeSlots!.add(TimeSlot.fromJson(v));
+      });
+    }
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
   }
@@ -101,6 +137,9 @@ class CartData {
     data['removed_count'] = removedCount;
     if (deliveryZone != null) {
       data['delivery_zone'] = deliveryZone!.toJson();
+    }
+    if (timeSlots != null) {
+      data['time_slots'] = timeSlots!.map((v) => v.toJson()).toList();
     }
     data['created_at'] = createdAt;
     data['updated_at'] = updatedAt;
@@ -535,6 +574,7 @@ class DeliveryZone {
   int? perStoreDropOffFee;
   int? bufferTime;
   bool? rushDeliveryAvailable;
+  List<TimeSlot>? timeSlots;
 
   DeliveryZone(
       {this.exists,
@@ -551,7 +591,8 @@ class DeliveryZone {
         this.distanceBasedDeliveryCharges,
         this.perStoreDropOffFee,
         this.bufferTime,
-        this.rushDeliveryAvailable});
+        this.rushDeliveryAvailable,
+        this.timeSlots});
 
   DeliveryZone.fromJson(Map<String, dynamic> json) {
     exists = json['exists'];
@@ -569,6 +610,12 @@ class DeliveryZone {
     perStoreDropOffFee = json['per_store_drop_off_fee'];
     bufferTime = json['buffer_time'];
     rushDeliveryAvailable = json['rush_delivery_available'];
+    if (json['time_slots'] != null) {
+      timeSlots = <TimeSlot>[];
+      json['time_slots'].forEach((v) {
+        timeSlots!.add(TimeSlot.fromJson(v));
+      });
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -588,6 +635,9 @@ class DeliveryZone {
     data['per_store_drop_off_fee'] = perStoreDropOffFee;
     data['buffer_time'] = bufferTime;
     data['rush_delivery_available'] = rushDeliveryAvailable;
+    if (timeSlots != null) {
+      data['time_slots'] = timeSlots!.map((v) => v.toJson()).toList();
+    }
     return data;
   }
 }

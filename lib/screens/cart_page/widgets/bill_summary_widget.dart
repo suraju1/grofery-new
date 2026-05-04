@@ -29,6 +29,7 @@ class BillSummaryWidget extends StatelessWidget {
   final String? promoMode;
   final String? discountAmount;
   final bool? isRushDelivery;
+  final double? walletAmountUsed;
 
   const BillSummaryWidget({
     super.key,
@@ -49,6 +50,7 @@ class BillSummaryWidget extends StatelessWidget {
     this.promoMode,
     this.discountAmount,
     this.isRushDelivery,
+    this.walletAmountUsed,
   });
 
   @override
@@ -79,7 +81,7 @@ class BillSummaryWidget extends StatelessWidget {
             // Items total row
             _buildItemRow(
               context: context,
-              icon: Icons.receipt_long,
+              icon: TablerIcons.receipt,
               label: l10n?.itemsTotal ?? 'Items total',
               originalPrice: itemsOriginalPrice >= 0
                   ? '$currency${itemsOriginalPrice.toStringAsFixed(2)}'
@@ -92,7 +94,7 @@ class BillSummaryWidget extends StatelessWidget {
             // Delivery charge row
             _buildItemRow(
               context: context,
-              icon: Icons.delivery_dining,
+              icon: TablerIcons.truck_delivery,
               label: l10n?.deliveryCharge ?? 'Delivery charge',
               originalPrice: deliveryChargeOriginal.toStringAsFixed(2),
               finalPrice: deliveryChargeOriginal <= 0
@@ -101,65 +103,10 @@ class BillSummaryWidget extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Rush Delivery Indicator
-            if (isRushDelivery == true) ...[
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppTheme.primaryColor.withValues(alpha: 0.1),
-                      AppTheme.primaryColor.withValues(alpha: 0.05),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.bolt,
-                      size: 18,
-                      color: AppTheme.primaryColor,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      l10n?.rushDeliveryActive ?? 'Rush Delivery Active',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.primaryColor,
-                      ),
-                    ),
-                    Spacer(),
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        l10n?.on ?? 'ON',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-
             if (perStoreDropOffFees != null)
               _buildItemRow(
                 context: context,
-                icon: Icons.shopping_bag,
+                icon: TablerIcons.building_store,
                 label: l10n?.perStoreDropOffFees ?? 'Per store drop off fees',
                 finalPrice: perStoreDropOffFees! <= 0
                     ? (l10n?.free ?? 'FREE')
@@ -171,7 +118,7 @@ class BillSummaryWidget extends StatelessWidget {
             // Handling charge row
             _buildItemRow(
               context: context,
-              icon: Icons.shopping_bag,
+              icon: TablerIcons.package,
               label: l10n?.handlingCharge ?? 'Handling charge',
               finalPrice: handlingCharge <= 0
                   ? (l10n?.free ?? 'FREE')
@@ -179,6 +126,33 @@ class BillSummaryWidget extends StatelessWidget {
             ),
 
             const SizedBox(height: 16),
+
+            // Promo Discount Row (Added here for transparency)
+            if (promoCode != null &&
+                promoCode!.isNotEmpty &&
+                promoDiscount != null &&
+                promoDiscount! > 0) ...[
+              _buildItemRow(
+                context: context,
+                icon: TablerIcons.rosette_discount_filled,
+                label: l10n?.promoDiscount ?? 'Promo Discount',
+                finalPrice: '-$currency${promoDiscount!.toStringAsFixed(2)}',
+                finalPriceColor: const Color(0xFF149400),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Wallet Amount Row
+            if (walletAmountUsed != null && walletAmountUsed! > 0) ...[
+              _buildItemRow(
+                context: context,
+                icon: Icons.account_balance_wallet,
+                label: 'Wallet Amount Used',
+                finalPrice: '-$currency${walletAmountUsed!.toStringAsFixed(2)}',
+                finalPriceColor: Colors.orange.shade800,
+              ),
+              const SizedBox(height: 16),
+            ],
 
             /// For Cart Bill Promo Preview
             if (isFromOrderDetail == false) ...[
@@ -368,20 +342,7 @@ class BillSummaryWidget extends StatelessWidget {
 
             /// For Order Detail Page Promo Preview
             if (isFromOrderDetail == true) ...[
-              if (promoCode != null &&
-                  promoCode!.isNotEmpty &&
-                  promoDiscount != null &&
-                  promoDiscount! >= 0.0) ...[
-                _buildItemRow(
-                  context: context,
-                  icon: TablerIcons.discount_filled,
-                  label: l10n?.promoDiscount ?? 'Promo Discount',
-                  finalPrice: promoDiscount! <= 0
-                      ? (l10n?.free ?? 'FREE')
-                      : '-$currency${promoDiscount!.toStringAsFixed(2)}',
-                ),
-                const SizedBox(height: 16),
-              ],
+              // Removed duplicate from here as it's now in the main list
             ],
 
             // Dotted line separator
@@ -395,15 +356,17 @@ class BillSummaryWidget extends StatelessWidget {
                 Text(
                   l10n?.grandTotal ?? 'Grand total',
                   style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.tertiary,
                   ),
                 ),
                 Text(
                   '${AppConstant.currency}${grandTotal.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.primaryColor,
                   ),
                 ),
               ],
@@ -470,17 +433,17 @@ class BillSummaryWidget extends StatelessWidget {
       case 'cashback':
         return [
           Colors.purple.shade50,
-          Colors.purple.shade100.withValues(alpha: 0.3),
+          Colors.purple.shade100.withOpacity(0.3),
         ];
       case 'instant':
         return [
           Colors.green.shade50,
-          Colors.green.shade100.withValues(alpha: 0.3),
+          Colors.green.shade100.withOpacity(0.3),
         ];
       default:
         return [
           Colors.blue.shade50,
-          Colors.blue.shade100.withValues(alpha: 0.3),
+          Colors.blue.shade100.withOpacity(0.3),
         ];
     }
   }
@@ -577,13 +540,20 @@ class BillSummaryWidget extends StatelessWidget {
     String? originalPrice,
     required String finalPrice,
     bool hasDiscount = false,
+    Color? finalPriceColor,
   }) {
+    final isFree = finalPrice.toUpperCase() == 'FREE';
+    final effectivePriceColor = finalPriceColor ??
+        (isFree
+            ? const Color(0xFF149400)
+            : Theme.of(context).colorScheme.tertiary);
+
     return Row(
       children: [
         Icon(
           icon,
           size: 20,
-          color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.6),
+          color: Theme.of(context).colorScheme.tertiary.withOpacity(0.5),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -594,7 +564,8 @@ class BillSummaryWidget extends StatelessWidget {
                 label,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Theme.of(context).colorScheme.tertiary,
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(context).colorScheme.tertiary.withOpacity(0.8),
                 ),
               ),
               if (additionalInfo != null)
@@ -619,7 +590,7 @@ class BillSummaryWidget extends StatelessWidget {
                   color: Theme.of(context)
                       .colorScheme
                       .tertiary
-                      .withValues(alpha: 0.3),
+                      .withOpacity(0.3),
                   decoration: TextDecoration.lineThrough,
                 ),
               ),
@@ -629,8 +600,8 @@ class BillSummaryWidget extends StatelessWidget {
               finalPrice,
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.tertiary,
+                fontWeight: isFree ? FontWeight.bold : FontWeight.w600,
+                color: effectivePriceColor,
               ),
             ),
           ],

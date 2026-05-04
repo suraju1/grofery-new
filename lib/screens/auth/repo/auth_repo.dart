@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:google_sign_in/google_sign_in.dart' as g_auth;
 import 'package:grofery_user/config/api_base_helper.dart';
 import 'package:grofery_user/config/api_routes.dart';
 import 'package:grofery_user/config/constant.dart';
@@ -14,6 +14,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 class AuthRepository {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final String _serverClientId = AppConstant.serverClientId;
+  late final g_auth.GoogleSignIn _googleSignIn = g_auth.GoogleSignIn.instance;
 
   String deviceType = '';
   String getDeviceType() {
@@ -106,6 +107,8 @@ class AuthRepository {
 
   Future<void> logout() async {
     try {
+      await _auth.signOut();
+      await _googleSignIn.signOut();
       await AppConstant.apiBaseHelper.postAPICall(ApiRoutes.logoutApi, {});
     } catch (e) {
       throw ApiException('Failed to logout user');
@@ -202,93 +205,103 @@ class AuthRepository {
 
   Future<Map<String, dynamic>> socialAuth({
     required String firebaseToken,
+    String? name,
+    String? email,
     required bool isApple,
   }) async {
     try {
       String? fcmToken = await getFCMToken();
-      String? apiUrl = '';
-      if (isApple) {
-        apiUrl = ApiRoutes.appleAuthApi;
-      } else {
-        apiUrl = ApiRoutes.googleAuthApi;
-      }
+      String? apiUrl = isApple ? ApiRoutes.appleAuthApi : ApiRoutes.googleAuthApi;
+
+      log('🔑 Sending SocialAuth: firebase_token=${firebaseToken.substring(0, 10)}..., name=$name, email=$email');
 
       final response = await AppConstant.apiBaseHelper.postAPICall(apiUrl, {
         'id_token': firebaseToken,
+        'idToken': firebaseToken, // Compatibility
+        'name': name,
+        'email': email,
         'device_type': getDeviceType(),
         'fcm_token': fcmToken,
       });
-      log('🔑 Sending to API: id_token=${firebaseToken.isEmpty ? "EMPTY" : "HAS_VALUE"}, device_type=${getDeviceType()}, fcm_token=${fcmToken?.isEmpty ?? true ? "EMPTY" : "HAS_VALUE"}');
+      log('🔑 API Response status: ${response.statusCode}');
       if (response.statusCode == 200) {
         return response.data;
       }
-      return {};
+      final msg = response.data is Map ? response.data['message'] : null;
+      throw ApiException(
+          msg?.toString() ?? 'Social auth failed (${response.statusCode})');
     } catch (e) {
+      log('🔴 SocialAuth Repository Error: $e');
       throw ApiException(e.toString());
     }
   }
 
-  Future<String> googleLogin() async {
-    final GoogleSignIn googleSignIn = GoogleSignIn.instance;
+  Future<Map<String, String>> googleLogin() async {
     try {
-      log('🔵 Step 1: Initializing Google Sign-In');
-      await googleSignIn.initialize(serverClientId: _serverClientId);
+      log('🔵 Step 1: Authenticating user');
+      final g_auth.GoogleSignInAccount googleUser =
+          await _googleSignIn.authenticate(scopeHint: ['email']);
 
-      log('🔵 Step 2: Authenticating user');
-      final GoogleSignInAccount googleUser =
-          await googleSignIn.authenticate(scopeHint: ['email']);
+      log('🔵 Step 2: Got Google user - ID: ${googleUser.id}');
 
-      log('🔵 Step 3: Got Google user - ID: ${googleUser.id}');
-      if (googleUser.id.isEmpty) {
-        throw ApiException('User cancelled the login');
+      log('🔵 Step 3: Getting authentication details');
+      final g_auth.GoogleSignInAuthentication googleAuth =
+          googleUser.authentication;
+      log('🔵 Step 4: Got auth - idToken: ${googleAuth.idToken != null ? "EXISTS" : "NULL"}');
+
+      log('🔵 Step 5: Creating Firebase credential');
+      String? accessToken;
+      try {
+        // Attempt to get access token, but don't let it block the whole flow if it fails
+        // as idToken is often sufficient for Firebase login.
+        final authorization = await googleUser.authorizationClient.authorizeScopes(['email']);
+        accessToken = authorization.accessToken;
+        log('🔵 Step 6: Got access token: ${accessToken.isNotEmpty ? "EXISTS" : "EMPTY"}');
+      } catch (authzError) {
+        log('⚠️ Warning: Failed to authorize scopes for access token: $authzError');
       }
 
-      log('🔵 Step 4: Getting authentication details');
-      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
-      log('🔵 Step 5: Got auth - idToken: ${googleAuth.idToken != null ? "EXISTS" : "NULL"}');
-
-      final authClient = googleSignIn.authorizationClient;
-      final authorization = await authClient.authorizationForScopes(['email']);
-      log('🔵 Step 6: Got authorization - accessToken: ${authorization?.accessToken != null ? "EXISTS" : "NULL"}');
-
-      log('🔵 Step 7: Creating Firebase credential');
       final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: authorization?.accessToken,
+        accessToken: accessToken,
         idToken: googleAuth.idToken,
       );
 
-      log('🔵 Step 8: Signing in to Firebase');
+      log('🔵 Step 7: Signing in to Firebase with credential');
       final UserCredential userCredential =
           await _auth.signInWithCredential(credential);
       final User? user = userCredential.user;
 
-      log('🔵 Step 9: Firebase user: ${user != null ? "EXISTS" : "NULL"}');
+      log('🔵 Step 8: Firebase user: ${user != null ? "ID: ${user.uid}" : "NULL"}');
       if (user != null) {
-        log('🔵 Step 10: Getting Firebase ID token');
-        final IdTokenResult idTokenResult = await user.getIdTokenResult();
-        final String? accessToken = idTokenResult.token;
+        log('🔵 Step 9: Getting Firebase ID token');
+        final String? firebaseToken = await user.getIdToken();
 
-        log('🔵 Step 11: Firebase token: ${accessToken != null ? "EXISTS (length: ${accessToken.length})" : "NULL"}');
-        if (accessToken != null) {
-          log('✅ Google login successful - returning token');
-          return accessToken;
+        log('🔵 Step 10: Firebase token: ${firebaseToken != null ? "EXISTS" : "NULL"}');
+        if (firebaseToken != null) {
+          log('✅ Google login successful');
+          return {
+            'firebaseToken': firebaseToken,
+            'googleToken': googleAuth.idToken ?? '',
+            'userName': user.displayName ?? '',
+            'userEmail': user.email ?? '',
+          };
         } else {
-          throw ApiException('Failed to get token');
+          throw ApiException('Failed to get Firebase token');
         }
       } else {
-        throw ApiException('Failed to sign in');
+        throw ApiException('Failed to sign in to Firebase');
       }
-    } catch (e) {
+    } catch (e, stack) {
       log('❌ Google login error: $e');
+      log('❌ Stack trace: $stack');
       final errorMessage = e.toString().toLowerCase();
 
-      if (errorMessage.contains('cancel')) {
-        log('⚠️ User cancelled - returning empty string');
-        return '';
+      if (errorMessage.contains('cancel') || errorMessage.contains('12501')) {
+        log('⚠️ User cancelled - returning empty map');
+        return {};
       } else {
-        // Any other error — treat as real failure
         log('🔴 Throwing exception: $e');
-        throw ApiException(e.toString());
+        throw ApiException('Google login failed: $e');
       }
     }
   }

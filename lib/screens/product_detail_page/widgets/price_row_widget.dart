@@ -137,6 +137,8 @@ class PriceRowWidget extends StatelessWidget {
     final discountPercentage = hasRealDiscount
         ? PriceUtils.calculateDiscountPercentage(originalPrice, salePrice!)
         : 0;
+        
+    final discountAmount = hasRealDiscount ? (originalPrice - salePrice!) : 0.0;
 
     // ────────────────────────────────────────────────
     // Build UI
@@ -183,7 +185,7 @@ class PriceRowWidget extends StatelessWidget {
               borderRadius: BorderRadius.circular(4.r),
             ),
             child: Text(
-              '$discountPercentage% OFF',
+              '$discountPercentage% OFF (${PriceUtils.formatPrice(discountAmount)})',
               style: TextStyle(
                 fontSize: isTablet(context) ? 14 : 10.sp,
                 fontWeight: FontWeight.w500,

@@ -203,12 +203,19 @@ class AuthFailureEvent extends AuthEvent {
 
 class SocialAuthRequest extends AuthEvent {
   final String firebaseToken;
+  final String? name;
+  final String? email;
   final bool isApple;
 
-  SocialAuthRequest({required this.firebaseToken, required this.isApple});
+  SocialAuthRequest({
+    required this.firebaseToken,
+    this.name,
+    this.email,
+    required this.isApple,
+  });
 
   @override
-  List<Object?> get props => [firebaseToken, isApple];
+  List<Object?> get props => [firebaseToken, name, email, isApple];
 }
 
 class GoogleLoginRequest extends AuthEvent {}

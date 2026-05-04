@@ -10,6 +10,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:grofery_user/config/constant.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'dart:developer';
 import 'bloc/settings_bloc/settings_bloc.dart';
 import 'bloc/theme_bloc/theme_bloc.dart';
 import 'bloc/language_bloc/language_bloc.dart';
@@ -71,6 +74,8 @@ import 'screens/home_page/bloc/feature_section_product/feature_section_product_b
 import 'screens/home_page/bloc/sub_category/sub_category_bloc.dart';
 import 'screens/home_page/bloc/explore/explore_bloc.dart';
 import 'screens/home_page/bloc/explore/explore_event.dart';
+import 'screens/home_page/bloc/recommended_products/recommended_products_bloc.dart';
+import 'screens/home_page/repo/recommended_products_repo.dart';
 import 'screens/product_detail_page/bloc/product_detail_bloc/product_detail_bloc.dart';
 import 'bloc/user_cart_bloc/user_cart_bloc.dart';
 import 'bloc/user_details_bloc/user_details_bloc.dart';
@@ -89,7 +94,17 @@ void main() async {
       CacheManagerLogLevel.none; // Suppress HTTP error logs
   await FastCachedImageConfig.init();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
+  } catch (e) {
+    if (!e.toString().contains('duplicate-app')) {
+      rethrow;
+    }
+  }
   await Hive.initFlutter();
 
   Hive.registerAdapter(CartSyncActionAdapter());
@@ -104,6 +119,16 @@ void main() async {
   await Global.initialize();
   await Global.initializePrefs();
   await Hive.openBox('themebox');
+
+  // Initialize Google Sign-In (exactly once as required by the package)
+  try {
+    await GoogleSignIn.instance.initialize(
+      serverClientId: AppConstant.serverClientId,
+    );
+    log('✅ Google Sign-In initialized');
+  } catch (e) {
+    log('❌ Google Sign-In initialization failed: $e');
+  }
 
   if (kDebugMode) {
     io.HttpClient.enableTimelineLogging = true;
@@ -161,6 +186,9 @@ class _MyAppState extends State<MyApp> {
         ),
         BlocProvider(
           create: (context) => SubCategoryBloc(),
+        ),
+        BlocProvider(
+          create: (context) => RecommendedProductsBloc(RecommendedProductsRepository()),
         ),
         BlocProvider(create: (context) => UserDataBloc()),
         BlocProvider(

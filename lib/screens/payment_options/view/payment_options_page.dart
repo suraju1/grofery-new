@@ -12,18 +12,14 @@ class PaymentOptionsPage extends StatefulWidget {
   final double totalAmount;
   final bool? isFromAddMoney;
 
-  const PaymentOptionsPage({
-    super.key,
-    required this.totalAmount,
-    this.isFromAddMoney = false
-  });
+  const PaymentOptionsPage(
+      {super.key, required this.totalAmount, this.isFromAddMoney = false});
 
   @override
   State<PaymentOptionsPage> createState() => _PaymentOptionsPageState();
 }
 
 class _PaymentOptionsPageState extends State<PaymentOptionsPage> {
-
   @override
   Widget build(BuildContext context) {
     return CustomScaffold(
@@ -56,7 +52,8 @@ class _PaymentOptionsPageState extends State<PaymentOptionsPage> {
               builder: (context, profileState) {
                 String? walletBalance;
                 if (profileState is UserProfileLoaded) {
-                  walletBalance = profileState.userData.data?.walletBalance?.toString();
+                  walletBalance =
+                      profileState.userData.data?.walletBalance?.toString();
                 }
 
                 return SingleChildScrollView(
@@ -88,9 +85,7 @@ class _PaymentOptionsPageState extends State<PaymentOptionsPage> {
 
   Widget _buildPaymentSummary() {
     return Container(
-      margin: EdgeInsets.only(
-        bottom: 16.w
-      ),
+      margin: EdgeInsets.only(bottom: 16.w),
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -112,7 +107,9 @@ class _PaymentOptionsPageState extends State<PaymentOptionsPage> {
               fontWeight: FontWeight.w500,
             ),
           ),
-          SizedBox(width: 10.w,),
+          SizedBox(
+            width: 10.w,
+          ),
           Text(
             '${AppConstant.currency}${widget.totalAmount.toStringAsFixed(2)}',
             style: TextStyle(
@@ -194,7 +191,8 @@ class _PaymentOptionsPageState extends State<PaymentOptionsPage> {
 
     String? subtitleText;
     if (method.type == PaymentMethodType.wallet && walletBalance != null) {
-      subtitleText = '${AppLocalizations.of(context)!.balance}: ${AppConstant.currency}$walletBalance';
+      subtitleText =
+          '${AppLocalizations.of(context)!.balance}: ${AppConstant.currency}$walletBalance';
     } else if (!isEnabled) {
       subtitleText = AppLocalizations.of(context)!.currentlyUnavailable;
     }
@@ -204,11 +202,11 @@ class _PaymentOptionsPageState extends State<PaymentOptionsPage> {
         border: isLast
             ? null
             : Border(
-          bottom: BorderSide(
-            color: Colors.grey.withValues(alpha: 0.2),
-            width: 1,
-          ),
-        ),
+                bottom: BorderSide(
+                  color: Colors.grey.withValues(alpha: 0.2),
+                  width: 1,
+                ),
+              ),
       ),
       child: ListTile(
         contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
@@ -225,49 +223,54 @@ class _PaymentOptionsPageState extends State<PaymentOptionsPage> {
           style: TextStyle(
             fontSize: 14.sp,
             fontWeight: FontWeight.w500,
-            color: isEnabled ? Theme.of(context).colorScheme.tertiary : Colors.grey[600],
+            color: isEnabled
+                ? Theme.of(context).colorScheme.tertiary
+                : Colors.grey[600],
           ),
         ),
         subtitle: subtitleText != null
             ? Text(
-          subtitleText,
-          style: TextStyle(
-            fontSize: 12.sp,
-            color: isEnabled ? AppTheme.primaryColor : Colors.grey[500],
-            fontStyle: isEnabled ? FontStyle.normal : FontStyle.italic,
-            fontWeight: isEnabled && method.type == PaymentMethodType.wallet ? FontWeight.w600 : FontWeight.normal,
-          ),
-        )
+                subtitleText,
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  color: isEnabled ? AppTheme.primaryColor : Colors.grey[500],
+                  fontStyle: isEnabled ? FontStyle.normal : FontStyle.italic,
+                  fontWeight:
+                      isEnabled && method.type == PaymentMethodType.wallet
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                ),
+              )
             : null,
         trailing: showAddIcon
             ? Container(
-          width: 24.w,
-          height: 24.w,
-          decoration: BoxDecoration(
-            color: Colors.green,
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-          child: Icon(
-            Icons.add,
-            color: Colors.white,
-            size: 16.sp,
-          ),
-        )
+                width: 24.w,
+                height: 24.w,
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Icon(
+                  Icons.add,
+                  color: Colors.white,
+                  size: 16.sp,
+                ),
+              )
             : isEnabled
-            ? Icon(
-          Icons.arrow_forward_ios,
-          color: Colors.grey[400],
-          size: 16.sp,
-        )
-            : Icon(
-          Icons.block,
-          color: Colors.grey[400],
-          size: 16.sp,
-        ),
+                ? Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.grey[400],
+                    size: 16.sp,
+                  )
+                : Icon(
+                    Icons.block,
+                    color: Colors.grey[400],
+                    size: 16.sp,
+                  ),
         onTap: isEnabled && !showAddIcon
             ? () {
-          Navigator.pop(context, method.type);
-        }
+                Navigator.pop(context, method.type);
+              }
             : null,
       ),
     );

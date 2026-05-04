@@ -84,30 +84,20 @@ class ApiBaseHelper {
 
       responseJson = response;
     } on dio_.DioException catch (e) {
-      // DioError handling.
       if (e.response != null) {
-        // The server responded but with an error status.
-        if(e.response?.statusCode == 401 ){
-          throw ApiException(
-              '${e.response?.data['message']}');
-        } else if(e.response?.statusCode == 422){
-          throw ApiException(
-              '${e.response?.data['message']}');
-        } else if(e.response?.statusCode == 500 || e.response?.statusCode == 503){
-          throw ApiException(
-              'Server error');
-        }
-        throw ApiException(
-            '${e.response?.data['message']}');
+        final statusCode = e.response?.statusCode;
+        final data = e.response?.data;
+        final message = data is Map ? (data['message'] ?? data['error'] ?? data.toString()) : data.toString();
+        throw ApiException('API Error ($statusCode): $message');
       } else {
-        throw ApiException('Something Went Wrong: ${e.message}');
+        throw ApiException('Network Error: ${e.message}');
       }
     } on SocketException {
       throw ApiException('No Internet connection');
     } on TimeoutException {
-      throw ApiException('Something went wrong, Server not Responding');
+      throw ApiException('Server Timeout: Server not Responding');
     } on Exception catch (e) {
-      throw ApiException('Something Went wrong with ${e.toString()}');
+      throw ApiException('Unexpected Error: ${e.toString()}');
     }
     return responseJson;
   }
@@ -168,8 +158,8 @@ class ApiBaseHelper {
           options: dio_.Options(headers: headers)
       );
 
-      // log(
-      //     'response api****$url*****************${response.statusCode}*********${response.data}');
+      log(
+          'response api****$url*****************${response.statusCode}*********${response.data}');
 
       responseJson = response;
     } on dio_.DioException catch (e) {
@@ -181,9 +171,11 @@ class ApiBaseHelper {
           throw ApiException(
               '${e.response?.data['message']}');
         } else if(e.response?.statusCode == 422){
+          log('❌ API Error 422: ${e.response?.data}');
           throw ApiException(
               '${e.response?.data['success']['email']}');
         } else if(e.response?.statusCode == 500){
+          log('❌ API Error 500: ${e.response?.data}');
           throw ApiException(
               'Server error');
         } else if(e.response?.statusCode == 403){

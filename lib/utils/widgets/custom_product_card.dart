@@ -58,6 +58,9 @@ class CustomProductCard extends StatelessWidget {
   final bool useHorizontalLayout;
   final bool isSimilarProductLayout;
   final List<TieredPricing>? tieredPricing;
+  final String? mrp;
+  final int? mrpStatus;
+  final bool quickDeliveryAvailable;
 
   const CustomProductCard({
     super.key,
@@ -90,16 +93,13 @@ class CustomProductCard extends StatelessWidget {
     this.useHorizontalLayout = false,
     this.isSimilarProductLayout = false,
     this.tieredPricing,
+    this.mrp,
+    this.mrpStatus,
+    this.quickDeliveryAvailable = false,
   });
 
   BoxFit get boxFit {
-    switch (imageFit.toLowerCase()) {
-      case 'cover':
-        return BoxFit.cover;
-      case 'contain':
-      default:
-        return BoxFit.contain;
-    }
+    return BoxFit.contain;
   }
 
   @override
@@ -134,7 +134,16 @@ class CustomProductCard extends StatelessWidget {
             opacity: totalStocks <= 0 ? 0.5 : 1,
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8.r),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(5.r),
+                border: Border.all(color: Colors.grey.shade200, width: 0.8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Stack(
                 children: [
@@ -145,49 +154,74 @@ class CustomProductCard extends StatelessWidget {
                           productImage: productImage,
                           discountPercentage:
                               PriceUtils.calculateDiscountPercentage(
-                                      double.parse(productPrice),
-                                      double.parse(specialPrice))
+                                      double.tryParse(productPrice) ?? 0.0,
+                                      double.tryParse(specialPrice) ?? 0.0)
                                   .toString(),
                           heroTag: heroTag,
                           context: context),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 2.w, vertical: 0.h),
-                        child: BlocBuilder<CartBloc, CartState>(
-                            builder: (context, state) {
-                          final cartItem = _getCartItem(state);
-                          final int currentQty = cartItem?.quantity ?? 0;
-                          final double effectivePrice =
-                              _calculateEffectivePrice(
-                                  currentQty > 0 ? currentQty : 1);
-                          final double original =
-                              double.tryParse(productPrice) ?? 0.0;
-                          final displayQty = currentQty > 0 ? currentQty : 1;
-                          final totalPrice = effectivePrice * displayQty;
-                          final totalOriginalPrice = original * displayQty;
+                      Expanded(
+                        child: Container(
+                          padding: EdgeInsets.fromLTRB(8.w, 4.h, 8.w, 8.h),
+                          child: BlocBuilder<CartBloc, CartState>(
+                              builder: (context, state) {
+                            final cartItem = _getCartItem(state);
+                            final int currentQty = cartItem?.quantity ?? 0;
+                            final double effectivePrice =
+                                _calculateEffectivePrice(
+                                    currentQty > 0 ? currentQty : 1);
+                            final double original =
+                                double.tryParse(productPrice) ?? 0.0;
+                            final displayQty = currentQty > 0 ? currentQty : 1;
+                            final totalPrice = effectivePrice * displayQty;
+                            final totalOriginalPrice = original * displayQty;
 
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              productNameWidget(
-                                  productName: productName, context: context),
-                              SizedBox(height: 2.h),
-                              productPriceWidget(
-                                  price: totalOriginalPrice.toString(),
-                                  specialPrice: totalPrice.toString(),
-                                  locale: AppConstant.defaultLocalCurrency,
-                                  context: context),
-                              SizedBox(height: 3.h),
-                              _buildBulkTierPricing(context, currentQty),
-                              SizedBox(height: 3.h),
-                              ratingWidget(context),
-                              SizedBox(height: 4.h),
-                              DeliveryTimeWidget(time: estimatedDeliveryTime),
-                            ],
-                          );
-                        }),
+                            return SingleChildScrollView(
+                              physics: const NeverScrollableScrollPhysics(),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  productNameWidget(
+                                      productName: productName,
+                                      context: context),
+                                  SizedBox(height: 2.h),
+                                  productPriceWidget(
+                                      price: (mrpStatus == 1 &&
+                                              (double.tryParse(mrp ?? '0') ??
+                                                      0) >
+                                                  0)
+                                          ? mrp!
+                                          : '',
+                                      specialPrice: totalPrice.toString(),
+                                      locale: AppConstant.defaultLocalCurrency,
+                                      context: context),
+                                  SizedBox(height: 4.h),
+                                  _buildQuickDeliveryBadge(
+                                      quickDeliveryAvailable),
+                                  SizedBox(height: 3.h),
+                                  _buildBulkTierPricing(context, currentQty),
+                                  SizedBox(height: 3.h),
+                                  ratingWidget(context),
+                                  if (minQty > 1) ...[
+                                    SizedBox(height: 3.h),
+                                    Text(
+                                      "Minimum Order: $minQty ${minQty > 1 ? 'pcs' : 'pc'}",
+                                      style: TextStyle(
+                                        color: AppTheme.primaryColor,
+                                        fontSize: 9.sp,
+                                        fontWeight: FontWeight.w600,
+                                        fontFamily: AppTheme.fontFamily,
+                                      ),
+                                    ),
+                                  ],
+                                  SizedBox(height: 4.h),
+                                  SizedBox(height: 4.h),
+                                ],
+                              ),
+                            );
+                          }),
+                        ),
                       ),
                     ],
                   ),
@@ -211,6 +245,42 @@ class CustomProductCard extends StatelessWidget {
     );
   }
 
+  Widget _buildQuickDeliveryBadge(bool available) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 3.h),
+      decoration: BoxDecoration(
+        color: available ? const Color(0xFFE8F5E9) : const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(6.r),
+        border: Border.all(
+          color: available ? const Color(0xFFC8E6C9) : const Color(0xFFE0E0E0),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            available ? TablerIcons.bolt : TablerIcons.truck_delivery,
+            size: 11.sp,
+            color:
+                available ? const Color(0xFF2E7D32) : const Color(0xFF757575),
+          ),
+          SizedBox(width: 4.w),
+          Text(
+            available ? 'Quick Delivery' : 'Standard Delivery',
+            style: TextStyle(
+              fontSize: 9.sp,
+              color:
+                  available ? const Color(0xFF2E7D32) : const Color(0xFF757575),
+              fontWeight: FontWeight.w700,
+              fontFamily: AppTheme.fontFamily,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget productImageWidget({
     required String productImage,
     required String discountPercentage,
@@ -224,14 +294,12 @@ class CustomProductCard extends StatelessWidget {
           Container(
             margin: EdgeInsetsDirectional.only(end: 8.w, bottom: 4.h),
             width: double.infinity,
-            height: 100.h,
+            height: 120.h,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.onPrimary,
-              borderRadius: BorderRadius.circular(8.r),
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
             ),
-            padding: boxFit == BoxFit.contain
-                ? const EdgeInsets.all(10.0)
-                : EdgeInsets.zero,
+            padding: const EdgeInsets.all(4.0),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8.r),
               child: productImage.isNotEmpty
@@ -485,111 +553,103 @@ class CustomProductCard extends StatelessWidget {
               },
             ),
           ),
-          if (showWishlist)
-            PositionedDirectional(
-              top: 3.h,
-              end: 12.w,
-              child: BlocBuilder<UserWishlistBloc, UserWishlistState>(
-                builder: (context, wishlistState) {
-                  final bloc = context.read<UserWishlistBloc>();
-                  final isWishListedFromBloc = bloc.isProductWishlisted(
-                      productId, productVariantId, storeId);
-                  final currentWishlistItemId = bloc.getWishlistItemId(
-                      productId, productVariantId, storeId);
-                  final hasBlocData =
-                      bloc.hasProductData(productId, productVariantId, storeId);
-
-                  final finalIsWishListed =
-                      hasBlocData ? isWishListedFromBloc : isWishListed;
-                  final finalWishlistItemId =
-                      currentWishlistItemId ?? wishlistItemId;
-
-                  if (!finalIsWishListed) return const SizedBox.shrink();
-
-                  return AnimatedButton(
-                    onTap: () async {
-                      if (Global.userData != null) {
-                        final wishlistBloc = context.read<UserWishlistBloc>();
-
-                        // CASE 1: Product is already wishlisted -> Remove it directly
-                        if (finalIsWishListed &&
-                            finalWishlistItemId != null &&
-                            finalWishlistItemId != 0) {
-                          wishlistBloc.add(RemoveItemFromWishlist(
-                              itemId: finalWishlistItemId));
-
-                          // Sync with local wishlist product listing if needed
-                          context.read<WishlistProductBloc>().add(
-                              RemoveProductLocally(
-                                  itemId: finalWishlistItemId));
-                          return;
-                        }
-
-                        // CASE 2: Product not wishlisted -> Try to add directly if only one wishlist exists
-                        if (!finalIsWishListed &&
-                            wishlistState is UserWishlistLoaded &&
-                            wishlistState.wishlistData.length == 1) {
-                          final wishlist = wishlistState.wishlistData.first;
-                          wishlistBloc.add(
-                            AddItemInWishlist(
-                              wishlistTitle: wishlist.title ?? '',
-                              productId: productId,
-                              productVariantId: productVariantId,
-                              storeId: storeId,
-                            ),
-                          );
-                          return;
-                        }
-
-                        // CASE 3: Fallback -> Show bottom sheet
-                        context
-                            .read<UserWishlistBloc>()
-                            .add(GetUserWishlistRequest());
-                        await showModalBottomSheet<String>(
-                          context: context,
-                          useSafeArea: true,
-                          isScrollControlled: true,
-                          useRootNavigator: true,
-                          backgroundColor:
-                              Theme.of(context).colorScheme.surface,
-                          constraints: BoxConstraints(maxHeight: 500.h),
-                          shape: const RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.vertical(top: Radius.circular(16)),
-                          ),
-                          builder: (_) => AddToWishlistSheetBody(
-                            productId: productId,
-                            productVariantId: productVariantId,
-                            storeId: storeId,
-                            wishlistItemId: finalWishlistItemId,
-                          ),
-                        );
-                      } else {
-                        await AuthGuard.ensureLoggedIn(context);
-                      }
-                    },
-                    child: Container(
-                      height: 28.r,
-                      width: 28.r,
-                      decoration: BoxDecoration(
-                        color: isDarkMode(context)
-                            ? Colors.black.withValues(alpha: 0.9)
-                            : Colors.white.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(100.r),
-                      ),
-                      alignment: Alignment.center,
-                      child: Icon(
-                        Icons.favorite,
-                        color: Colors.red,
-                        size: 15.r,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
+          PositionedDirectional(
+            top: 24.h,
+            end: 24.w,
+            child: _buildWishlistButton(context),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildWishlistButton(BuildContext context) {
+    if (!showWishlist) return const SizedBox.shrink();
+
+    return BlocBuilder<UserWishlistBloc, UserWishlistState>(
+      builder: (context, wishlistState) {
+        final bloc = context.read<UserWishlistBloc>();
+        final isWishListedFromBloc =
+            bloc.isProductWishlisted(productId, productVariantId, storeId);
+        final currentWishlistItemId =
+            bloc.getWishlistItemId(productId, productVariantId, storeId);
+        final hasBlocData =
+            bloc.hasProductData(productId, productVariantId, storeId);
+
+        final finalIsWishListed =
+            hasBlocData ? isWishListedFromBloc : isWishListed;
+        final finalWishlistItemId = currentWishlistItemId ?? wishlistItemId;
+
+        return AnimatedButton(
+          onTap: () async {
+            if (Global.userData != null) {
+              final wishlistBloc = context.read<UserWishlistBloc>();
+
+              // CASE 1: Product is already wishlisted -> Remove it directly
+              if (finalIsWishListed &&
+                  finalWishlistItemId != null &&
+                  finalWishlistItemId != 0) {
+                wishlistBloc
+                    .add(RemoveItemFromWishlist(itemId: finalWishlistItemId));
+
+                // Sync with local wishlist product listing if needed
+                context
+                    .read<WishlistProductBloc>()
+                    .add(RemoveProductLocally(itemId: finalWishlistItemId));
+                return;
+              }
+
+              // CASE 2: Product not wishlisted -> Try to add directly if any wishlist exists
+              if (!finalIsWishListed &&
+                  wishlistState is UserWishlistLoaded &&
+                  wishlistState.wishlistData.isNotEmpty) {
+                final wishlist = wishlistState.wishlistData.first;
+                wishlistBloc.add(
+                  AddItemInWishlist(
+                    wishlistTitle: wishlist.title ?? '',
+                    productId: productId,
+                    productVariantId: productVariantId,
+                    storeId: storeId,
+                  ),
+                );
+                return;
+              }
+
+              // CASE 3: Fallback -> Show bottom sheet
+              context.read<UserWishlistBloc>().add(GetUserWishlistRequest());
+              await showModalBottomSheet<String>(
+                context: context,
+                useSafeArea: true,
+                isScrollControlled: true,
+                useRootNavigator: true,
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                constraints: BoxConstraints(maxHeight: 500.h),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+                builder: (_) => AddToWishlistSheetBody(
+                  productId: productId,
+                  productVariantId: productVariantId,
+                  storeId: storeId,
+                  wishlistItemId: finalWishlistItemId,
+                ),
+              );
+            } else {
+              await AuthGuard.ensureLoggedIn(context);
+            }
+          },
+          child: Container(
+            height: 34.r,
+            width: 34.r,
+            alignment: Alignment.center,
+            child: Icon(
+              finalIsWishListed ? Icons.favorite : Icons.favorite_border,
+              color: finalIsWishListed ? Colors.red : Colors.grey.shade700,
+              size: 24.r,
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -667,14 +727,17 @@ class CustomProductCard extends StatelessWidget {
 
   Widget _buildSimilarProductLayout(BuildContext context, String heroTag) {
     String discountPercentage = PriceUtils.calculateDiscountPercentage(
-            double.parse(productPrice), double.parse(specialPrice))
+            double.tryParse(productPrice) ?? 0.0,
+            double.tryParse(specialPrice) ?? 0.0)
         .toString();
 
     return Container(
+      height: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.grey.shade200.withValues(alpha: 0.5), width: 1.0),
+        border: Border.all(
+            color: Colors.grey.shade200.withValues(alpha: 0.5), width: 1.0),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -729,6 +792,11 @@ class CustomProductCard extends StatelessWidget {
                                 : _buildAssetImageOrPlaceholder(),
                           ),
                         ),
+                        PositionedDirectional(
+                          top: 8.h,
+                          end: 8.w,
+                          child: _buildWishlistButton(context),
+                        ),
                         if (indicator != null &&
                             (indicator == 'veg' || indicator == 'non_veg'))
                           PositionedDirectional(
@@ -761,99 +829,114 @@ class CustomProductCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  
+
                   // 2. Info below
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 10.w, vertical: 2.h),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        _buildQuickDeliveryBadge(quickDeliveryAvailable),
+                        SizedBox(height: 3.h),
                         Text(
                           productName,
                           style: TextStyle(
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1A1A1A),
-                            height: 1.2
-                          ),
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1A1A1A),
+                              height: 1.2),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        SizedBox(height: 4.h),
-                        // Quantity
-                        Text(
-                          "${quantityStepSize > 0 ? quantityStepSize : 1} pc", 
-                          style: TextStyle(
-                            fontSize: 13.sp,
-                            color: Colors.grey.shade600,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        SizedBox(height: 6.h),
+                        SizedBox(height: 3.h),
                         // Price Row
                         BlocBuilder<CartBloc, CartState>(
-                          builder: (context, state) {
-                            final cartItem = _getCartItem(state);
-                            final int currentQty = cartItem?.quantity ?? 0;
-                            final double effectivePrice = _calculateEffectivePrice(
-                                currentQty > 0 ? currentQty : 1);
-                            final double original =
-                                double.tryParse(productPrice) ?? 0.0;
-                            
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                                  textBaseline: TextBaseline.alphabetic,
-                                  children: [
-                                    Text(
-                                      "₹${formatPrice(effectivePrice)}",
-                                      style: TextStyle(
-                                        fontSize: 15.sp,
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                    SizedBox(width: 6.w),
-                                    if (effectivePrice < original)
-                                      Text(
-                                        "₹${formatPrice(original)}",
-                                        style: TextStyle(
-                                          fontSize: 14.sp,
-                                          color: Colors.grey.shade400,
-                                          decoration: TextDecoration.lineThrough,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                                if (tieredPricing != null && tieredPricing!.isNotEmpty)
-                                  Padding(
-                                    padding: EdgeInsets.only(top: 4.h, bottom: 2.h),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: tieredPricing!.take(2).map((tier) {
-                                        final double tierUnitPrice = tier.price / tier.minQty;
-                                        return Padding(
-                                          padding: EdgeInsets.only(bottom: 2.h),
-                                          child: Text(
-                                            "₹${formatPrice(tierUnitPrice)}/pc for ${tier.minQty} pcs+",
-                                            style: TextStyle(
-                                              fontSize: 12.5.sp,
-                                              color: const Color(0xFF2E6FF2),
-                                              fontWeight: FontWeight.w600,
-                                              height: 1.1
-                                            ),
-                                          ),
-                                        );
-                                      }).toList(),
+                            builder: (context, state) {
+                          final cartItem = _getCartItem(state);
+                          final int currentQty = cartItem?.quantity ?? 0;
+                          final double effectivePrice =
+                              _calculateEffectivePrice(
+                                  currentQty > 0 ? currentQty : 1);
+                          final double original =
+                              double.tryParse(productPrice) ?? 0.0;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
+                                textBaseline: TextBaseline.alphabetic,
+                                children: [
+                                  Text(
+                                    "₹${formatPrice(effectivePrice)}",
+                                    style: TextStyle(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.black,
                                     ),
                                   ),
+                                  SizedBox(width: 4.w),
+                                  if (mrpStatus == 1) ...[
+                                    Builder(builder: (context) {
+                                      final double parsedMrp =
+                                          double.tryParse(mrp ?? '') ?? 0.0;
+                                      final double originalPrice = parsedMrp;
+                                      if (originalPrice <= 0)
+                                        return const SizedBox.shrink();
+                                      return Text(
+                                        "₹${formatPrice(originalPrice)}",
+                                        style: TextStyle(
+                                          fontSize: 12.sp,
+                                          color: Colors.grey.shade400,
+                                          decoration:
+                                              TextDecoration.lineThrough,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      );
+                                    }),
+                                  ],
+                                ],
+                              ),
+                              SizedBox(height: 3.h),
+                              ratingWidget(context),
+                              if (minQty > 1) ...[
+                                SizedBox(height: 3.h),
+                                Text(
+                                  "Minimum Order: $minQty ${minQty > 1 ? 'pcs' : 'pc'}",
+                                  style: TextStyle(
+                                    color: AppTheme.primaryColor,
+                                    fontSize: 9.sp,
+                                    fontWeight: FontWeight.w700,
+                                    fontFamily: AppTheme.fontFamily,
+                                  ),
+                                ),
                               ],
-                            );
-                          }
-                        ),
+                              if (tieredPricing != null &&
+                                  tieredPricing!.isNotEmpty)
+                                Padding(
+                                  padding: EdgeInsets.only(top: 4.h),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children:
+                                        tieredPricing!.take(1).map((tier) {
+                                      final double tierUnitPrice =
+                                          tier.price / tier.minQty;
+                                      return Text(
+                                        "₹${formatPrice(tierUnitPrice)}/pc for ${tier.minQty}+",
+                                        style: TextStyle(
+                                            fontSize: 10.sp,
+                                            color: const Color(0xFF2E6FF2),
+                                            fontWeight: FontWeight.w700,
+                                            height: 1.1),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ),
+                            ],
+                          );
+                        }),
                       ],
                     ),
                   ),
@@ -861,6 +944,7 @@ class CustomProductCard extends StatelessWidget {
               ),
             ),
           ),
+          const Spacer(),
           // Action area (Independent of navigation InkWell)
           _buildSimilarAddButton(context),
         ],
@@ -881,10 +965,11 @@ class CustomProductCard extends StatelessWidget {
             width: double.infinity,
             height: 34.h,
             decoration: BoxDecoration(
-              color: isInCart ? const Color(0xFFE54A50) : const Color(0xFFFEF2F2),
+              color:
+                  isInCart ? const Color(0xFFE54A50) : const Color(0xFFFEF2F2),
               borderRadius: BorderRadius.circular(10.r),
               border: Border.all(
-                color: const Color(0xFFE54A50), 
+                color: const Color(0xFFE54A50),
                 width: 1.0,
               ),
             ),
@@ -938,11 +1023,12 @@ class CustomProductCard extends StatelessWidget {
 
   Widget _buildHorizontalLayout(BuildContext context, String heroTag) {
     String discountPercentage = PriceUtils.calculateDiscountPercentage(
-            double.parse(productPrice), double.parse(specialPrice))
+            double.tryParse(productPrice) ?? 0.0,
+            double.tryParse(specialPrice) ?? 0.0)
         .toString();
 
     return Container(
-      margin: EdgeInsets.only(bottom: 16.h, left: 8.w, right: 8.w),
+      margin: EdgeInsets.only(bottom: 6.h, left: 2.w, right: 2.w),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.r),
@@ -980,7 +1066,7 @@ class CustomProductCard extends StatelessWidget {
                   // Top Half
                   Padding(
                     padding: EdgeInsets.only(
-                        left: 12.w, right: 12.w, top: 16.h, bottom: 12.h),
+                        left: 8.w, right: 12.w, top: 12.h, bottom: 8.h),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -989,29 +1075,8 @@ class CustomProductCard extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  Icon(Icons.timer_outlined,
-                                      color: const Color(0xFF0B7B69),
-                                      size: 14.sp),
-                                  SizedBox(width: 4.w),
-                                  Flexible(
-                                    child: Text(
-                                      estimatedDeliveryTime.isNotEmpty
-                                          ? "Prep time: $estimatedDeliveryTime"
-                                          : "Prep time: 10 mins",
-                                      style: TextStyle(
-                                        fontSize: 12.sp,
-                                        fontWeight: FontWeight.bold,
-                                        color: const Color(0xFF0B7B69),
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 12.h),
+                              _buildQuickDeliveryBadge(quickDeliveryAvailable),
+                              SizedBox(height: 6.h),
                               Text(
                                 productName,
                                 style: TextStyle(
@@ -1021,7 +1086,8 @@ class CustomProductCard extends StatelessWidget {
                                   height: 1.3,
                                 ),
                               ),
-                              if (productTags.isNotEmpty) ...[
+                              if (productTags.isNotEmpty &&
+                                  productTags.first != "[]") ...[
                                 SizedBox(height: 6.h),
                                 Text(
                                   productTags.first,
@@ -1062,30 +1128,18 @@ class CustomProductCard extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              SizedBox(height: 10.h),
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 4.w,
-                                    height: 4.w,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFFE54A50),
-                                      shape: BoxShape.circle,
-                                    ),
+                              if (minQty > 1) ...[
+                                SizedBox(height: 6.h),
+                                Text(
+                                  "Minimum Order: $minQty ${minQty > 1 ? 'pcs' : 'pc'}",
+                                  style: TextStyle(
+                                    color: AppTheme.primaryColor,
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.w700,
+                                    fontFamily: AppTheme.fontFamily,
                                   ),
-                                  SizedBox(width: 6.w),
-                                  Flexible(
-                                    child: Text(
-                                      "Preparation guide",
-                                      style: TextStyle(
-                                        fontSize: 10.sp,
-                                        color: const Color(0xFFE54A50),
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -1114,13 +1168,11 @@ class CustomProductCard extends StatelessWidget {
                               ),
                             ),
                             // Wishlist heart
-                            if (showWishlist && isWishListed)
-                              PositionedDirectional(
-                                top: 4.w,
-                                end: 4.w,
-                                child: Icon(Icons.favorite,
-                                    color: Colors.red, size: 20.sp),
-                              ),
+                            PositionedDirectional(
+                              top: -4.w,
+                              end: -4.w,
+                              child: _buildWishlistButton(context),
+                            ),
                             // Veg indicator on image
                             if (indicator != null &&
                                 (indicator == 'veg' || indicator == 'non_veg'))
@@ -1160,15 +1212,16 @@ class CustomProductCard extends StatelessWidget {
                   // Bottom Half Pricing & Action
                   Padding(
                     padding:
-                        EdgeInsets.symmetric(horizontal: 12.w, vertical: 16.h),
+                        EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                     child: BlocBuilder<CartBloc, CartState>(
                       builder: (context, state) {
                         final cartItem = _getCartItem(state);
                         final int currentQty = cartItem?.quantity ?? 0;
                         final double effectivePrice = _calculateEffectivePrice(
                             currentQty > 0 ? currentQty : 1);
-                        final double original =
-                            double.tryParse(productPrice) ?? 0.0;
+                        final double parsedMrp =
+                            double.tryParse(mrp ?? '') ?? 0.0;
+                        final double original = parsedMrp;
                         final displayQty = currentQty > 0 ? currentQty : 1;
                         final totalPrice = effectivePrice * displayQty;
                         final totalOriginalPrice = original * displayQty;
@@ -1196,7 +1249,8 @@ class CustomProductCard extends StatelessWidget {
                                           ),
                                         ),
                                         SizedBox(width: 4.w),
-                                        if (totalPrice < totalOriginalPrice)
+                                        if (mrpStatus == 1 &&
+                                            totalOriginalPrice > 0)
                                           Text(
                                             "₹${formatPrice(totalOriginalPrice)}",
                                             style: TextStyle(
@@ -1318,7 +1372,8 @@ class CustomProductCard extends StatelessWidget {
   }
 
   void _handleAddToCart(BuildContext context, CartState state) async {
-    debugPrint('CustomProductCard: _handleAddToCart called for Product ID: $productId, Variant ID: $productVariantId');
+    debugPrint(
+        'CustomProductCard: _handleAddToCart called for Product ID: $productId, Variant ID: $productVariantId');
     final Set<int> currentStoreIds = {};
     int currentUniqueItems = 0;
     bool isInCart = false;
@@ -1505,13 +1560,19 @@ class CustomProductCard extends StatelessWidget {
 
   Widget productNameWidget(
       {required String productName, required BuildContext context}) {
-    return Text(
-      productName,
-      style: TextStyle(
-        fontSize: isTablet(context) ? 20 : 10.5.sp,
-        height: isTablet(context) ? 1.2 : 1.2,
-        fontFamily: AppTheme.fontFamily,
-        fontWeight: FontWeight.w500,
+    return SizedBox(
+      height: 32.h, // Fixed height for 2 lines to ensure alignment
+      child: Text(
+        productName,
+        style: TextStyle(
+          fontSize: isTablet(context) ? 20 : 10.5.sp,
+          height: 1.2,
+          fontFamily: AppTheme.fontFamily,
+          fontWeight: FontWeight.w600,
+          color: Colors.red,
+        ),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
@@ -1525,11 +1586,10 @@ class CustomProductCard extends StatelessWidget {
     final double regular = double.tryParse(price) ?? 0.0;
     final double special = double.tryParse(specialPrice) ?? 0.0;
 
-    final bool hasDiscount = special > 0 && special < regular;
+    final bool hasDiscount = price.isNotEmpty && regular > special;
+    final String displayPrice = specialPrice;
 
-    final String displayPrice = hasDiscount ? specialPrice : price;
-
-    final formattedDisplay = formatPrice(double.parse(displayPrice));
+    final formattedDisplay = formatPrice(double.tryParse(displayPrice) ?? 0.0);
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -1771,8 +1831,6 @@ class _TieredPricingExpandableList extends StatefulWidget {
 
 class _TieredPricingExpandableListState
     extends State<_TieredPricingExpandableList> {
-  bool isExpanded = false;
-
   String formatPriceLocally(double price) {
     if (price == price.toInt()) return price.toInt().toString();
     return price.toStringAsFixed(2);
@@ -1789,12 +1847,11 @@ class _TieredPricingExpandableListState
       }
     }
 
-    final tiersToShow = isExpanded
-        ? widget.tieredPricing
-        : [activeTier ?? widget.tieredPricing.first];
+    // Always show all tiers as requested by the user
+    final tiersToShow = widget.tieredPricing;
 
     return Container(
-      margin: EdgeInsets.only(top: 8.h),
+      margin: EdgeInsets.only(top: 4.h),
       decoration: BoxDecoration(
         color: const Color(0xFFF4F8FE),
         borderRadius: BorderRadius.circular(8.r),
@@ -1877,8 +1934,8 @@ class _TieredPricingExpandableListState
                                 Text(
                                   "₹${formatPriceLocally(tierUnitPrice)}/pc for ${tier.minQty} pcs+",
                                   style: TextStyle(
-                                    fontSize: 11.5.sp,
-                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13.sp,
+                                    fontWeight: FontWeight.w800,
                                     color: isSelectedTier
                                         ? const Color(0xFF1D8936)
                                         : const Color(0xFF1E5BB2),
@@ -1954,24 +2011,6 @@ class _TieredPricingExpandableListState
               }),
             ),
           ),
-          if (widget.tieredPricing.length > 1)
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  isExpanded = !isExpanded;
-                });
-              },
-              child: Container(
-                width: double.infinity,
-                padding: EdgeInsets.only(bottom: 4.h, top: 2.h),
-                color: Colors.transparent,
-                child: Icon(
-                  isExpanded ? Icons.keyboard_arrow_up : Icons.more_horiz,
-                  size: 16.sp,
-                  color: const Color(0xFF1E5BB2),
-                ),
-              ),
-            ),
         ],
       ),
     );

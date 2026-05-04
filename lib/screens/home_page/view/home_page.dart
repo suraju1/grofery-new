@@ -48,6 +48,12 @@ import '../bloc/sub_category/sub_category_state.dart';
 import '../bloc/explore/explore_bloc.dart';
 import '../bloc/explore/explore_event.dart';
 import '../bloc/explore/explore_state.dart';
+import '../bloc/recommended_products/recommended_products_bloc.dart';
+import '../bloc/recommended_products/recommended_products_event.dart';
+import '../bloc/recommended_products/recommended_products_state.dart';
+import '../../product_listing_page/model/product_listing_type.dart';
+import 'package:grofery_user/router/app_routes.dart';
+import 'package:go_router/go_router.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -121,48 +127,103 @@ class _HomePageState extends State<HomePage>
   void _showGstPopup() {
     showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (BuildContext context) {
-        return AlertDialog(
+        return Dialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.r),
+            borderRadius: BorderRadius.circular(24.r),
           ),
-          contentPadding: EdgeInsets.all(20.w),
-          title: Row(
-            children: [
-              Icon(Icons.info_outline, color: AppTheme.primaryColor),
-              SizedBox(width: 8.w),
-              Expanded(
-                child: Text(
-                  'Notice',
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: EdgeInsets.all(22.w),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24.r),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 18,
+                  spreadRadius: 2,
+                  offset: Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                /// Top Icon
+                Container(
+                  height: 70.h,
+                  width: 70.w,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withOpacity(0.10),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.shopping_bag_rounded,
+                    color: AppTheme.primaryColor,
+                    size: 34.sp,
+                  ),
+                ),
+
+                SizedBox(height: 18.h),
+
+                /// Title
+                Text(
+                  "Welcome to Grofery!",
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 18.sp,
+                    fontSize: 21.sp,
                     fontWeight: FontWeight.bold,
+                    fontFamily: AppTheme.fontFamily,
+                    color: Colors.black87,
+                  ),
+                ),
+
+                SizedBox(height: 10.h),
+
+                /// Subtitle
+                Text(
+                  "Fresh groceries, fast delivery & amazing offers are waiting for you.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    height: 1.5,
+                    color: Colors.black54,
                     fontFamily: AppTheme.fontFamily,
                   ),
                 ),
-              ),
-            ],
-          ),
-          content: Text(
-            'This message will be updated soon.',
-            style: TextStyle(
-              fontSize: 15.sp,
-              fontFamily: AppTheme.fontFamily,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'OK',
-                style: TextStyle(
-                  color: AppTheme.primaryColor,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: AppTheme.fontFamily,
+
+                SizedBox(height: 24.h),
+
+                /// Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 48.h,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14.r),
+                      ),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      "Start Shopping",
+                      style: TextStyle(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                        fontFamily: AppTheme.fontFamily,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         );
       },
     );
@@ -342,6 +403,11 @@ class _HomePageState extends State<HomePage>
           _tabController.addListener(_onTabChanged);
           _isRecreatingTabController = false;
 
+          // Trigger initial API calls for the Home tab if we're at index 0
+          if (_tabController.index == 0) {
+            apiCalls('');
+          }
+
           // Trigger rebuild after controller is recreated
           if (mounted) {
             setState(() {});
@@ -372,6 +438,9 @@ class _HomePageState extends State<HomePage>
       context.read<ExploreBloc>().add(const FetchExplores());
       context.read<GetUserCartBloc>().add(FetchUserCart());
       context.read<GetAddressListBloc>().add(FetchUserAddressList());
+
+      // Fetch recommended products alongside others
+      context.read<RecommendedProductsBloc>().add(FetchRecommendedProducts());
     } else {
       context
           .read<SubCategoryBloc>()
@@ -1107,6 +1176,96 @@ class _HomePageState extends State<HomePage>
                                             ),
                                           ),
                                           SliverToBoxAdapter(
+                                            child: SizedBox(height: 15.h),
+                                          ),
+                                          SliverToBoxAdapter(
+                                            child: BlocBuilder<
+                                                RecommendedProductsBloc,
+                                                RecommendedProductsState>(
+                                              builder:
+                                                  (context, recommendedState) {
+                                                if (recommendedState
+                                                    is RecommendedProductsLoading) {
+                                                  return const Padding(
+                                                    padding:
+                                                        EdgeInsets.all(16.0),
+                                                    child: Center(
+                                                        child:
+                                                            CircularProgressIndicator()),
+                                                  );
+                                                } else if (recommendedState
+                                                    is RecommendedProductsFailed) {
+                                                  if (recommendedState.error
+                                                      .toLowerCase()
+                                                      .contains(
+                                                          'unauthenticated')) {
+                                                    return const SizedBox
+                                                        .shrink();
+                                                  }
+                                                  return Padding(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            16.0),
+                                                    child: Center(
+                                                        child: Text(
+                                                            "Recommend Error: ${recommendedState.error}",
+                                                            style: TextStyle(
+                                                                color: Colors
+                                                                    .red))),
+                                                  );
+                                                } else if (recommendedState
+                                                    is RecommendedProductsLoaded) {
+                                                  if ((recommendedState
+                                                              .recommendedData
+                                                              .products ??
+                                                          [])
+                                                      .isNotEmpty) {
+                                                    return _buildFeatureSection(
+                                                        recommendedState
+                                                            .recommendedData,
+                                                        onSeeAllTap: () {
+                                                      GoRouter.of(context).push(
+                                                        AppRoutes
+                                                            .productListing,
+                                                        extra: {
+                                                          'isTheirMoreCategory':
+                                                              false,
+                                                          'title':
+                                                              recommendedState
+                                                                  .recommendedData
+                                                                  .title,
+                                                          'logo': recommendedState
+                                                              .recommendedData
+                                                              .mobileBackgroundImage,
+                                                          'totalProduct': 10,
+                                                          'type':
+                                                              ProductListingType
+                                                                  .recommended,
+                                                          'identifier':
+                                                              recommendedState
+                                                                  .recommendedData
+                                                                  .slug,
+                                                        },
+                                                      );
+                                                    });
+                                                  } else {
+                                                    return const Padding(
+                                                      padding:
+                                                          EdgeInsets.all(16.0),
+                                                      child: Center(
+                                                          child: Text(
+                                                              "Recommend Error: Products list is empty",
+                                                              style: TextStyle(
+                                                                  color: Colors
+                                                                      .red))),
+                                                    );
+                                                  }
+                                                }
+                                                return const SizedBox.shrink();
+                                              },
+                                            ),
+                                          ),
+                                          SliverToBoxAdapter(
                                             child: BlocBuilder<
                                                 FeatureSectionProductBloc,
                                                 FeatureSectionProductState>(
@@ -1114,8 +1273,7 @@ class _HomePageState extends State<HomePage>
                                                 if (state
                                                     is FeatureSectionProductLoaded) {
                                                   return ListView(
-                                                    padding: EdgeInsets.only(
-                                                        top: 5.h),
+                                                    padding: EdgeInsets.zero,
                                                     shrinkWrap: true,
                                                     physics:
                                                         const NeverScrollableScrollPhysics(),
@@ -1129,33 +1287,28 @@ class _HomePageState extends State<HomePage>
                                                               .isNotEmpty)) ...[
                                                         if (state
                                                             .featureSectionProductData
-                                                            .isNotEmpty)
-                                                          _buildFeatureSection(
-                                                              state.featureSectionProductData[
-                                                                  0]),
-                                                        ...state
-                                                            .featureSectionProductData
-                                                            .skip(1)
-                                                            .map((section) {
-                                                          if ((section.products ??
-                                                                  [])
-                                                              .isEmpty) {
-                                                            return const SizedBox
-                                                                .shrink();
-                                                          }
-                                                          return _buildFeatureSection(
-                                                              section);
-                                                        }),
-                                                        if (!state
-                                                            .hasReachedMax)
-                                                          const Padding(
-                                                            padding:
-                                                                EdgeInsets.all(
-                                                                    16.0),
-                                                            child: Center(
-                                                                child:
-                                                                    CustomCircularProgressIndicator()),
-                                                          ),
+                                                            .isNotEmpty) ...[
+                                                          ...state
+                                                              .featureSectionProductData
+                                                              .where((section) =>
+                                                                  (section.products ??
+                                                                          [])
+                                                                      .isNotEmpty)
+                                                              .map((section) =>
+                                                                  _buildFeatureSection(
+                                                                      section)),
+                                                          if (!state
+                                                              .hasReachedMax)
+                                                            const Padding(
+                                                              padding:
+                                                                  EdgeInsets
+                                                                      .all(
+                                                                          16.0),
+                                                              child: Center(
+                                                                  child:
+                                                                      CustomCircularProgressIndicator()),
+                                                            ),
+                                                        ]
                                                       ]
                                                     ],
                                                   );
@@ -1239,7 +1392,7 @@ class _HomePageState extends State<HomePage>
                                           ),
                                           SliverToBoxAdapter(
                                             child: SizedBox(
-                                              height: 70,
+                                              height: 180.h,
                                             ),
                                           ),
                                         ],
@@ -1538,8 +1691,7 @@ class _HomePageState extends State<HomePage>
                                                   );*/
 
                                                   return ListView(
-                                                    padding: EdgeInsets.only(
-                                                        top: 5.h),
+                                                    padding: EdgeInsets.zero,
                                                     shrinkWrap: true,
                                                     physics:
                                                         const NeverScrollableScrollPhysics(),
@@ -1553,33 +1705,28 @@ class _HomePageState extends State<HomePage>
                                                               .isNotEmpty)) ...[
                                                         if (state
                                                             .featureSectionProductData
-                                                            .isNotEmpty)
-                                                          _buildFeatureSection(
-                                                              state.featureSectionProductData[
-                                                                  0]),
-                                                        ...state
-                                                            .featureSectionProductData
-                                                            .skip(1)
-                                                            .map((section) {
-                                                          if ((section.products ??
-                                                                  [])
-                                                              .isEmpty) {
-                                                            return const SizedBox
-                                                                .shrink();
-                                                          }
-                                                          return _buildFeatureSection(
-                                                              section);
-                                                        }),
-                                                        if (!state
-                                                            .hasReachedMax)
-                                                          const Padding(
-                                                            padding:
-                                                                EdgeInsets.all(
-                                                                    16.0),
-                                                            child: Center(
-                                                                child:
-                                                                    CustomCircularProgressIndicator()),
-                                                          ),
+                                                            .isNotEmpty) ...[
+                                                          ...state
+                                                              .featureSectionProductData
+                                                              .where((section) =>
+                                                                  (section.products ??
+                                                                          [])
+                                                                      .isNotEmpty)
+                                                              .map((section) =>
+                                                                  _buildFeatureSection(
+                                                                      section)),
+                                                          if (!state
+                                                              .hasReachedMax)
+                                                            const Padding(
+                                                              padding:
+                                                                  EdgeInsets
+                                                                      .all(
+                                                                          16.0),
+                                                              child: Center(
+                                                                  child:
+                                                                      CustomCircularProgressIndicator()),
+                                                            ),
+                                                        ]
                                                       ]
                                                     ],
                                                   );
@@ -1593,7 +1740,7 @@ class _HomePageState extends State<HomePage>
                                           ),
                                           SliverToBoxAdapter(
                                             child: SizedBox(
-                                              height: 70,
+                                              height: 180.h,
                                             ),
                                           ),
                                         ],
@@ -1836,16 +1983,31 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  Widget _buildFeatureSection(FeatureSectionData section) {
+  Widget _buildFeatureSection(FeatureSectionData section,
+      {VoidCallback? onSeeAllTap}) {
     return ProductFeatureSectionWidget(
       featureSectionData: section,
       featureSectionTitle: null,
       backgroundImage: section.mobileBackgroundImage ?? '',
       backgroundImageTablet: section.tabletBackgroundImage ?? '',
       featureSectionSlug: section.slug ?? '',
-      featureSectionStyle: section.style!,
+      featureSectionStyle: section.style ?? 'style_1',
       backgroundColor: section.backgroundColor,
       backgroundType: section.backgroundType,
+      onSeeAllTap: onSeeAllTap ??
+          () {
+            GoRouter.of(context).push(
+              AppRoutes.productListing,
+              extra: {
+                'isTheirMoreCategory': false,
+                'title': section.title ?? '',
+                'logo': section.mobileBackgroundImage ?? '',
+                'totalProduct': '10',
+                'type': ProductListingType.featuredSection,
+                'identifier': section.slug ?? '',
+              },
+            );
+          },
     );
   }
 
