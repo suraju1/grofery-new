@@ -53,11 +53,15 @@ class ProductFeatureSectionWidget extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  featureSectionTitle ?? section.title ?? "",
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Text(
+                    featureSectionTitle ?? section.title ?? "",
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
                 if (onSeeAllTap != null)
@@ -92,6 +96,9 @@ class ProductFeatureSectionWidget extends StatelessWidget {
               itemCount: section.products!.length,
               itemBuilder: (context, index) {
                 final product = section.products![index];
+                if (product.variants.isEmpty) {
+                  return const SizedBox.shrink();
+                }
                 final variant = product.variants.first;
                 return Container(
                   width: 175.w,

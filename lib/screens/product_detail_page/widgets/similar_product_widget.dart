@@ -60,6 +60,8 @@ class SimilarProductWidget extends StatelessWidget {
             itemCount: similarProducts.length,
             itemBuilder: (context, index) {
               final product = similarProducts[index];
+              if (product.variants.isEmpty) return const SizedBox.shrink();
+
               return Container(
                 width: 175.w,
                 margin: EdgeInsets.only(right: 12.w),

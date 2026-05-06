@@ -19,7 +19,7 @@ class AccountPageAppBar extends StatelessWidget implements PreferredSizeWidget {
       automaticallyImplyLeading: false,
       titleSpacing: 0,
       bottom: PreferredSize(
-        preferredSize: Size(10, 60),
+        preferredSize: Size(10, 80),
         child: Column(
           children: [
             BlocBuilder<UserProfileBloc, UserProfileState>(
@@ -94,6 +94,25 @@ class AccountPageAppBar extends StatelessWidget implements PreferredSizeWidget {
                                   color: Color(0xFFEEEEEE),
                                 ),
                               ),
+                            if (Global.userData != null && Global.userData!.token.isNotEmpty)
+                              InkWell(
+                                onTap: () {
+                                  GoRouter.of(context).push(AppRoutes.manageOutlet);
+                                },
+                                child: const Padding(
+                                  padding: EdgeInsets.only(top: 4.0),
+                                  child: Text(
+                                    "Manage Outlet",
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w500,
+                                      decoration: TextDecoration.underline,
+                                      decorationColor: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -132,5 +151,5 @@ class AccountPageAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => Size.fromHeight(kToolbarHeight + 30.h);
+  Size get preferredSize => Size.fromHeight(kToolbarHeight + 50.h);
 }

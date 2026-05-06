@@ -30,6 +30,7 @@ class RegisterRequest extends AuthEvent {
   final String countryCode;
   final String completePhoneNumber;
   final String confirmPassword;
+  final String? shopName;
 
   RegisterRequest({
     required this.name,
@@ -41,6 +42,7 @@ class RegisterRequest extends AuthEvent {
     required this.countryCode,
     required this.completePhoneNumber,
     required this.confirmPassword,
+    this.shopName,
   });
 
   @override
@@ -53,7 +55,8 @@ class RegisterRequest extends AuthEvent {
         iso2,
         countryCode,
         completePhoneNumber,
-        confirmPassword
+        confirmPassword,
+        shopName ?? ''
       ];
 }
 

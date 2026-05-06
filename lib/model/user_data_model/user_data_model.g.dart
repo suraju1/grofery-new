@@ -27,13 +27,14 @@ class UserDataModelAdapter extends TypeAdapter<UserDataModel> {
       profileImage: fields[7] as String,
       referralCode: fields[8] as String,
       language: fields[9] as String,
+      shopName: fields[10] as String? ?? '',
     );
   }
 
   @override
   void write(BinaryWriter writer, UserDataModel obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.token)
       ..writeByte(1)
@@ -53,7 +54,9 @@ class UserDataModelAdapter extends TypeAdapter<UserDataModel> {
       ..writeByte(8)
       ..write(obj.referralCode)
       ..writeByte(9)
-      ..write(obj.language);
+      ..write(obj.language)
+      ..writeByte(10)
+      ..write(obj.shopName);
   }
 
   @override

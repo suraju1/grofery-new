@@ -20,27 +20,26 @@ class BrandsListPage extends StatefulWidget {
 }
 
 class _BrandsListPageState extends State<BrandsListPage> {
-
   @override
   void initState() {
     // TODO: implement initState
-    context.read<BrandsBloc>().add(FetchBrands(categorySlug: widget.categorySlug));
+    context
+        .read<BrandsBloc>()
+        .add(FetchBrands(categorySlug: widget.categorySlug));
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
     return CustomScaffold(
-      title: AppLocalizations.of(context)!.brand,
-      showAppBar: true,
-      showViewCart: true,
-      body: BlocBuilder<BrandsBloc, BrandsState>(
-        builder: (context, state){
-          if(state is BrandsLoading) {
+        title: AppLocalizations.of(context)!.brand,
+        showAppBar: true,
+        showViewCart: true,
+        body: BlocBuilder<BrandsBloc, BrandsState>(builder: (context, state) {
+          if (state is BrandsLoading) {
             return CustomCircularProgressIndicator();
           }
-          if(state is BrandsLoaded) {
-
+          if (state is BrandsLoaded) {
             if (state.brandsData.isEmpty) {
               return const NoProductPage();
             }
@@ -49,7 +48,8 @@ class _BrandsListPageState extends State<BrandsListPage> {
               padding: const EdgeInsets.all(16.0),
               child: GridView.builder(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: MediaQuery.of(context).size.width > 600 ? 6 : 3,
+                  crossAxisCount:
+                      MediaQuery.of(context).size.width > 600 ? 6 : 3,
                   childAspectRatio: 1.0,
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
@@ -58,18 +58,16 @@ class _BrandsListPageState extends State<BrandsListPage> {
                 itemBuilder: (context, index) {
                   final brand = state.brandsData[index];
                   return GestureDetector(
-                    onTap: (){
-                      GoRouter.of(context).push(
-                          AppRoutes.productListing,
-                          extra: {
-                            'isTheirMoreCategory': false,
-                            'title': brand.title,
-                            'logo': brand.logo,
-                            'totalProduct': 10,
-                            'type': ProductListingType.brand,
-                            'identifier': brand.slug,
-                          }
-                      );
+                    onTap: () {
+                      GoRouter.of(context)
+                          .push(AppRoutes.productListing, extra: {
+                        'isTheirMoreCategory': false,
+                        'title': brand.title,
+                        'logo': brand.logo,
+                        'totalProduct': 10,
+                        'type': ProductListingType.brand,
+                        'identifier': brand.slug,
+                      });
                     },
                     child: CustomBrandsCard(
                       brandName: brand.title ?? 'Brand',
@@ -79,14 +77,11 @@ class _BrandsListPageState extends State<BrandsListPage> {
                 },
               ),
             );
-
           }
-          if( state is BrandsFailed) {
+          if (state is BrandsFailed) {
             return NoProductPage();
           }
           return const Center(child: CustomCircularProgressIndicator());
-        }
-      )
-    );
+        }));
   }
 }

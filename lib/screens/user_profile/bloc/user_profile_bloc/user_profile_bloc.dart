@@ -35,6 +35,7 @@ class UserProfileBloc extends Bloc<UserProfileEvent, UserProfileState> {
           final updated = current.copyWith(
             name: apiData.name ?? current.name,
             profileImage: apiData.profileImage ?? current.profileImage,
+            shopName: apiData.shopName ?? current.shopName,
           );
           await Global.setUserData(updated);
         }

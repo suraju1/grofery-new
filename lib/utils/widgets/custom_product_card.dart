@@ -554,8 +554,8 @@ class CustomProductCard extends StatelessWidget {
             ),
           ),
           PositionedDirectional(
-            top: 24.h,
-            end: 24.w,
+            top: 6.h,
+            end: 6.w,
             child: _buildWishlistButton(context),
           ),
         ],
@@ -563,7 +563,7 @@ class CustomProductCard extends StatelessWidget {
     );
   }
 
-  Widget _buildWishlistButton(BuildContext context) {
+  Widget _buildWishlistButton(BuildContext context, {double size = 30, double iconSize = 18}) {
     if (!showWishlist) return const SizedBox.shrink();
 
     return BlocBuilder<UserWishlistBloc, UserWishlistState>(
@@ -639,13 +639,24 @@ class CustomProductCard extends StatelessWidget {
             }
           },
           child: Container(
-            height: 34.r,
-            width: 34.r,
+            height: size.r,
+            width: size.r,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.95),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             alignment: Alignment.center,
             child: Icon(
               finalIsWishListed ? Icons.favorite : Icons.favorite_border,
-              color: finalIsWishListed ? Colors.red : Colors.grey.shade700,
-              size: 24.r,
+              color: finalIsWishListed ? Colors.red : Colors.black87,
+              size: iconSize.r,
             ),
           ),
         );
@@ -793,8 +804,8 @@ class CustomProductCard extends StatelessWidget {
                           ),
                         ),
                         PositionedDirectional(
-                          top: 8.h,
-                          end: 8.w,
+                          top: 6.h,
+                          end: 6.w,
                           child: _buildWishlistButton(context),
                         ),
                         if (indicator != null &&
@@ -1169,9 +1180,9 @@ class CustomProductCard extends StatelessWidget {
                             ),
                             // Wishlist heart
                             PositionedDirectional(
-                              top: -4.w,
-                              end: -4.w,
-                              child: _buildWishlistButton(context),
+                              bottom: 4.w,
+                              end: 4.w,
+                              child: _buildWishlistButton(context, size: 24, iconSize: 14),
                             ),
                             // Veg indicator on image
                             if (indicator != null &&
@@ -1569,7 +1580,7 @@ class CustomProductCard extends StatelessWidget {
           height: 1.2,
           fontFamily: AppTheme.fontFamily,
           fontWeight: FontWeight.w600,
-          color: Colors.red,
+          color: Colors.black87,
         ),
         maxLines: 2,
         overflow: TextOverflow.ellipsis,

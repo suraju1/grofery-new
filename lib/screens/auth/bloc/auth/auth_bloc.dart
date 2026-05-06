@@ -98,6 +98,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           iso2: userData.iso2 ?? '',
           profileImage: userData.profileImage ?? '',
           referralCode: userData.referralCode ?? '',
+          shopName: userData.shopName ?? '',
           language: 'en',
         )));
 
@@ -139,6 +140,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           iso2: userData.iso2 ?? '',
           profileImage: userData.profileImage ?? '',
           referralCode: userData.referralCode ?? '',
+          shopName: userData.shopName ?? '',
           language: 'en',
         )));
         emit(AuthSuccess(
@@ -399,6 +401,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           iso2: user.iso2 ?? '',
           profileImage: user.profileImage ?? '',
           referralCode: user.referralCode ?? '',
+          shopName: user.shopName ?? '',
           language: 'en',
         )));
         emit(
@@ -406,7 +409,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       } else {
         log('🔴 SocialAuth: Unexpected response: $response');
         emit(AuthFailed(
-            error: response['message']?.toString() ?? 'Google login failed. Please try again.'));
+            error: response['message']?.toString() ??
+                'Google login failed. Please try again.'));
       }
     } catch (e) {
       log('🔴 SocialAuth error: $e');
@@ -494,6 +498,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           iso2: user.iso2 ?? '',
           profileImage: user.profileImage ?? '',
           referralCode: user.referralCode ?? '',
+          shopName: user.shopName ?? '',
           language: 'en',
         )));
         emit(

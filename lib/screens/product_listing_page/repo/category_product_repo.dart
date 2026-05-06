@@ -74,8 +74,8 @@ class CategoryProductRepository {
       //  debugPrint('🚀 Final Product Listing API URL: $apiUrl');
 
       final response = await AppConstant.apiBaseHelper.getAPICall(apiUrl, {});
-      log('📋 Product Listing API: $apiUrl');
-      log('📦 Response: ${response.data}');
+      log('🚀 FINAL API URL: $apiUrl');
+      log('📦 RESPONSE DATA COUNT: ${response.data['data'] != null && response.data['data']['data'] != null ? (response.data['data']['data'] as List).length : '0'}');
       return response.data;
     } catch (e) {
       throw ApiException(e.toString());

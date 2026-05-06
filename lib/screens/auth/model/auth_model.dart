@@ -9,17 +9,17 @@ class AuthModel {
 
   AuthModel(
       {this.success,
-        this.message,
-        this.accessToken,
-        this.tokenType,
-        this.data});
+      this.message,
+      this.accessToken,
+      this.tokenType,
+      this.data});
 
   AuthModel.fromJson(Map<String, dynamic> json) {
     success = json['success'];
     message = json['message'];
     accessToken = json['access_token'];
     tokenType = json['token_type'];
-    
+
     // Handle both Flat data (Login) and Nested user data (Register)
     if (json['data'] != null) {
       if (json['data']['user'] != null) {
@@ -57,25 +57,27 @@ class Data {
   String? friendsCode;
   int? rewardPoints;
   String? profileImage;
+  String? shopName;
   String? emailVerifiedAt;
   String? createdAt;
   String? updatedAt;
 
   Data(
       {this.id,
-        this.name,
-        this.email,
-        this.mobile,
-        this.country,
-        this.iso2,
-        this.walletBalance,
-        this.referralCode,
-        this.friendsCode,
-        this.rewardPoints,
-        this.profileImage,
-        this.emailVerifiedAt,
-        this.createdAt,
-        this.updatedAt});
+      this.name,
+      this.email,
+      this.mobile,
+      this.country,
+      this.iso2,
+      this.walletBalance,
+      this.referralCode,
+      this.friendsCode,
+      this.rewardPoints,
+      this.profileImage,
+      this.shopName,
+      this.emailVerifiedAt,
+      this.createdAt,
+      this.updatedAt});
 
   Data.fromJson(Map<String, dynamic> json) {
     id = parseInt(json['id']);
@@ -89,6 +91,7 @@ class Data {
     friendsCode = parseString(json['friends_code']);
     rewardPoints = parseInt(json['reward_points']);
     profileImage = parseString(json['profile_image']);
+    shopName = parseString(json['shop_name']);
     emailVerifiedAt = parseString(json['email_verified_at']);
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
@@ -107,6 +110,7 @@ class Data {
     data['friends_code'] = friendsCode;
     data['reward_points'] = rewardPoints;
     data['profile_image'] = profileImage;
+    data['shop_name'] = shopName;
     data['email_verified_at'] = emailVerifiedAt;
     data['created_at'] = createdAt;
     data['updated_at'] = updatedAt;

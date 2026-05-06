@@ -8,10 +8,8 @@ abstract class ProductListingEvent extends Equatable {
 class FetchFilteredAndSortedProduct extends ProductListingEvent {
   final String categorySlug;
   final String sortType;
-  FetchFilteredAndSortedProduct({
-    required this.categorySlug,
-    required this.sortType
-  });
+  FetchFilteredAndSortedProduct(
+      {required this.categorySlug, required this.sortType});
   @override
   List<Object?> get props => [categorySlug, sortType];
 }
@@ -76,7 +74,15 @@ class FetchSortedListingProducts extends ProductListingEvent {
   });
 
   @override
-  List<Object?> get props => [type, identifier, storeSlug, sortType, isSearchInStore, indicator, rating];
+  List<Object?> get props => [
+        type,
+        identifier,
+        storeSlug,
+        sortType,
+        isSearchInStore,
+        indicator,
+        rating
+      ];
 }
 
 class FetchMoreListingProducts extends ProductListingEvent {
@@ -99,7 +105,15 @@ class FetchMoreListingProducts extends ProductListingEvent {
   });
 
   @override
-  List<Object?> get props => [type, identifier, storeSlug, sortType, isSearchInStore, indicator, rating];
+  List<Object?> get props => [
+        type,
+        identifier,
+        storeSlug,
+        sortType,
+        isSearchInStore,
+        indicator,
+        rating
+      ];
 }
 
 class FetchKeywords extends ProductListingEvent {
@@ -134,15 +148,15 @@ class FetchFilteredListingProducts extends ProductListingEvent {
 
   @override
   List<Object?> get props => [
-    type,
-    identifier,
-    storeSlug,
-    isSearchInStore,
-    categorySlugs,
-    brandSlugs,
-    indicator,
-    rating,
-  ];
+        type,
+        identifier,
+        storeSlug,
+        isSearchInStore,
+        categorySlugs,
+        brandSlugs,
+        indicator,
+        rating,
+      ];
 }
 
 class ApplyFiltersAndSort extends ProductListingEvent {
@@ -170,16 +184,16 @@ class ApplyFiltersAndSort extends ProductListingEvent {
 
   @override
   List<Object?> get props => [
-    type,
-    identifier,
-    storeSlug,
-    sortType,
-    isSearchInStore,
-    categorySlugs,
-    brandSlugs,
-    indicator,
-    rating,
-  ];
+        type,
+        identifier,
+        storeSlug,
+        sortType,
+        isSearchInStore,
+        categorySlugs,
+        brandSlugs,
+        indicator,
+        rating,
+      ];
 }
 
 class ClearProductFilters extends ProductListingEvent {

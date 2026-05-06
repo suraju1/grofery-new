@@ -49,6 +49,8 @@ class YouMightAlsoLikeProductWidget extends StatelessWidget {
             itemCount: productData!.length,
             itemBuilder: (context, index) {
               final product = productData![index];
+              if (product.variants.isEmpty) return const SizedBox.shrink();
+
               return Container(
                 width: 175.w,
                 margin: EdgeInsets.only(right: 12.w),

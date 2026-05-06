@@ -51,6 +51,7 @@ import '../screens/wallet_page/view/add_money_page.dart';
 import '../screens/wallet_page/view/wallet_page.dart';
 import '../screens/wishlist_page/view/wishlist_page.dart';
 import '../screens/wishlist_page/view/wishlist_product_listing_page.dart';
+import '../screens/manage_outlet_page/view/manage_outlet_page.dart';
 
 Page platformPage(Widget child) {
   if (Platform.isIOS) {
@@ -104,6 +105,7 @@ class AppRoutes {
   static const String maintenancePage = '/maintenance-page';
   static const String brandsListPage = '/brands-list-page';
   static const String mobileOtpLoginPage = '/mobile-otp-login-page';
+  static const String manageOutlet = '/manage-outlet';
 }
 
 class MyAppRoute {
@@ -562,6 +564,12 @@ class MyAppRoute {
           name: 'mobile-otp-login-page',
           path: AppRoutes.mobileOtpLoginPage,
           pageBuilder: (context, state) => platformPage(MobileOtpLoginPage()),
+        ),
+        GoRoute(
+          name: 'manage-outlet',
+          path: AppRoutes.manageOutlet,
+          pageBuilder: (context, state) =>
+              platformPage(const ManageOutletPage()),
         ),
       ]);
 }

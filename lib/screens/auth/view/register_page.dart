@@ -33,6 +33,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _shopNameController = TextEditingController();
 
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
@@ -207,6 +208,7 @@ class _RegisterPageState extends State<RegisterPage> {
           countryCode: _countryCode,
           completePhoneNumber: _completePhoneNumber,
           confirmPassword: _confirmPasswordController.text,
+          shopName: _shopNameController.text.trim(),
         ));
   }
 
@@ -289,6 +291,34 @@ class _RegisterPageState extends State<RegisterPage> {
                             ToastManager.show(
                               context: context,
                               message: l10n.nameMustBeAtLeast2Characters,
+                              type: ToastType.error,
+                            );
+                          });
+                          return null;
+                        }
+                        return null;
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                /// Shop Name
+                Builder(
+                  builder: (context) {
+                    return CustomTextFormField(
+                      controller: _shopNameController,
+                      labelText: "Shop Name",
+                      hintText: "Enter your shop name",
+                      prefixIcon: Icons.store,
+                      keyboardType: TextInputType.name,
+                      textInputAction: TextInputAction.next,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            ToastManager.show(
+                              context: context,
+                              message: "Please enter your shop name",
                               type: ToastType.error,
                             );
                           });
@@ -760,6 +790,7 @@ class _RegisterPageState extends State<RegisterPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _shopNameController.dispose();
     super.dispose();
   }
 }

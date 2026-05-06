@@ -481,16 +481,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
                               AppLocalizations.of(context)!.country,
                               userData.country ??
                                   AppLocalizations.of(context)!.notProvided),
-                          
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             child: Divider(
                               height: 1,
                               thickness: 1,
-                              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                              color: colorScheme.outlineVariant
+                                  .withValues(alpha: 0.3),
                             ),
                           ),
-
                           _buildInfoItem(
                             Icons.account_balance_wallet_outlined,
                             '${AppLocalizations.of(context)!.wallet} ${AppLocalizations.of(context)!.balance}',

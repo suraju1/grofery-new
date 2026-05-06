@@ -1,5 +1,3 @@
-
-
 import 'package:hive_flutter/hive_flutter.dart';
 
 part 'user_data_model.g.dart';
@@ -36,6 +34,9 @@ class UserDataModel extends HiveObject {
   @HiveField(9)
   final String language;
 
+  @HiveField(10, defaultValue: '')
+  final String shopName;
+
   UserDataModel({
     required this.token,
     required this.userId,
@@ -47,6 +48,7 @@ class UserDataModel extends HiveObject {
     required this.profileImage,
     required this.referralCode,
     required this.language,
+    required this.shopName,
   });
 
   UserDataModel copyWith({
@@ -60,6 +62,7 @@ class UserDataModel extends HiveObject {
     String? profileImage,
     String? referralCode,
     String? language,
+    String? shopName,
   }) {
     return UserDataModel(
       token: token ?? this.token,
@@ -72,6 +75,7 @@ class UserDataModel extends HiveObject {
       profileImage: profileImage ?? this.profileImage,
       referralCode: referralCode ?? this.referralCode,
       language: language ?? this.language,
+      shopName: shopName ?? this.shopName,
     );
   }
 }

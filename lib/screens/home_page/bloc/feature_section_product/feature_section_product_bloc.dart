@@ -5,8 +5,9 @@ import 'package:grofery_user/screens/home_page/repo/feature_section_product_repo
 
 import '../../model/featured_section_product_model.dart';
 
-class FeatureSectionProductBloc extends Bloc<FeatureSectionProductEvent, FeatureSectionProductState> {
-  FeatureSectionProductBloc() : super(FeatureSectionProductInitial()){
+class FeatureSectionProductBloc
+    extends Bloc<FeatureSectionProductEvent, FeatureSectionProductState> {
+  FeatureSectionProductBloc() : super(FeatureSectionProductInitial()) {
     on<FetchFeatureSectionProducts>(_onFetchFeatureSectionProducts);
     on<FetchMoreFeatureSectionProducts>(_onFetchMoreFeatureSectionProducts);
     on<ClearFeatureSectionProducts>(_onClearProducts);
@@ -22,15 +23,17 @@ class FeatureSectionProductBloc extends Bloc<FeatureSectionProductEvent, Feature
   bool isRefresh = false;
   String selectedCategory = '';
 
-  void _onClearProducts(ClearFeatureSectionProducts event, Emitter<FeatureSectionProductState> emit) {
+  void _onClearProducts(ClearFeatureSectionProducts event,
+      Emitter<FeatureSectionProductState> emit) {
     emit(FeatureSectionProductLoading());
   }
 
-  Future<void> _onFetchFeatureSectionProducts(FetchFeatureSectionProducts event, Emitter<FeatureSectionProductState> emit) async {
-    if(isRefresh) {
+  Future<void> _onFetchFeatureSectionProducts(FetchFeatureSectionProducts event,
+      Emitter<FeatureSectionProductState> emit) async {
+    if (isRefresh) {
       emit(FeatureSectionProductLoading());
     }
-    try{
+    try {
       List<FeatureSectionData> featureSectionProductData = [];
       perPage = 12;
       currentPage = 1;
@@ -38,23 +41,23 @@ class FeatureSectionProductBloc extends Bloc<FeatureSectionProductEvent, Feature
       selectedCategory = event.slug;
 
       final response = await repository.fetchFeatureSectionProduct(
-        slug: event.slug,
-        perPage: perPage,
-        page: currentPage
-      );
-      featureSectionProductData = List<FeatureSectionData>.from(response['data']['data'].map((data) => FeatureSectionData.fromJson(data)));
-      final currentTotal = int.parse(response['data']['current_page'].toString());
+          slug: event.slug, perPage: perPage, page: currentPage);
+      featureSectionProductData = List<FeatureSectionData>.from(response['data']
+              ['data']
+          .map((data) => FeatureSectionData.fromJson(data)));
+      final currentTotal =
+          int.parse(response['data']['current_page'].toString());
       final lastPageNum = int.parse(response['data']['last_page'].toString());
-      hasReachedMax = currentTotal >= lastPageNum || featureSectionProductData.length < perPage;
-      if(response['success'] != null && featureSectionProductData.isNotEmpty){
-        if(response['success'] == true){
+      hasReachedMax = currentTotal >= lastPageNum ||
+          featureSectionProductData.length < perPage;
+      if (response['success'] != null && featureSectionProductData.isNotEmpty) {
+        if (response['success'] == true) {
           emit(FeatureSectionProductLoaded(
-            featureSectionProductData: featureSectionProductData,
-            message: response['message'],
-            hasReachedMax: hasReachedMax
-          ));
+              featureSectionProductData: featureSectionProductData,
+              message: response['message'],
+              hasReachedMax: hasReachedMax));
           isRefresh = true;
-        } else if (response['success'] == false){
+        } else if (response['success'] == false) {
           emit(FeatureSectionProductFailed(error: response['message']));
           isRefresh = true;
         }
@@ -62,15 +65,15 @@ class FeatureSectionProductBloc extends Bloc<FeatureSectionProductEvent, Feature
         emit(FeatureSectionProductFailed(error: response['message']));
         isRefresh = true;
       }
-
-    }catch(e){
+    } catch (e) {
       emit(FeatureSectionProductFailed(error: e.toString()));
       isRefresh = true;
     }
   }
 
-
-  Future<void> _onFetchMoreFeatureSectionProducts(FetchMoreFeatureSectionProducts event, Emitter<FeatureSectionProductState> emit) async {
+  Future<void> _onFetchMoreFeatureSectionProducts(
+      FetchMoreFeatureSectionProducts event,
+      Emitter<FeatureSectionProductState> emit) async {
     if (hasReachedMax || isLoadingMore) return;
 
     final currentState = state;
@@ -80,30 +83,31 @@ class FeatureSectionProductBloc extends Bloc<FeatureSectionProductEvent, Feature
         currentPage += 1;
 
         final response = await repository.fetchFeatureSectionProduct(
-            slug: event.slug,
-            perPage: perPage,
-            page: currentPage
-        );
-        final featureSectionProductData = List<FeatureSectionData>.from(response['data']['data'].map((data) => FeatureSectionData.fromJson(data)));
+            slug: event.slug, perPage: perPage, page: currentPage);
+        final featureSectionProductData = List<FeatureSectionData>.from(
+            response['data']['data']
+                .map((data) => FeatureSectionData.fromJson(data)));
 
-        final currentTotal = int.parse(response['data']['current_page'].toString());
+        final currentTotal =
+            int.parse(response['data']['current_page'].toString());
         final lastPageNum = int.parse(response['data']['last_page'].toString());
-        hasReachedMax = currentTotal >= lastPageNum || featureSectionProductData.length < perPage;
+        hasReachedMax = currentTotal >= lastPageNum ||
+            featureSectionProductData.length < perPage;
 
-        final updatedFeatureSectionList = List<FeatureSectionData>.from(currentState.featureSectionProductData);
+        final updatedFeatureSectionList = List<FeatureSectionData>.from(
+            currentState.featureSectionProductData);
 
         for (final newData in featureSectionProductData) {
-          if (!updatedFeatureSectionList.any((existing) => existing.id == newData.id)) {
+          if (!updatedFeatureSectionList
+              .any((existing) => existing.id == newData.id)) {
             updatedFeatureSectionList.add(newData);
           }
         }
 
         emit(FeatureSectionProductLoaded(
-          featureSectionProductData: updatedFeatureSectionList,
-          message: response['message'],
-          hasReachedMax: hasReachedMax
-        ));
-
+            featureSectionProductData: updatedFeatureSectionList,
+            message: response['message'],
+            hasReachedMax: hasReachedMax));
       } catch (e) {
         currentPage -= 1;
         emit(FeatureSectionProductFailed(error: e.toString()));
@@ -113,12 +117,14 @@ class FeatureSectionProductBloc extends Bloc<FeatureSectionProductEvent, Feature
     }
   }
 
-  Future<void> _onRefreshFeatureSectionProducts(RefreshFeatureSectionProducts event, Emitter<FeatureSectionProductState> emit) async {
+  Future<void> _onRefreshFeatureSectionProducts(
+      RefreshFeatureSectionProducts event,
+      Emitter<FeatureSectionProductState> emit) async {
     emit(FeatureSectionProductLoading());
-    try{
+    try {
       isRefresh = false;
       add(FetchFeatureSectionProducts(slug: selectedCategory));
-    }catch(e){
+    } catch (e) {
       emit(FeatureSectionProductFailed(error: e.toString()));
     }
   }

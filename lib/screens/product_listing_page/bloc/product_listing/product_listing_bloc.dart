@@ -24,7 +24,8 @@ class ProductListingBloc
     on<FetchFilteredListingProducts>(_onFetchFilteredListingProducts);
     on<ApplyFiltersAndSort>(_onApplyFiltersAndSort);
     on<ClearProductFilters>(_onClearProductFilters);
-    on<FilterByDeliveryTime>((event, emit) => _onFilterByDeliveryTime(event, emit));
+    on<FilterByDeliveryTime>(
+        (event, emit) => _onFilterByDeliveryTime(event, emit));
   }
 
   int currentPage = 1;
@@ -49,11 +50,13 @@ class ProductListingBloc
 
   Future<void> _onFetchListingProducts(
       FetchListingProducts event, Emitter<ProductListingState> emit) async {
+    log('🔍 Fetching products for type: ${event.type}, identifier: ${event.identifier}');
     emit(ProductListingLoading());
     try {
       final location = LocationService.getStoredLocation();
       if (location == null) {
-        emit(ProductListingFailed(error: 'Location not found. Please select a delivery location.'));
+        emit(ProductListingFailed(
+            error: 'Location not found. Please select a delivery location.'));
         return;
       }
 
@@ -88,19 +91,28 @@ class ProductListingBloc
 
       final dynamic responseData = response['data'];
 
-      if (responseData != null && 
-          ((responseData is Map && (responseData['data'] != null || responseData['products'] != null)) || 
-           (responseData is List && responseData.isNotEmpty))) {
-        
+      if (responseData != null &&
+          ((responseData is Map &&
+                  (responseData['data'] != null ||
+                      responseData['products'] != null)) ||
+              (responseData is List && responseData.isNotEmpty))) {
         List<dynamic> rawList = [];
         if (responseData is Map) {
-          rawList = (responseData['data'] ?? responseData['products'] ?? []) as List<dynamic>;
-          totalProducts = int.tryParse((responseData['total'] ?? responseData['products_count'] ?? rawList.length).toString()) ?? 0;
-          final int currentPageNum = int.tryParse(responseData['current_page'].toString()) ?? 1;
-          final int lastPageNum = int.tryParse(responseData['last_page'].toString()) ?? 1;
+          rawList = (responseData['data'] ?? responseData['products'] ?? [])
+              as List<dynamic>;
+          totalProducts = int.tryParse((responseData['total'] ??
+                      responseData['products_count'] ??
+                      rawList.length)
+                  .toString()) ??
+              0;
+          final int currentPageNum =
+              int.tryParse(responseData['current_page'].toString()) ?? 1;
+          final int lastPageNum =
+              int.tryParse(responseData['last_page'].toString()) ?? 1;
           hasReachedMax = currentPageNum >= lastPageNum;
-          
-          if (event.type == ProductListingType.search && responseData['keywords'] != null) {
+
+          if (event.type == ProductListingType.search &&
+              responseData['keywords'] != null) {
             keywords = responseData['keywords'] as List<dynamic>;
           }
         } else {
@@ -113,10 +125,12 @@ class ProductListingBloc
             rawList.map((data) => ProductData.fromJson(data)));
 
         if (appliedIndicator != null && appliedIndicator!.isNotEmpty) {
-          products = products.where((p) => p.indicator == appliedIndicator).toList();
+          products =
+              products.where((p) => p.indicator == appliedIndicator).toList();
         }
         if (appliedRating != null) {
-          products = products.where((p) => p.ratings >= appliedRating!).toList();
+          products =
+              products.where((p) => p.ratings >= appliedRating!).toList();
         }
 
         List<BrandsData> brandsList = [];
@@ -124,7 +138,7 @@ class ProductListingBloc
           brandsList = List<BrandsData>.from(
               responseData['brands'].map((v) => BrandsData.fromJson(v)));
         }
-        
+
         if (brandsList.isEmpty) {
           brandsList = _extractBrandsFromProducts(rawList);
         }
@@ -153,7 +167,8 @@ class ProductListingBloc
       }
     } catch (e, err) {
       log('Error in ProductListingBloc: $e\n$err');
-      emit(ProductListingFailed(error: 'Something went wrong while loading products.'));
+      emit(ProductListingFailed(
+          error: 'Something went wrong while loading products.'));
     }
   }
 
@@ -173,6 +188,8 @@ class ProductListingBloc
         String? categoryIds = '';
         String? brandIds = '';
 
+        log('🔄 Fetching More Products: Page: $currentPage, Type: $type, Identifier: ${event.identifier}');
+
         final response = await repository.fetchProductsByType(
             type: type,
             identifier: event.identifier,
@@ -188,15 +205,21 @@ class ProductListingBloc
 
         final dynamic responseData = response['data'];
 
-        if (responseData != null && 
-            ((responseData is Map && (responseData['data'] != null || responseData['products'] != null)) || 
-             (responseData is List && responseData.isNotEmpty))) {
-          
+        if (responseData != null &&
+            ((responseData is Map &&
+                    (responseData['data'] != null ||
+                        responseData['products'] != null)) ||
+                (responseData is List && responseData.isNotEmpty))) {
           List<dynamic> rawList = [];
           if (responseData is Map) {
-            rawList = (responseData['data'] ?? responseData['products'] ?? []) as List<dynamic>;
-            final int currentPageNum = int.tryParse(responseData['current_page'].toString()) ?? currentPage;
-            final int lastPageNum = int.tryParse(responseData['last_page'].toString()) ?? currentPage;
+            rawList = (responseData['data'] ?? responseData['products'] ?? [])
+                as List<dynamic>;
+            final int currentPageNum =
+                int.tryParse(responseData['current_page'].toString()) ??
+                    currentPage;
+            final int lastPageNum =
+                int.tryParse(responseData['last_page'].toString()) ??
+                    currentPage;
             hasReachedMax = currentPageNum >= lastPageNum;
           } else {
             rawList = responseData;
@@ -207,10 +230,13 @@ class ProductListingBloc
               rawList.map((data) => ProductData.fromJson(data)));
 
           if (appliedIndicator != null && appliedIndicator!.isNotEmpty) {
-            newProducts = newProducts.where((p) => p.indicator == appliedIndicator).toList();
+            newProducts = newProducts
+                .where((p) => p.indicator == appliedIndicator)
+                .toList();
           }
           if (appliedRating != null) {
-            newProducts = newProducts.where((p) => p.ratings >= appliedRating!).toList();
+            newProducts =
+                newProducts.where((p) => p.ratings >= appliedRating!).toList();
           }
           if (event.type == ProductListingType.search) {
             keywords = response['data']['keywords'];
@@ -309,16 +335,25 @@ class ProductListingBloc
 
       final dynamic responseData = response['data'];
 
-      if (responseData != null && 
-          ((responseData is Map && (responseData['data'] != null || responseData['products'] != null)) || 
-           (responseData is List && responseData.isNotEmpty))) {
-        
+      if (responseData != null &&
+          ((responseData is Map &&
+                  (responseData['data'] != null ||
+                      responseData['products'] != null)) ||
+              (responseData is List && responseData.isNotEmpty))) {
         List<dynamic> rawList = [];
         if (responseData is Map) {
-          rawList = (responseData['data'] ?? responseData['products'] ?? []) as List<dynamic>;
-          totalProducts = int.tryParse((responseData['total'] ?? responseData['products_count'] ?? rawList.length).toString()) ?? 0;
-          final int currentPageNum = int.tryParse(responseData['current_page']?.toString() ?? '1') ?? 1;
-          final int lastPageNum = int.tryParse(responseData['last_page']?.toString() ?? '1') ?? 1;
+          rawList = (responseData['data'] ?? responseData['products'] ?? [])
+              as List<dynamic>;
+          totalProducts = int.tryParse((responseData['total'] ??
+                      responseData['products_count'] ??
+                      rawList.length)
+                  .toString()) ??
+              0;
+          final int currentPageNum =
+              int.tryParse(responseData['current_page']?.toString() ?? '1') ??
+                  1;
+          final int lastPageNum =
+              int.tryParse(responseData['last_page']?.toString() ?? '1') ?? 1;
           hasReachedMax = currentPageNum >= lastPageNum;
         } else {
           rawList = responseData;
@@ -330,10 +365,12 @@ class ProductListingBloc
             rawList.map((data) => ProductData.fromJson(data)));
 
         if (appliedIndicator != null && appliedIndicator!.isNotEmpty) {
-          products = products.where((p) => p.indicator == appliedIndicator).toList();
+          products =
+              products.where((p) => p.indicator == appliedIndicator).toList();
         }
         if (appliedRating != null) {
-          products = products.where((p) => p.ratings >= appliedRating!).toList();
+          products =
+              products.where((p) => p.ratings >= appliedRating!).toList();
         }
 
         List<BrandsData> brandsList = [];
@@ -341,12 +378,13 @@ class ProductListingBloc
           brandsList = List<BrandsData>.from(
               responseData['brands'].map((v) => BrandsData.fromJson(v)));
         }
-        
+
         if (brandsList.isEmpty) {
           brandsList = _extractBrandsFromProducts(rawList);
         }
 
-        currentSortType = SortOption.getSortOptionByApiValue(event.sortType).type;
+        currentSortType =
+            SortOption.getSortOptionByApiValue(event.sortType).type;
 
         if (response['success'] == true) {
           emit(ProductListingLoaded(
@@ -367,7 +405,8 @@ class ProductListingBloc
           emit(ProductListingFailed(error: response['message']));
         }
       } else {
-        emit(ProductListingFailed(error: response['message'] ?? 'No products found'));
+        emit(ProductListingFailed(
+            error: response['message'] ?? 'No products found'));
       }
     } catch (e) {
       log('Error in _onFetchSortedListingProducts: $e');
@@ -432,19 +471,29 @@ class ProductListingBloc
 
       final dynamic responseData = response['data'];
 
-      if (responseData != null && 
-          ((responseData is Map && (responseData['data'] != null || responseData['products'] != null)) || 
-           (responseData is List && responseData.isNotEmpty))) {
-        
+      if (responseData != null &&
+          ((responseData is Map &&
+                  (responseData['data'] != null ||
+                      responseData['products'] != null)) ||
+              (responseData is List && responseData.isNotEmpty))) {
         List<dynamic> rawList = [];
         if (responseData is Map) {
-          rawList = (responseData['data'] ?? responseData['products'] ?? []) as List<dynamic>;
-          totalProducts = int.tryParse((responseData['total'] ?? responseData['products_count'] ?? rawList.length).toString()) ?? 0;
-          final int currentPageNum = int.tryParse(responseData['current_page']?.toString() ?? '1') ?? 1;
-          final int lastPageNum = int.tryParse(responseData['last_page']?.toString() ?? '1') ?? 1;
+          rawList = (responseData['data'] ?? responseData['products'] ?? [])
+              as List<dynamic>;
+          totalProducts = int.tryParse((responseData['total'] ??
+                      responseData['products_count'] ??
+                      rawList.length)
+                  .toString()) ??
+              0;
+          final int currentPageNum =
+              int.tryParse(responseData['current_page']?.toString() ?? '1') ??
+                  1;
+          final int lastPageNum =
+              int.tryParse(responseData['last_page']?.toString() ?? '1') ?? 1;
           hasReachedMax = currentPageNum >= lastPageNum;
-          
-          if (event.type == ProductListingType.search && responseData['keywords'] != null) {
+
+          if (event.type == ProductListingType.search &&
+              responseData['keywords'] != null) {
             keywords = responseData['keywords'] as List<dynamic>;
           }
         } else {
@@ -457,10 +506,12 @@ class ProductListingBloc
             rawList.map((data) => ProductData.fromJson(data)));
 
         if (appliedIndicator != null && appliedIndicator!.isNotEmpty) {
-          products = products.where((p) => p.indicator == appliedIndicator).toList();
+          products =
+              products.where((p) => p.indicator == appliedIndicator).toList();
         }
         if (appliedRating != null) {
-          products = products.where((p) => p.ratings >= appliedRating!).toList();
+          products =
+              products.where((p) => p.ratings >= appliedRating!).toList();
         }
 
         List<BrandsData> brandsList = [];
@@ -468,12 +519,13 @@ class ProductListingBloc
           brandsList = List<BrandsData>.from(
               responseData['brands'].map((v) => BrandsData.fromJson(v)));
         }
-        
+
         if (brandsList.isEmpty) {
           brandsList = _extractBrandsFromProducts(rawList);
         }
 
-        currentSortType = SortOption.getSortOptionByApiValue(selectedSortingType).type;
+        currentSortType =
+            SortOption.getSortOptionByApiValue(selectedSortingType).type;
 
         if (response['success'] == true) {
           emit(ProductListingLoaded(
@@ -494,7 +546,8 @@ class ProductListingBloc
           emit(ProductListingFailed(error: response['message']));
         }
       } else {
-        emit(ProductListingFailed(error: response['message'] ?? 'No products found'));
+        emit(ProductListingFailed(
+            error: response['message'] ?? 'No products found'));
       }
     } catch (e) {
       log('Error in _onFetchFilteredListingProducts: $e');
@@ -575,10 +628,12 @@ class ProductListingBloc
   List<ProductData> _applyFrontendFilters(List<ProductData> products) {
     List<ProductData> result = products;
 
-    if (appliedMaxDeliveryMinutes != null || appliedMinDeliveryMinutes != null) {
+    if (appliedMaxDeliveryMinutes != null ||
+        appliedMinDeliveryMinutes != null) {
       result = result.where((product) {
         final minutes = _parseDeliveryTime(product.estimatedDeliveryTime);
-        if (minutes == null) return true; // Keep if we can't parse? or filter out? Usually keep.
+        if (minutes == null)
+          return true; // Keep if we can't parse? or filter out? Usually keep.
 
         bool match = true;
         if (appliedMaxDeliveryMinutes != null) {
