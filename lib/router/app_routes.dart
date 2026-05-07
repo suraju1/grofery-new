@@ -32,26 +32,26 @@ import 'package:grofery_user/utils/widgets/custom_toast.dart';
 import 'package:grofery_user/utils/widgets/empty_states_page.dart';
 import 'package:grofery_user/utils/widgets/no_internet_connection.dart';
 import '../config/map_code.dart';
-import '../screens/account_page/view/account_page.dart';
-import '../screens/auth/view/mobile_otp_login.dart';
-import '../screens/brand_list_page/view/brands_list_page.dart';
-import '../screens/dashboard/view/dashboard.dart';
-import '../screens/my_orders/view/my_orders_page.dart';
-import '../screens/my_orders/view/order_success_page.dart';
-import '../screens/policies/view/app_policies_page.dart';
-import '../screens/product_detail_page/view/product_detail_page.dart';
-import '../screens/address_list_page/view/address_list_page.dart';
-import '../screens/payment_options/view/payment_options_page.dart';
-import '../screens/product_listing_page/model/product_listing_type.dart';
-import '../screens/product_listing_page/view/product_listing_page.dart';
-import '../screens/save_for_later_page/view/save_for_later_page.dart';
-import '../screens/search_page/view/search_page.dart';
-import '../screens/shopping_list_page/view/shopping_list_page.dart';
-import '../screens/wallet_page/view/add_money_page.dart';
-import '../screens/wallet_page/view/wallet_page.dart';
-import '../screens/wishlist_page/view/wishlist_page.dart';
-import '../screens/wishlist_page/view/wishlist_product_listing_page.dart';
-import '../screens/manage_outlet_page/view/manage_outlet_page.dart';
+import 'package:grofery_user/screens/account_page/view/account_page.dart';
+import 'package:grofery_user/screens/auth/view/mobile_otp_login.dart';
+import 'package:grofery_user/screens/brand_list_page/view/brands_list_page.dart';
+import 'package:grofery_user/screens/dashboard/view/dashboard.dart';
+import 'package:grofery_user/screens/my_orders/view/my_orders_page.dart';
+import 'package:grofery_user/screens/my_orders/view/order_success_page.dart';
+import 'package:grofery_user/screens/policies/view/app_policies_page.dart';
+import 'package:grofery_user/screens/product_detail_page/view/product_detail_page.dart';
+import 'package:grofery_user/screens/address_list_page/view/address_list_page.dart';
+import 'package:grofery_user/screens/payment_options/view/payment_options_page.dart';
+import 'package:grofery_user/screens/product_listing_page/model/product_listing_type.dart';
+import 'package:grofery_user/screens/product_listing_page/view/product_listing_page.dart';
+import 'package:grofery_user/screens/save_for_later_page/view/save_for_later_page.dart';
+import 'package:grofery_user/screens/search_page/view/search_page.dart';
+import 'package:grofery_user/screens/shopping_list_page/view/shopping_list_page.dart';
+import 'package:grofery_user/screens/wallet_page/view/add_money_page.dart';
+import 'package:grofery_user/screens/wallet_page/view/wallet_page.dart';
+import 'package:grofery_user/screens/wishlist_page/view/wishlist_page.dart';
+import 'package:grofery_user/screens/wishlist_page/view/wishlist_product_listing_page.dart';
+import 'package:grofery_user/screens/manage_outlet_page/view/manage_outlet_page.dart';
 
 Page platformPage(Widget child) {
   if (Platform.isIOS) {
@@ -309,9 +309,8 @@ class MyAppRoute {
           name: 'product-listing',
           path: AppRoutes.productListing,
           pageBuilder: (context, state) {
-            final extra = state.extra as Map<String, dynamic>? ?? {};
-            final isTheirMoreCategory = extra['isTheirMoreCategory'] as bool? ??
-                false; // Default to false if null
+            final Map<String, dynamic> extra =
+                state.extra as Map<String, dynamic>? ?? {};
             final dynamic rawType = extra['type'];
             final ProductListingType listingType = rawType is ProductListingType
                 ? rawType
@@ -324,9 +323,9 @@ class MyAppRoute {
             final String identifier = (extra['identifier']?.toString() ??
                 extra['categorySlug']?.toString() ??
                 '');
+
             return platformPage(
               ProductListingPage(
-                isTheirMoreCategory: isTheirMoreCategory,
                 title: extra['title']?.toString() ?? '',
                 logo: extra['logo']?.toString() ?? '',
                 totalProduct: extra['totalProduct']?.toString() ?? '',

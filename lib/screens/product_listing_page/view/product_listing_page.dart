@@ -1,27 +1,24 @@
 import 'package:flutter/material.dart';
-import '../../../utils/widgets/custom_scaffold.dart';
+import 'package:grofery_user/utils/widgets/custom_scaffold.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../model/sorting_model/sorting_model.dart';
-import '../../../utils/widgets/custom_product_card.dart';
-import '../../home_page/bloc/sub_category/sub_category_bloc.dart';
-import '../../home_page/bloc/sub_category/sub_category_event.dart';
-import '../../home_page/bloc/sub_category/sub_category_state.dart';
-import '../../home_page/model/sub_category_model.dart';
-import '../bloc/product_listing/product_listing_bloc.dart';
-import '../model/product_listing_type.dart';
+import 'package:grofery_user/model/sorting_model/sorting_model.dart';
+import 'package:grofery_user/utils/widgets/custom_product_card.dart';
+import 'package:grofery_user/screens/product_listing_page/bloc/product_listing/product_listing_bloc.dart';
+import 'package:grofery_user/screens/product_listing_page/model/product_listing_type.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../bloc/user_cart_bloc/user_cart_bloc.dart';
-import '../../../bloc/user_cart_bloc/user_cart_event.dart';
-import '../../../model/user_cart_model/user_cart.dart';
-import '../../../model/user_cart_model/cart_sync_action.dart';
-import '../../../utils/widgets/custom_shimmer.dart';
-import '../../../utils/widgets/custom_refresh_indicator.dart';
+import 'package:grofery_user/bloc/user_cart_bloc/user_cart_bloc.dart';
+import 'package:grofery_user/bloc/user_cart_bloc/user_cart_event.dart';
+import 'package:grofery_user/model/user_cart_model/user_cart.dart';
+import 'package:grofery_user/model/user_cart_model/cart_sync_action.dart';
+import 'package:grofery_user/utils/widgets/custom_shimmer.dart';
+import 'package:grofery_user/utils/widgets/custom_refresh_indicator.dart';
 import 'package:go_router/go_router.dart';
-import '../../../router/app_routes.dart';
+import 'package:grofery_user/router/app_routes.dart';
+import 'package:grofery_user/screens/product_listing_page/bloc/nested_category/nested_category_bloc.dart';
+import 'package:grofery_user/screens/home_page/model/category_model.dart';
 
 class ProductListingPage extends StatefulWidget {
-  final bool isTheirMoreCategory;
   final String title;
   final String logo;
   final String totalProduct;
@@ -30,7 +27,6 @@ class ProductListingPage extends StatefulWidget {
 
   const ProductListingPage({
     super.key,
-    required this.isTheirMoreCategory,
     required this.title,
     required this.logo,
     required this.totalProduct,
@@ -44,27 +40,24 @@ class ProductListingPage extends StatefulWidget {
 
 class _ProductListingPageState extends State<ProductListingPage> {
   final ScrollController _scrollController = ScrollController();
-  String? _selectedSubCategorySlug;
   String? _selectedSortApiValue;
   bool _isRated4Plus = false;
   String? _selectedIndicator; // 'veg', 'non_veg'
   final List<String> _selectedBrandSlugs = [];
   int? _selectedMaxDeliveryMinutes;
   int? _selectedMinDeliveryMinutes;
+  String? _selectedSubCategorySlug; // null means 'All'
 
   @override
   void initState() {
     super.initState();
     _fetchProducts();
-    _fetchSubCategories();
-    _scrollController.addListener(_onScroll);
-  }
-
-  void _fetchSubCategories() {
     if (widget.type == ProductListingType.category) {
-      context.read<SubCategoryBloc>().add(
-          FetchSubCategory(slug: widget.identifier, isForAllCategory: false));
+      context
+          .read<NestedCategoryBloc>()
+          .add(FetchNestedCategory(slug: widget.identifier));
     }
+    _scrollController.addListener(_onScroll);
   }
 
   @override
@@ -77,7 +70,7 @@ class _ProductListingPageState extends State<ProductListingPage> {
   void _fetchProducts() {
     context.read<ProductListingBloc>().add(FetchListingProducts(
           type: widget.type,
-          identifier: widget.identifier,
+          identifier: _selectedSubCategorySlug ?? widget.identifier,
           indicator: _selectedIndicator,
           rating: _isRated4Plus ? 4.0 : null,
           brandSlugs: _selectedBrandSlugs,
@@ -170,8 +163,11 @@ class _ProductListingPageState extends State<ProductListingPage> {
           _buildFilterBar(),
           Expanded(
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSidebar(),
+                if (widget.type == ProductListingType.category ||
+                    widget.type == ProductListingType.featuredSection)
+                  _buildSubCategorySidebar(),
                 Expanded(child: _buildProductList()),
               ],
             ),
@@ -563,122 +559,6 @@ class _ProductListingPageState extends State<ProductListingPage> {
     );
   }
 
-  Widget _buildSidebar() {
-    return Container(
-      width: 80.w,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(right: BorderSide(color: Colors.grey[200]!)),
-      ),
-      child: BlocBuilder<SubCategoryBloc, SubCategoryState>(
-        builder: (context, state) {
-          if (state is SubCategoryLoading) {
-            return const Center(
-                child: CircularProgressIndicator(strokeWidth: 2));
-          }
-          if (state is SubCategoryLoaded) {
-            final categories = [
-              SubCategoryData(
-                  id: -1,
-                  title: "All",
-                  slug: widget.identifier,
-                  image: widget.logo),
-              ...state.subCategoryData,
-            ];
-            return ListView.builder(
-              itemCount: categories.length,
-              itemBuilder: (context, index) {
-                final category = categories[index];
-                final bool isSelected = _selectedSubCategorySlug == null
-                    ? (index == 0)
-                    : (category.slug == _selectedSubCategorySlug);
-                return _buildSidebarItem(category, isSelected);
-              },
-            );
-          }
-          return const SizedBox.shrink();
-        },
-      ),
-    );
-  }
-
-  Widget _buildSidebarItem(SubCategoryData category, bool isSelected) {
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _selectedSubCategorySlug = category.slug;
-        });
-        if (category.id == -1) {
-          // Show All
-          _fetchProducts();
-        } else {
-          // Filter by subcategory
-          context.read<ProductListingBloc>().add(FetchListingProducts(
-                type: ProductListingType.category,
-                identifier: category.slug ?? "",
-                indicator: _selectedIndicator,
-                rating: _isRated4Plus ? 4.0 : null,
-                brandSlugs: _selectedBrandSlugs,
-              ));
-        }
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 16.h),
-        decoration: BoxDecoration(
-          border: isSelected
-              ? Border(right: BorderSide(color: Colors.green, width: 4.w))
-              : null,
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 50.w,
-              height: 50.w,
-              padding: EdgeInsets.all(4.w),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                            color: Colors.green.withOpacity(0.2),
-                            blurRadius: 8,
-                            spreadRadius: 2)
-                      ]
-                    : null,
-              ),
-              child: ClipOval(
-                child: category.id == -1
-                    ? Icon(Icons.shopping_basket,
-                        color: isSelected ? Colors.green : Colors.blue,
-                        size: 24.sp)
-                    : (category.image != null
-                        ? CachedNetworkImage(
-                            imageUrl: category.image!, fit: BoxFit.cover)
-                        : const Icon(Icons.category)),
-              ),
-            ),
-            SizedBox(height: 8.h),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4.w),
-              child: Text(
-                category.title ?? "",
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11.sp,
-                  color: isSelected ? Colors.green[800] : Colors.grey[600],
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildProductList() {
     return BlocBuilder<ProductListingBloc, ProductListingState>(
       builder: (context, state) {
@@ -908,6 +788,163 @@ class _ProductListingPageState extends State<ProductListingPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSubCategorySidebar() {
+    return BlocBuilder<NestedCategoryBloc, NestedCategoryState>(
+      builder: (context, state) {
+        List<CategoryData> subCategories = [];
+        bool isLoading = false;
+
+        if (state is NestedCategoryLoading) {
+          isLoading = true;
+        } else if (state is NestedCategoryLoaded) {
+          subCategories = state.subCategoryData;
+        }
+
+        return Container(
+          width: 80.w,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border(right: BorderSide(color: Colors.grey[200]!)),
+          ),
+          child: Column(
+            children: [
+              // Always show "All" option at the top
+              _buildSubCategoryItem(
+                title: "All",
+                icon: Icons.shopping_basket_outlined,
+                isSelected: _selectedSubCategorySlug == null,
+                onTap: () {
+                  if (_selectedSubCategorySlug != null) {
+                    setState(() {
+                      _selectedSubCategorySlug = null;
+                    });
+                    _fetchProducts();
+                  }
+                },
+              ),
+              if (isLoading)
+                Expanded(
+                  child: Center(
+                    child: SizedBox(
+                      width: 20.w,
+                      height: 20.w,
+                      child: const CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                )
+              else if (subCategories.isNotEmpty)
+                Expanded(
+                  child: ListView.builder(
+                    padding: EdgeInsets.zero,
+                    itemCount: subCategories.length,
+                    itemBuilder: (context, index) {
+                      final subCategory = subCategories[index];
+                      final isSelected =
+                          _selectedSubCategorySlug == subCategory.slug;
+                      return _buildSubCategoryItem(
+                        title: subCategory.title ?? "",
+                        image: subCategory.image,
+                        isSelected: isSelected,
+                        onTap: () {
+                          if (!isSelected) {
+                            setState(() {
+                              _selectedSubCategorySlug = subCategory.slug;
+                            });
+                            _fetchProducts();
+                          }
+                        },
+                      );
+                    },
+                  ),
+                )
+              else
+                const Spacer(),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSubCategoryItem({
+    required String title,
+    IconData? icon,
+    String? image,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Stack(
+        children: [
+          Container(
+            width: 80.w,
+            padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 4.w),
+            color: isSelected ? Colors.grey[50] : Colors.white,
+            child: Column(
+              children: [
+                Container(
+                  width: 44.w,
+                  height: 44.w,
+                  decoration: BoxDecoration(
+                    color:
+                        isSelected ? const Color(0xFFE8F5E9) : Colors.grey[100],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: image != null
+                        ? CachedNetworkImage(
+                            imageUrl: image,
+                            width: 24.w,
+                            height: 24.w,
+                            fit: BoxFit.contain,
+                            errorWidget: (context, url, error) => Icon(
+                                Icons.category,
+                                size: 20.sp,
+                                color: Colors.grey),
+                          )
+                        : Icon(
+                            icon ?? Icons.category,
+                            size: 24.sp,
+                            color: isSelected ? Colors.green : Colors.grey[600],
+                          ),
+                  ),
+                ),
+                SizedBox(height: 6.h),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11.sp,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? Colors.black : Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isSelected)
+            Positioned(
+              left: 0,
+              top: 8.h,
+              bottom: 8.h,
+              child: Container(
+                width: 3.w,
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  borderRadius:
+                      BorderRadius.horizontal(right: Radius.circular(4.r)),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

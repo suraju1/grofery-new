@@ -44,6 +44,7 @@ import 'package:grofery_user/bloc/user_cart_bloc/user_cart_state.dart';
 import 'package:grofery_user/model/user_cart_model/user_cart.dart';
 import 'package:grofery_user/model/tiered_pricing.dart';
 import 'package:grofery_user/utils/widgets/animated_button.dart';
+import 'package:grofery_user/utils/widgets/price_utils.dart';
 
 class ProductDetailPage extends StatefulWidget {
   final String productSlug;
@@ -370,7 +371,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                           currentQty);
                                               final displayQty = currentQty > 0
                                                   ? currentQty
-                                                  : 1;
+                                                  : (product.minimumOrderQuantity > 0
+                                                      ? product.minimumOrderQuantity
+                                                      : 1);
                                               final totalPrice =
                                                   effectivePrice * displayQty;
                                               final double totalOriginalPrice =
@@ -401,6 +404,23 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                     discountTextColor:
                                                         Colors.white,
                                                   ),
+                                                  if (product
+                                                          .minimumOrderQuantity >
+                                                      1)
+                                                    Padding(
+                                                      padding: EdgeInsets.only(
+                                                          top: 2.h, bottom: 4.h),
+                                                      child: Text(
+                                                        "${PriceUtils.formatPrice(effectivePrice.toDouble())} per pc",
+                                                        style: TextStyle(
+                                                          fontSize: 14.sp,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color: Colors.grey
+                                                              .shade700,
+                                                        ),
+                                                      ),
+                                                    ),
                                                   if (product
                                                           .minimumOrderQuantity >
                                                       1)
@@ -876,7 +896,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
             final activeVariant = _getActiveVariant(product);
 
             return Container(
-              height: 80,
+              height: 100,
               decoration: BoxDecoration(
                 color: isDarkMode(context)
                     ? Theme.of(context).colorScheme.onPrimary
@@ -914,54 +934,71 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: BlocBuilder<CartBloc, CartState>(
-                          builder: (context, cartState) {
-                            final cartItem = _getCartItem(cartState, product.id,
-                                activeVariant.id, activeVariant.storeId);
-                            final currentQty = cartItem?.quantity ?? 0;
-                            final effectivePrice =
-                                activeVariant.getEffectivePrice(currentQty);
-                            final displayQty = currentQty > 0 ? currentQty : 1;
-                            final totalPrice = effectivePrice * displayQty;
+                  BlocBuilder<CartBloc, CartState>(
+                    builder: (context, cartState) {
+                      final cartItem = _getCartItem(cartState, product.id,
+                          activeVariant.id, activeVariant.storeId);
+                      final currentQty = cartItem?.quantity ?? 0;
+                      final effectivePrice =
+                          activeVariant.getEffectivePrice(currentQty);
+                      final displayQty = currentQty > 0
+                          ? currentQty
+                          : (product.minimumOrderQuantity > 0
+                              ? product.minimumOrderQuantity
+                              : 1);
+                      final totalPrice = effectivePrice * displayQty;
 
-                            final double totalOriginalPrice =
-                                (activeVariant.mrpStatus == 1 &&
-                                        activeVariant.mrp > 0)
-                                    ? (activeVariant.mrp * displayQty)
-                                    : 0.0;
+                      final double totalOriginalPrice =
+                          (activeVariant.mrpStatus == 1 &&
+                                  activeVariant.mrp > 0)
+                              ? (activeVariant.mrp * displayQty)
+                              : 0.0;
 
-                            return PriceRowWidget(
-                              originalPrice: totalOriginalPrice,
-                              salePrice: totalPrice.toDouble(),
-                              fontSize: 12.sp,
-                              originalFontSize: 10.sp,
-                              discountFontSize: 8.sp,
-                              fontWeight: FontWeight.w700,
-                              originalPriceColor: Colors.grey.shade600,
-                            );
-                          },
-                        ),
-                      ),
-                      Text(
-                        l10n.inclusiveOfAllTax,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                      if (product.minimumOrderQuantity > 1)
-                        Padding(
-                          padding: EdgeInsets.only(top: 2),
-                          child: Text(
-                            "Min Order: ${product.minimumOrderQuantity} ${product.minimumOrderQuantity > 1 ? 'pcs' : 'pc'}",
+                      return Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          PriceRowWidget(
+                            originalPrice: totalOriginalPrice,
+                            salePrice: totalPrice.toDouble(),
+                            fontSize: 12.sp,
+                            originalFontSize: 10.sp,
+                            discountFontSize: 8.sp,
+                            fontWeight: FontWeight.w700,
+                            originalPriceColor: Colors.grey.shade600,
+                          ),
+                          if (product.minimumOrderQuantity > 1)
+                            Text(
+                              "${PriceUtils.formatPrice(effectivePrice.toDouble())} per pc",
+                              style: TextStyle(
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          Text(
+                            l10n.inclusiveOfAllTax,
                             style: TextStyle(
                               fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.primaryColor,
+                              color: Colors.grey.shade600,
                             ),
                           ),
-                        ),
+                          if (product.minimumOrderQuantity > 1)
+                            Padding(
+                              padding: EdgeInsets.only(top: 2),
+                              child: Text(
+                                "Min Order: ${product.minimumOrderQuantity} ${product.minimumOrderQuantity > 1 ? 'pcs' : 'pc'}",
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.primaryColor,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
                     ],
                   ),
                   SizedBox(

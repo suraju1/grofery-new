@@ -171,7 +171,8 @@ class CustomProductCard extends StatelessWidget {
                                     currentQty > 0 ? currentQty : 1);
                             final double original =
                                 double.tryParse(productPrice) ?? 0.0;
-                            final displayQty = currentQty > 0 ? currentQty : 1;
+                            final displayQty =
+                                currentQty > 0 ? currentQty : (minQty > 0 ? minQty : 1);
                             final totalPrice = effectivePrice * displayQty;
                             final totalOriginalPrice = original * displayQty;
 
@@ -191,11 +192,23 @@ class CustomProductCard extends StatelessWidget {
                                               (double.tryParse(mrp ?? '0') ??
                                                       0) >
                                                   0)
-                                          ? mrp!
+                                          ? totalOriginalPrice.toString()
                                           : '',
                                       specialPrice: totalPrice.toString(),
                                       locale: AppConstant.defaultLocalCurrency,
                                       context: context),
+                                  if (minQty > 1)
+                                    Padding(
+                                      padding: EdgeInsets.only(top: 2.h),
+                                      child: Text(
+                                        "at ₹${formatPrice(effectivePrice)}/pc",
+                                        style: TextStyle(
+                                          fontSize: 9.sp,
+                                          color: Colors.grey.shade600,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
                                   SizedBox(height: 4.h),
                                   _buildQuickDeliveryBadge(
                                       quickDeliveryAvailable),
@@ -868,9 +881,13 @@ class CustomProductCard extends StatelessWidget {
                           final int currentQty = cartItem?.quantity ?? 0;
                           final double effectivePrice =
                               _calculateEffectivePrice(
-                                  currentQty > 0 ? currentQty : 1);
+                                  currentQty > 0 ? currentQty : (minQty > 0 ? minQty : 1));
                           final double original =
                               double.tryParse(productPrice) ?? 0.0;
+                          final displayQty =
+                              currentQty > 0 ? currentQty : (minQty > 0 ? minQty : 1);
+                          final totalPrice = effectivePrice * displayQty;
+                          final totalOriginalPrice = original * displayQty;
 
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -880,7 +897,7 @@ class CustomProductCard extends StatelessWidget {
                                 textBaseline: TextBaseline.alphabetic,
                                 children: [
                                   Text(
-                                    "₹${formatPrice(effectivePrice)}",
+                                    "₹${formatPrice(totalPrice)}",
                                     style: TextStyle(
                                       fontSize: 14.sp,
                                       fontWeight: FontWeight.w800,
@@ -895,20 +912,32 @@ class CustomProductCard extends StatelessWidget {
                                       final double originalPrice = parsedMrp;
                                       if (originalPrice <= 0)
                                         return const SizedBox.shrink();
-                                      return Text(
-                                        "₹${formatPrice(originalPrice)}",
-                                        style: TextStyle(
-                                          fontSize: 12.sp,
-                                          color: Colors.grey.shade400,
-                                          decoration:
-                                              TextDecoration.lineThrough,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      );
+                                        return Text(
+                                          "₹${formatPrice(totalOriginalPrice)}",
+                                          style: TextStyle(
+                                            fontSize: 12.sp,
+                                            color: Colors.grey.shade400,
+                                            decoration:
+                                                TextDecoration.lineThrough,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        );
                                     }),
                                   ],
                                 ],
                               ),
+                              if (minQty > 1)
+                                Padding(
+                                  padding: EdgeInsets.only(top: 1.h),
+                                  child: Text(
+                                    "at ₹${formatPrice(effectivePrice)}/pc",
+                                    style: TextStyle(
+                                      fontSize: 9.sp,
+                                      color: Colors.grey.shade600,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
                               SizedBox(height: 3.h),
                               ratingWidget(context),
                               if (minQty > 1) ...[
@@ -1233,7 +1262,8 @@ class CustomProductCard extends StatelessWidget {
                         final double parsedMrp =
                             double.tryParse(mrp ?? '') ?? 0.0;
                         final double original = parsedMrp;
-                        final displayQty = currentQty > 0 ? currentQty : 1;
+                        final displayQty =
+                            currentQty > 0 ? currentQty : (minQty > 0 ? minQty : 1);
                         final totalPrice = effectivePrice * displayQty;
                         final totalOriginalPrice = original * displayQty;
 

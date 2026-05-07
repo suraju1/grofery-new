@@ -151,7 +151,7 @@ class PriceRowWidget extends StatelessWidget {
         Text(
           PriceUtils.formatPrice(displayPrice),
           style: TextStyle(
-            fontSize: 18,
+            fontSize: fontSize ?? 18.sp,
             fontWeight: fontWeight ?? FontWeight.bold,
             color: priceColor ?? Theme.of(context).colorScheme.tertiary,
             letterSpacing: 0.2,
