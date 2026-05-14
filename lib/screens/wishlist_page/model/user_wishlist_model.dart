@@ -217,6 +217,26 @@ class Items {
     data['updated_at'] = updatedAt;
     return data;
   }
+
+  Items copyWith({
+    int? id,
+    int? wishlistId,
+    WishlistProduct? product,
+    WishlistVariant? variant,
+    Store? store,
+    String? createdAt,
+    String? updatedAt,
+  }) {
+    return Items(
+      id: id ?? this.id,
+      wishlistId: wishlistId ?? this.wishlistId,
+      product: product ?? this.product,
+      variant: variant ?? this.variant,
+      store: store ?? this.store,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }
 
 class WishlistProduct {

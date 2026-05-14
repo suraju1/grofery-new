@@ -590,54 +590,58 @@ class CustomProductCard extends StatelessWidget {
               final wishlistBloc = context.read<UserWishlistBloc>();
 
               // CASE 1: Product is already wishlisted -> Remove it directly
-              if (finalIsWishListed &&
-                  finalWishlistItemId != null &&
-                  finalWishlistItemId != 0) {
-                wishlistBloc
-                    .add(RemoveItemFromWishlist(itemId: finalWishlistItemId));
+              if (finalIsWishListed) {
+                if (finalWishlistItemId != null && finalWishlistItemId != 0) {
+                  wishlistBloc.add(RemoveItemFromWishlist(
+                    itemId: finalWishlistItemId ?? 0,
+                    productId: productId,
+                    productVariantId: productVariantId,
+                    storeId: storeId,
+                  ));
 
-                // Sync with local wishlist product listing if needed
-                context
-                    .read<WishlistProductBloc>()
-                    .add(RemoveProductLocally(itemId: finalWishlistItemId));
+                  // Sync with local wishlist product listing if needed
+                  context
+                      .read<WishlistProductBloc>()
+                      .add(RemoveProductLocally(itemId: finalWishlistItemId));
+                } else {
+                  // We know it's wishlisted but don't have the ID, BLoC will try to find it
+                  wishlistBloc.add(RemoveItemFromWishlist(
+                    itemId: 0,
+                    productId: productId,
+                    productVariantId: productVariantId,
+                    storeId: storeId,
+                  ));
+                }
                 return;
               }
 
               // CASE 2: Product not wishlisted -> Try to add directly if any wishlist exists
-              if (!finalIsWishListed &&
-                  wishlistState is UserWishlistLoaded &&
-                  wishlistState.wishlistData.isNotEmpty) {
-                final wishlist = wishlistState.wishlistData.first;
-                wishlistBloc.add(
-                  AddItemInWishlist(
-                    wishlistTitle: wishlist.title ?? '',
-                    productId: productId,
-                    productVariantId: productVariantId,
-                    storeId: storeId,
-                  ),
-                );
+              if (!finalIsWishListed) {
+                if (wishlistState is UserWishlistLoaded &&
+                    wishlistState.wishlistData.isNotEmpty) {
+                  final wishlist = wishlistState.wishlistData.first;
+                  wishlistBloc.add(
+                    AddItemInWishlist(
+                      wishlistTitle: wishlist.title ?? '',
+                      productId: productId,
+                      productVariantId: productVariantId,
+                      storeId: storeId,
+                    ),
+                  );
+                } else {
+                  // CASE 3: No wishlist yet -> Create default one and add product
+                  final userName = Global.userData?.name ?? 'My Wishlist';
+                  wishlistBloc.add(
+                    CreateNewWishlist(
+                      title: userName,
+                      productId: productId,
+                      productVariantId: productVariantId,
+                      storeId: storeId,
+                    ),
+                  );
+                }
                 return;
               }
-
-              // CASE 3: Fallback -> Show bottom sheet
-              context.read<UserWishlistBloc>().add(GetUserWishlistRequest());
-              await showModalBottomSheet<String>(
-                context: context,
-                useSafeArea: true,
-                isScrollControlled: true,
-                useRootNavigator: true,
-                backgroundColor: Theme.of(context).colorScheme.surface,
-                constraints: BoxConstraints(maxHeight: 500.h),
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                ),
-                builder: (_) => AddToWishlistSheetBody(
-                  productId: productId,
-                  productVariantId: productVariantId,
-                  storeId: storeId,
-                  wishlistItemId: finalWishlistItemId,
-                ),
-              );
             } else {
               await AuthGuard.ensureLoggedIn(context);
             }

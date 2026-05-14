@@ -1,5 +1,6 @@
 
 import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:grofery_user/screens/wishlist_page/model/user_wishlist_model.dart';
 import 'package:grofery_user/screens/wishlist_page/repo/wishlist_repo.dart';
@@ -37,6 +38,21 @@ class UserWishlistBloc extends Bloc<UserWishlistEvent, UserWishlistState> {
   final Set<String> _pendingAddOperations = {}; // Format: "productId_productVariantId_storeId_wishlistTitle"
   final Set<int> _pendingRemoveOperations = {}; // itemIds
   
+  // Track operation IDs per product to handle race conditions
+  final Map<String, int> _productOperationId = {};
+  
+  int _getNextOperationId(int productId, int productVariantId, int storeId) {
+    final key = _getCacheKey(productId, productVariantId, storeId);
+    final nextId = (_productOperationId[key] ?? 0) + 1;
+    _productOperationId[key] = nextId;
+    return nextId;
+  }
+
+  bool _isOperationStale(int productId, int productVariantId, int storeId, int operationId) {
+    final key = _getCacheKey(productId, productVariantId, storeId);
+    return (_productOperationId[key] ?? 0) > operationId;
+  }
+  
   // Check if an add operation is pending for a product in a specific wishlist
   bool isAddOperationPending(int productId, int productVariantId, int storeId, String wishlistTitle) {
     final key = '${_getCacheKey(productId, productVariantId, storeId)}_$wishlistTitle';
@@ -56,52 +72,16 @@ class UserWishlistBloc extends Bloc<UserWishlistEvent, UserWishlistState> {
   // Public method to check if product is wishlisted (checks both server state and local cache)
   bool isProductWishlisted(int productId, int productVariantId, int storeId) {
     final cacheKey = _getCacheKey(productId, productVariantId, storeId);
-    if (_localWishlistCache.containsKey(cacheKey)) {
-      return _localWishlistCache[cacheKey] != null;
-    }
-    // If not in cache, check server state
-    if (state is UserWishlistLoaded) {
-      final loadedState = state as UserWishlistLoaded;
-      for (final wishlist in loadedState.wishlistData) {
-        if (wishlist.items != null) {
-          for (final item in wishlist.items!) {
-            if (item.product?.id == productId && 
-                item.variant?.id == productVariantId && 
-                item.store?.id == storeId) {
-              // Update cache with server state
-              _localWishlistCache[cacheKey] = item.id;
-              return true;
-            }
-          }
-        }
-      }
-    }
-    return false;
+    
+    // Check local cache (O(1) lookup)
+    // If it's in the cache and NOT null, it's wishlisted
+    return _localWishlistCache[cacheKey] != null;
   }
   
   // Get wishlist item ID for a product
   int? getWishlistItemId(int productId, int productVariantId, int storeId) {
     final cacheKey = _getCacheKey(productId, productVariantId, storeId);
-    if (_localWishlistCache.containsKey(cacheKey)) {
-      return _localWishlistCache[cacheKey];
-    }
-    // If not in cache, check server state
-    if (state is UserWishlistLoaded) {
-      final loadedState = state as UserWishlistLoaded;
-      for (final wishlist in loadedState.wishlistData) {
-        if (wishlist.items != null) {
-          for (final item in wishlist.items!) {
-            if (item.product?.id == productId && 
-                item.variant?.id == productVariantId && 
-                item.store?.id == storeId) {
-              _localWishlistCache[cacheKey] = item.id;
-              return item.id;
-            }
-          }
-        }
-      }
-    }
-    return null;
+    return _localWishlistCache[cacheKey];
   }
   
   // Check if bloc has data for this product (either from cache or server state)
@@ -129,6 +109,8 @@ class UserWishlistBloc extends Bloc<UserWishlistEvent, UserWishlistState> {
       final lastPageNum = int.parse(response['data']['last_page'].toString());
       hasReachedMax = currentTotal >= lastPageNum || wishlistData.length < perPage;
       if(response['success'] == true){
+        // Clear old cache on full refresh to ensure sync with server
+        _localWishlistCache.clear();
         // Update local cache with server data
         _updateLocalCacheFromWishlistData(wishlistData);
         emit(UserWishlistLoaded(
@@ -198,18 +180,65 @@ class UserWishlistBloc extends Bloc<UserWishlistEvent, UserWishlistState> {
   }
 
   Future<void> _onCreateNewWishlist(CreateNewWishlist event, Emitter<UserWishlistState> emit) async {
-    emit(UserWishlistLoading());
-    try{
+    // Optimistically update cache if product info provided
+    if (event.productId != null && event.productVariantId != null && event.storeId != null) {
+      final cacheKey = _getCacheKey(event.productId!, event.productVariantId!, event.storeId!);
+      _localWishlistCache[cacheKey] = -1; // Temporary ID
+      
+      // If we are in loading or initial state, emit a minimal loaded state to trigger UI update
+      if (state is UserWishlistLoading || state is UserWishlistInitial) {
+        emit(UserWishlistLoaded(
+          message: '',
+          wishlistData: [],
+          hasReachedMax: true,
+        ));
+      } else if (state is UserWishlistLoaded) {
+        emit(state as UserWishlistLoaded); // Trigger rebuild
+      }
+    } else {
+      emit(UserWishlistLoading());
+    }
 
+    try{
       final response = await repository.createWishlist(title: event.title);
 
       if(response['success'] == true){
-        add(GetUserWishlistRequest());
+        if (event.productId != null && event.productVariantId != null && event.storeId != null) {
+          // If product info is provided, add the item to the newly created wishlist
+          add(AddItemInWishlist(
+            wishlistTitle: event.title,
+            productId: event.productId!,
+            productVariantId: event.productVariantId!,
+            storeId: event.storeId!,
+          ));
+        } else {
+          add(GetUserWishlistRequest());
+        }
       } else if (response['error'] == true){
-        emit(UserWishlistFailed(message: response['message']));
+        if (event.productId != null && event.productVariantId != null && event.storeId != null) {
+          // If it failed (likely because wishlist already exists), try adding anyway!
+          add(AddItemInWishlist(
+            wishlistTitle: event.title,
+            productId: event.productId!,
+            productVariantId: event.productVariantId!,
+            storeId: event.storeId!,
+          ));
+        } else {
+          emit(UserWishlistFailed(message: response['message']));
+        }
       }
     }catch(e) {
-      emit(UserWishlistFailed(message: e.toString()));
+      if (event.productId != null && event.productVariantId != null && event.storeId != null) {
+        // If it failed (likely because wishlist already exists), try adding anyway!
+        add(AddItemInWishlist(
+          wishlistTitle: event.title,
+          productId: event.productId!,
+          productVariantId: event.productVariantId!,
+          storeId: event.storeId!,
+        ));
+      } else {
+        emit(UserWishlistFailed(message: e.toString()));
+      }
     }
   }
 
@@ -221,9 +250,19 @@ class UserWishlistBloc extends Bloc<UserWishlistEvent, UserWishlistState> {
     final pendingKey = '${_getCacheKey(event.productId, event.productVariantId, event.storeId)}_${event.wishlistTitle}';
     _pendingAddOperations.add(pendingKey);
     
+    // Capture operation ID to detect race conditions
+    final opId = _getNextOperationId(event.productId, event.productVariantId, event.storeId);
+    
     // Emit current state to trigger UI update with loading indicator
     if (state is UserWishlistLoaded) {
       emit((state as UserWishlistLoaded));
+    } else if (state is UserWishlistInitial || state is UserWishlistLoading) {
+      // If not loaded yet, emit a minimal loaded state to allow optimistic updates to show
+      emit(UserWishlistLoaded(
+        message: '',
+        wishlistData: [],
+        hasReachedMax: true,
+      ));
     }
     
     // Optimistically update ONLY item count and cache (for icon state)
@@ -270,6 +309,35 @@ class UserWishlistBloc extends Bloc<UserWishlistEvent, UserWishlistState> {
           wishlistData: updatedWishlistData,
           hasReachedMax: currentState.hasReachedMax,
         ));
+      } else {
+        // If wishlist not found (e.g. newly created and state hasn't refreshed), create a temp one
+        final tempItem = Items(
+          id: -1,
+          wishlistId: -1,
+          product: WishlistProduct(id: event.productId),
+          variant: WishlistVariant(id: event.productVariantId),
+          store: Store(id: event.storeId),
+        );
+
+        final tempWishlist = WishlistData(
+          id: -1,
+          title: event.wishlistTitle,
+          items: [tempItem],
+          itemsCount: 1,
+        );
+
+        final updatedWishlistData = List<WishlistData>.from(currentState.wishlistData);
+        updatedWishlistData.add(tempWishlist);
+
+        // Update local cache
+        final cacheKey = _getCacheKey(event.productId, event.productVariantId, event.storeId);
+        _localWishlistCache[cacheKey] = -1;
+
+        emit(UserWishlistLoaded(
+          message: currentState.message,
+          wishlistData: updatedWishlistData,
+          hasReachedMax: currentState.hasReachedMax,
+        ));
       }
     }
     
@@ -285,9 +353,18 @@ class UserWishlistBloc extends Bloc<UserWishlistEvent, UserWishlistState> {
       // Remove from pending operations
       _pendingAddOperations.remove(pendingKey);
 
+      // Check if this operation is still valid (not superseded by a newer click)
+      if (_isOperationStale(event.productId, event.productVariantId, event.storeId, opId)) {
+        return;
+      }
+
       if(response['success'] == true){
-        // API succeeded - now refresh the wishlist to get actual item data with image
-        // This will update the items array and isWishListed check
+        // API succeeded - Try to get the real ID from response if available
+        int? serverItemId;
+        if (response['data'] != null && response['data']['id'] != null) {
+          serverItemId = int.tryParse(response['data']['id'].toString());
+        }
+
         if (state is UserWishlistLoaded) {
           final currentState = state as UserWishlistLoaded;
           final wishlistIndex = currentState.wishlistData.indexWhere(
@@ -295,53 +372,43 @@ class UserWishlistBloc extends Bloc<UserWishlistEvent, UserWishlistState> {
           );
           
           if (wishlistIndex != -1) {
-            // Refresh only this specific wishlist's data
-            try {
-              final refreshResponse = await repository.getUserWishlist(perPage: perPage, currentPage: 1);
-              if (refreshResponse['success'] == true) {
-                final refreshedWishlistData = List<WishlistData>.from(
-                  refreshResponse['data']['data'].map((data) => WishlistData.fromJson(data))
-                );
-                
-                // Update only the specific wishlist that was modified
-                final updatedWishlistData = List<WishlistData>.from(currentState.wishlistData);
-                final refreshedWishlist = refreshedWishlistData.firstWhere(
-                  (w) => w.title == event.wishlistTitle,
-                  orElse: () => currentState.wishlistData[wishlistIndex],
-                );
-                updatedWishlistData[wishlistIndex] = refreshedWishlist;
-                
-                // Update local cache with real item ID if found
+            // Update the temporary item (-1) with the real server ID
+            final updatedWishlistData = List<WishlistData>.from(currentState.wishlistData);
+            final wishlist = updatedWishlistData[wishlistIndex];
+            final updatedItems = List<Items>.from(wishlist.items ?? []);
+            
+            final tempItemIndex = updatedItems.indexWhere((item) => 
+                item.id == -1 && 
+                item.product?.id == event.productId && 
+                item.variant?.id == event.productVariantId);
+            
+            if (tempItemIndex != -1) {
+              if (serverItemId != null) {
+                updatedItems[tempItemIndex] = updatedItems[tempItemIndex].copyWith(id: serverItemId);
+                // Also update cache with real ID
                 final cacheKey = _getCacheKey(event.productId, event.productVariantId, event.storeId);
-                if (refreshedWishlist.items != null) {
-                  for (final item in refreshedWishlist.items!) {
-                    if (item.product?.id == event.productId && 
-                        item.variant?.id == event.productVariantId && 
-                        item.store?.id == event.storeId) {
-                      _localWishlistCache[cacheKey] = item.id;
-                      break;
-                    }
-                  }
-                }
-                
-                emit(UserWishlistLoaded(
-                  message: currentState.message,
-                  wishlistData: updatedWishlistData,
-                  hasReachedMax: currentState.hasReachedMax,
-                ));
+                _localWishlistCache[cacheKey] = serverItemId;
               } else {
-                // If refresh fails, just emit current state to remove loading
-                emit((state as UserWishlistLoaded));
+                // If no ID in response, we might still need to refresh once to get it
+                // but we do it SILENTLY or only if needed.
+                // For now, let's keep the refresh as a fallback but make it more targeted if possible.
+                add(GetUserWishlistRequest()); 
+                return;
               }
-            } catch (e) {
-              // If refresh fails, just emit current state to remove loading
-              emit((state as UserWishlistLoaded));
             }
-          } else {
-            emit((state as UserWishlistLoaded));
+            
+            updatedWishlistData[wishlistIndex] = wishlist.copyWith(items: updatedItems);
+            
+            emit(UserWishlistLoaded(
+              message: currentState.message,
+              wishlistData: updatedWishlistData,
+              hasReachedMax: currentState.hasReachedMax,
+              timestamp: DateTime.now(),
+            ));
           }
         }
-      } else if (response['error'] == true){
+      }
+ else if (response['error'] == true){
         // Revert optimistic update on error
         if (state is UserWishlistLoaded && originalWishlist != null) {
           final currentState = state as UserWishlistLoaded;
@@ -579,17 +646,79 @@ class UserWishlistBloc extends Bloc<UserWishlistEvent, UserWishlistState> {
   }
 
   Future<void> _onRemoveItemFromWishlist(RemoveItemFromWishlist event, Emitter<UserWishlistState> emit) async {
+    int actualItemId = event.itemId;
+    int? productId = event.productId;
+    int? productVariantId = event.productVariantId;
+    int? storeId = event.storeId;
+
+    // If itemId is unknown (0), try to find it in the current state using product info
+    if (actualItemId == 0 && productId != null) {
+      if (state is UserWishlistLoaded) {
+        final currentState = state as UserWishlistLoaded;
+        for (final wishlist in currentState.wishlistData) {
+          if (wishlist.items != null) {
+            final item = wishlist.items!.firstWhere(
+              (i) => i.product?.id == productId && 
+                     (productVariantId == null || i.variant?.id == productVariantId),
+              orElse: () => Items(),
+            );
+            if (item.id != null) {
+              actualItemId = item.id!;
+              productVariantId ??= item.variant?.id;
+              storeId ??= item.store?.id;
+              break;
+            }
+          }
+        }
+      }
+    }
+    
+    // If still unknown, we can't remove it from the server, but we can clear local cache
+    if (actualItemId == 0) {
+      if (productId != null && productVariantId != null && storeId != null) {
+        final key = _getCacheKey(productId, productVariantId, storeId);
+        _localWishlistCache[key] = null;
+        if (state is UserWishlistLoaded) {
+          emit((state as UserWishlistLoaded).copyWith(timestamp: DateTime.now()));
+        }
+      } else {
+        // Last resort: refresh everything
+        add(GetUserWishlistRequest());
+      }
+      return;
+    }
+
     // Store original state to revert if API fails
     WishlistData? originalWishlist;
     Items? removedItem;
     int? wishlistIndex;
     
     // Mark operation as pending
-    _pendingRemoveOperations.add(event.itemId);
+    _pendingRemoveOperations.add(actualItemId);
+    
+    // Find product info for operation tracking if not provided
+    if (productId == null || productVariantId == null || storeId == null) {
+      if (state is UserWishlistLoaded) {
+        final currentState = state as UserWishlistLoaded;
+        for (final wishlist in currentState.wishlistData) {
+          final item = wishlist.items?.firstWhere((i) => i.id == actualItemId, orElse: () => Items());
+          if (item != null && item.id != null) {
+            productId = item.product?.id;
+            productVariantId = item.variant?.id;
+            storeId = item.store?.id;
+            break;
+          }
+        }
+      }
+    }
+
+    final opId = (productId != null && productVariantId != null && storeId != null) 
+        ? _getNextOperationId(productId, productVariantId, storeId) 
+        : null;
     
     // Emit current state to trigger UI update with loading indicator
     if (state is UserWishlistLoaded) {
-      emit((state as UserWishlistLoaded));
+      emit((state as UserWishlistLoaded).copyWith(timestamp: DateTime.now()));
     }
     
     // Optimistically update the wishlist in state without showing loading
@@ -613,7 +742,7 @@ class UserWishlistBloc extends Bloc<UserWishlistEvent, UserWishlistState> {
       if (originalWishlist != null && removedItem != null && wishlistIndex != null) {
         // Create updated wishlist with item removed
         final updatedItems = List<Items>.from(originalWishlist.items ?? []);
-        updatedItems.removeWhere((item) => item.id == event.itemId);
+        updatedItems.removeWhere((item) => item.id == actualItemId);
         
         final updatedWishlist = originalWishlist.copyWith(
           items: updatedItems,
@@ -676,21 +805,28 @@ class UserWishlistBloc extends Bloc<UserWishlistEvent, UserWishlistState> {
     // Just remove it from state without calling API
     if (removedItem != null && removedItem.id == -1) {
       // Remove from pending operations
-      _pendingRemoveOperations.remove(event.itemId);
+      _pendingRemoveOperations.remove(actualItemId);
       // Item was optimistically added, already removed from state
       // No API call needed, but emit state to remove loading indicator
       if (state is UserWishlistLoaded) {
-        emit((state as UserWishlistLoaded));
+        emit((state as UserWishlistLoaded).copyWith(timestamp: DateTime.now()));
       }
       return;
     }
     
     // Call API in background for real items
     try{
-      final response = await repository.removeItemFromWishlist(itemId: event.itemId);
+      final response = await repository.removeItemFromWishlist(itemId: actualItemId);
+      
+      // Check if this operation is stale
+      if (opId != null && productId != null && productVariantId != null && storeId != null) {
+        if (_isOperationStale(productId, productVariantId, storeId, opId)) {
+          return;
+        }
+      }
       
       // Remove from pending operations
-      _pendingRemoveOperations.remove(event.itemId);
+      _pendingRemoveOperations.remove(actualItemId);
       
       if(response['success'] == true){
         // API succeeded - state already updated optimistically
@@ -735,7 +871,7 @@ class UserWishlistBloc extends Bloc<UserWishlistEvent, UserWishlistState> {
         
         // Emit state to update UI (remove loading indicator)
         if (state is UserWishlistLoaded) {
-          emit((state as UserWishlistLoaded));
+          emit((state as UserWishlistLoaded).copyWith(timestamp: DateTime.now()));
         }
       } else if (response['error'] == true){
         // Revert optimistic update on error
@@ -790,7 +926,7 @@ class UserWishlistBloc extends Bloc<UserWishlistEvent, UserWishlistState> {
       }
     }catch(e) {
       // Remove from pending operations
-      _pendingRemoveOperations.remove(event.itemId);
+      _pendingRemoveOperations.remove(actualItemId);
       
       // Revert optimistic update on error
       if (state is UserWishlistLoaded && originalWishlist != null && wishlistIndex != null) {
@@ -852,7 +988,7 @@ class UserWishlistBloc extends Bloc<UserWishlistEvent, UserWishlistState> {
     
     // Emit current state to trigger UI update
     if (state is UserWishlistLoaded) {
-      emit((state as UserWishlistLoaded));
+      emit((state as UserWishlistLoaded).copyWith(timestamp: DateTime.now()));
     } else if (state is UserWishlistInitial) {
       // If no state loaded yet, emit a minimal loaded state
       emit(UserWishlistLoaded(
@@ -869,7 +1005,7 @@ class UserWishlistBloc extends Bloc<UserWishlistEvent, UserWishlistState> {
     
     // Emit current state to trigger UI update
     if (state is UserWishlistLoaded) {
-      emit((state as UserWishlistLoaded));
+      emit((state as UserWishlistLoaded).copyWith(timestamp: DateTime.now()));
     } else if (state is UserWishlistInitial) {
       emit(UserWishlistLoaded(
         message: '',

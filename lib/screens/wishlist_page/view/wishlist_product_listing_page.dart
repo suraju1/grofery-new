@@ -184,61 +184,61 @@ class _WishlistProductListingPageState
 
   Widget _buildGridItem(List<WishlistProductItems> productData, int index) {
     final product = productData[index];
+    final p = product.product;
+    final v = product.variant;
+    
+    if (p == null || v == null) {
+      return const SizedBox.shrink(); // Hide malformed items
+    }
+
     return CustomProductCard(
-      productId: product.product!.id!,
-      productImage: product.product!.image!,
-      productSlug: product.product!.slug!,
-      productName: product.product!.title!,
-      productPrice: product.variant!.price.toString(),
-      specialPrice: product.variant!.specialPrice.toString(),
-      productTags: [],
-      estimatedDeliveryTime: product.product!.estimatedDeliveryTime.toString(),
+      productId: p.id ?? 0,
+      productImage: p.image ?? '',
+      productSlug: p.slug ?? '',
+      productName: p.title ?? '',
+      productPrice: (v.price ?? 0).toString(),
+      specialPrice: (v.specialPrice ?? 0).toString(),
+      productTags: const [],
+      estimatedDeliveryTime: (p.estimatedDeliveryTime ?? '').toString(),
       assetImage: '',
-      ratings: double.parse(product.product!.ratings.toString()),
-      ratingCount: product.product!.ratingCount!,
-      quickDeliveryAvailable: product.product!.quickDeliveryAvailable ?? false,
+      ratings: (p.ratings ?? 0).toDouble(),
+      ratingCount: p.ratingCount ?? 0,
+      quickDeliveryAvailable: p.quickDeliveryAvailable ?? false,
       onAddToCart: (quantity) {
         final item = UserCart(
-            productId: product.id.toString(),
-            variantId: product.variant!.id.toString(),
-            variantName: product.product!.title.toString(),
-            vendorId: product.variant!.storeId.toString(),
-            name: product.product!.title.toString(),
-            image: product.product!.image!,
-            price: product.variant!.specialPrice!.toDouble(),
-            originalPrice: product.variant!.price!.toDouble(),
+            productId: (product.id ?? 0).toString(),
+            variantId: (v.id ?? 0).toString(),
+            variantName: p.title ?? '',
+            vendorId: (v.storeId ?? 0).toString(),
+            name: p.title ?? '',
+            image: p.image ?? '',
+            price: (v.specialPrice ?? 0).toDouble(),
+            originalPrice: (v.price ?? 0).toDouble(),
             quantity: quantity,
             serverCartItemId: null,
             syncAction: CartSyncAction.add,
             updatedAt: DateTime.now(),
-            minQty: product.product!.minimumOrderQuantity!,
-            maxQty: product.product!.totalAllowedQuantity!,
-            isOutOfStock: product.variant!.stock! <= 0,
-            tieredPricing: product.variant!.tieredPricing,
+            minQty: p.minimumOrderQuantity ?? 1,
+            maxQty: p.totalAllowedQuantity ?? 100,
+            isOutOfStock: (v.stock ?? 0) <= 0,
+            tieredPricing: v.tieredPricing,
             isSynced: false);
         context.read<CartBloc>().add(AddToCart(item: item, context: context));
-        /*context.read<AddToCartBloc>().add(
-            AddItemToCart(
-              productVariantId: product.variant!.id!,
-              storeId: product.variant!.storeId!,
-              quantity: product.product!.quantityStepSize!,
-            ),
-          );*/
       },
-      isStoreOpen: product.product!.storeStatus!.isOpen ?? true,
-      isWishListed: false,
-      productVariantId: product.variant!.id!,
-      storeId: product.variant!.storeId!,
-      totalStocks: product.variant!.stock!,
-      showWishlist: false,
-      wishlistItemId: 0,
-      imageFit: product.product!.imageFit ?? 'contain',
-      quantityStepSize: product.product!.quantityStepSize!,
-      minQty: product.product!.minimumOrderQuantity!,
-      totalAllowedQuantity: product.product!.totalAllowedQuantity!,
-      tieredPricing: product.variant!.tieredPricing,
-      mrp: product.variant!.mrp?.toString(),
-      mrpStatus: product.variant!.mrpStatus,
+      isStoreOpen: p.storeStatus?.isOpen ?? true,
+      isWishListed: true, // It's in the wishlist product listing
+      productVariantId: v.id ?? 0,
+      storeId: v.storeId ?? 0,
+      totalStocks: v.stock ?? 0,
+      showWishlist: true,
+      wishlistItemId: product.id ?? 0,
+      imageFit: p.imageFit ?? 'contain',
+      quantityStepSize: p.quantityStepSize ?? 1,
+      minQty: p.minimumOrderQuantity ?? 1,
+      totalAllowedQuantity: p.totalAllowedQuantity ?? 100,
+      tieredPricing: v.tieredPricing,
+      mrp: v.mrp?.toString(),
+      mrpStatus: v.mrpStatus,
     );
 
     /*return WishlistProductCard(

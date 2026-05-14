@@ -12,10 +12,19 @@ class GetMoreUserWishlistRequest extends UserWishlistEvent {}
 
 class CreateNewWishlist extends UserWishlistEvent {
   final String title;
-  CreateNewWishlist({required this.title});
+  final int? productId;
+  final int? productVariantId;
+  final int? storeId;
+
+  CreateNewWishlist({
+    required this.title,
+    this.productId,
+    this.productVariantId,
+    this.storeId,
+  });
   @override
   // TODO: implement props
-  List<Object?> get props => [title];
+  List<Object?> get props => [title, productId, productVariantId, storeId];
 }
 
 class AddItemInWishlist extends UserWishlistEvent {
@@ -49,10 +58,18 @@ class DeleteWishlist extends UserWishlistEvent {
 
 class RemoveItemFromWishlist extends UserWishlistEvent {
   final int itemId;
-  RemoveItemFromWishlist({required this.itemId});
+  final int? productId;
+  final int? productVariantId;
+  final int? storeId;
+
+  RemoveItemFromWishlist({
+    required this.itemId,
+    this.productId,
+    this.productVariantId,
+    this.storeId,
+  });
   @override
-  // TODO: implement props
-  List<Object?> get props => [itemId];
+  List<Object?> get props => [itemId, productId, productVariantId, storeId];
 }
 
 class MoveItemToAnotherWishlist extends UserWishlistEvent {

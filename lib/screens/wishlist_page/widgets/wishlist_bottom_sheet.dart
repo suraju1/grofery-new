@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:grofery_user/config/constant.dart';
+import 'package:grofery_user/config/global.dart';
 import 'package:grofery_user/config/theme.dart';
 import 'package:grofery_user/utils/widgets/custom_circular_progress_indicator.dart';
 import '../../../utils/widgets/custom_toast.dart';
@@ -121,30 +122,36 @@ class AddToWishlistSheetBody extends StatelessWidget {
 
             // Wishlist list from Bloc
             Flexible(
-              child: BlocBuilder<UserWishlistBloc, UserWishlistState>(
-                builder: (context, state) {
-                  if (state is UserWishlistLoading) {
-                    return SizedBox(
-                      height: 150.h,
-                      child: CustomCircularProgressIndicator(),
-                    );
+              child: BlocListener<UserWishlistBloc, UserWishlistState>(
+                listener: (context, state) {
+                  if (state is UserWishlistLoaded && state.wishlistData.isEmpty) {
+                    final userName = Global.userData?.name ?? 'My Wishlist';
+                    context.read<UserWishlistBloc>().add(CreateNewWishlist(title: userName));
                   }
-                  if (state is UserWishlistFailed) {
-                    Navigator.pop(context);
-                    ToastManager.show(
-                        context: context,
-                        message: state.message
-                    );
-
-                  }
-                  if (state is UserWishlistLoaded) {
-                    final items = state.wishlistData;
-                    if (items.isEmpty) {
-                      return Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Text(AppLocalizations.of(context)!.noWishlistsYet),
+                },
+                child: BlocBuilder<UserWishlistBloc, UserWishlistState>(
+                  builder: (context, state) {
+                    if (state is UserWishlistLoading) {
+                      return SizedBox(
+                        height: 150.h,
+                        child: CustomCircularProgressIndicator(),
                       );
                     }
+                    if (state is UserWishlistFailed) {
+                      Navigator.pop(context);
+                      ToastManager.show(
+                          context: context,
+                          message: state.message
+                      );
+                    }
+                    if (state is UserWishlistLoaded) {
+                      final items = state.wishlistData;
+                      if (items.isEmpty) {
+                        return Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Center(child: CustomCircularProgressIndicator()),
+                        );
+                      }
                     return NotificationListener<ScrollNotification>(
                       onNotification: (scrollInfo){
                         if (scrollInfo is ScrollUpdateNotification &&
@@ -362,8 +369,9 @@ class AddToWishlistSheetBody extends StatelessWidget {
                       ),
                     );
                   }
-                  return const SizedBox.shrink();
-                },
+                    return const SizedBox.shrink();
+                  },
+                ),
               ),
             ),
             SizedBox(height: MediaQuery.of(context).padding.bottom),
