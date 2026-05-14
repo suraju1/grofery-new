@@ -216,9 +216,10 @@ class ClearProductFilters extends ProductListingEvent {
 class FilterByDeliveryTime extends ProductListingEvent {
   final int? maxMinutes;
   final int? minMinutes;
+  final bool? quickDeliveryOnly;
 
-  FilterByDeliveryTime({this.maxMinutes, this.minMinutes});
+  FilterByDeliveryTime({this.maxMinutes, this.minMinutes, this.quickDeliveryOnly});
 
   @override
-  List<Object?> get props => [maxMinutes, minMinutes];
+  List<Object?> get props => [maxMinutes, minMinutes, quickDeliveryOnly];
 }

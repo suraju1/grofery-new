@@ -42,7 +42,7 @@ class YouMightAlsoLikeProductWidget extends StatelessWidget {
           ),
         ),
         SizedBox(
-          height: 270.h,
+          height: 285.h,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.symmetric(horizontal: 16.w),

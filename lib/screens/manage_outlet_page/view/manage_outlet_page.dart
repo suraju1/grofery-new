@@ -16,7 +16,8 @@ class ManageOutletPage extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_new,
+              color: Colors.black, size: 20),
           onPressed: () => GoRouter.of(context).pop(),
         ),
         title: const Text(
@@ -32,7 +33,7 @@ class ManageOutletPage extends StatelessWidget {
         builder: (context, state) {
           // Default to Global.userData
           var userData = Global.userData;
-          
+
           // If the profile API returned data, use it for freshness
           if (state is UserProfileLoaded && state.userData.data != null) {
             final apiData = state.userData.data!;
@@ -53,31 +54,31 @@ class ManageOutletPage extends StatelessWidget {
             child: Column(
               children: [
                 // Add New Outlet Button
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Add a new outlet',
-                        style: TextStyle(
-                          color: Colors.red.shade400,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      Icon(Icons.add, color: Colors.red.shade400, size: 20),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
+                // Container(
+                //   width: double.infinity,
+                //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                //   decoration: BoxDecoration(
+                //     color: Colors.white,
+                //     borderRadius: BorderRadius.circular(12),
+                //     border: Border.all(color: Colors.grey.shade200),
+                //   ),
+                //   child: Row(
+                //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                //     children: [
+                //       Text(
+                //         'Add a new outlet',
+                //         style: TextStyle(
+                //           color: Colors.red.shade400,
+                //           fontSize: 16,
+                //           fontWeight: FontWeight.w500,
+                //         ),
+                //       ),
+                //       Icon(Icons.add, color: Colors.red.shade400, size: 20),
+                //     ],
+                //   ),
+                // ),
+                // const SizedBox(height: 16),
+
                 // Outlet Details Card
                 Container(
                   width: double.infinity,
@@ -99,8 +100,8 @@ class ManageOutletPage extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  userData.shopName.isNotEmpty 
-                                      ? userData.shopName 
+                                  userData.shopName.isNotEmpty
+                                      ? userData.shopName
                                       : 'My Outlet',
                                   style: const TextStyle(
                                     fontSize: 18,
@@ -110,8 +111,8 @@ class ManageOutletPage extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  userData.name.isNotEmpty 
-                                      ? userData.name 
+                                  userData.name.isNotEmpty
+                                      ? userData.name
                                       : 'No Name Available',
                                   style: TextStyle(
                                     fontSize: 14,
@@ -121,20 +122,21 @@ class ManageOutletPage extends StatelessWidget {
                               ],
                             ),
                           ),
-                          Row(
-                            children: [
-                              Icon(TablerIcons.edit, color: Colors.red.shade400, size: 18),
-                              const SizedBox(width: 4),
-                              Text(
-                                'edit',
-                                style: TextStyle(
-                                  color: Colors.red.shade400,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
+                          // Row(
+                          //   children: [
+                          //     Icon(TablerIcons.edit,
+                          //         color: Colors.red.shade400, size: 18),
+                          //     const SizedBox(width: 4),
+                          //     Text(
+                          //       'edit',
+                          //       style: TextStyle(
+                          //         color: Colors.red.shade400,
+                          //         fontWeight: FontWeight.w600,
+                          //         fontSize: 14,
+                          //       ),
+                          //     ),
+                          //   ],
+                          // ),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -142,10 +144,13 @@ class ManageOutletPage extends StatelessWidget {
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          Icon(TablerIcons.phone, color: Colors.grey.shade600, size: 18),
+                          Icon(TablerIcons.phone,
+                              color: Colors.grey.shade600, size: 18),
                           const SizedBox(width: 12),
                           Text(
-                            userData.mobile.isNotEmpty ? userData.mobile : 'N/A',
+                            userData.mobile.isNotEmpty
+                                ? userData.mobile
+                                : 'N/A',
                             style: const TextStyle(
                               fontSize: 14,
                               color: Colors.black87,
@@ -157,7 +162,8 @@ class ManageOutletPage extends StatelessWidget {
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          Icon(TablerIcons.mail, color: Colors.grey.shade600, size: 18),
+                          Icon(TablerIcons.mail,
+                              color: Colors.grey.shade600, size: 18),
                           const SizedBox(width: 12),
                           Text(
                             userData.email.isNotEmpty ? userData.email : 'N/A',

@@ -76,6 +76,9 @@ import 'screens/home_page/bloc/explore/explore_bloc.dart';
 import 'screens/home_page/bloc/explore/explore_event.dart';
 import 'screens/home_page/bloc/recommended_products/recommended_products_bloc.dart';
 import 'screens/home_page/repo/recommended_products_repo.dart';
+import 'screens/home_page/bloc/target_gift/target_gift_bloc.dart';
+import 'screens/home_page/bloc/target_gift/target_gift_event.dart';
+import 'screens/home_page/repo/target_gift_repo.dart';
 import 'screens/product_detail_page/bloc/product_detail_bloc/product_detail_bloc.dart';
 import 'bloc/user_cart_bloc/user_cart_bloc.dart';
 import 'bloc/user_details_bloc/user_details_bloc.dart';
@@ -189,6 +192,9 @@ class _MyAppState extends State<MyApp> {
         ),
         BlocProvider(
           create: (context) => RecommendedProductsBloc(RecommendedProductsRepository()),
+        ),
+        BlocProvider(
+          create: (context) => TargetGiftBloc(TargetGiftRepository())..add(FetchTargetGift()),
         ),
         BlocProvider(create: (context) => UserDataBloc()),
         BlocProvider(

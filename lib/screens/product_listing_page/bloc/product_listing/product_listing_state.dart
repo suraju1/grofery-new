@@ -23,6 +23,7 @@ class ProductListingLoaded extends ProductListingState {
   final String? brandIds;
   final List<BrandsData>? brandsList;
   final int? appliedDeliveryMinutes; // New: for UI state tracking
+  final bool quickDeliveryOnly;
 
   ProductListingLoaded({
     required this.message,
@@ -38,6 +39,7 @@ class ProductListingLoaded extends ProductListingState {
     this.brandIds,
     this.brandsList,
     this.appliedDeliveryMinutes,
+    this.quickDeliveryOnly = false,
   });
 
   @override
@@ -55,6 +57,7 @@ class ProductListingLoaded extends ProductListingState {
     brandIds,
     brandsList,
     appliedDeliveryMinutes,
+    quickDeliveryOnly,
   ];
 
   ProductListingLoaded copyWith({
@@ -71,6 +74,7 @@ class ProductListingLoaded extends ProductListingState {
     String? brandIds,
     List<BrandsData>? brandsList,
     int? appliedDeliveryMinutes,
+    bool? quickDeliveryOnly,
   }) {
     return ProductListingLoaded(
       message: message ?? this.message,
@@ -86,6 +90,7 @@ class ProductListingLoaded extends ProductListingState {
       brandIds: brandIds ?? this.brandIds,
       brandsList: brandsList ?? this.brandsList,
       appliedDeliveryMinutes: appliedDeliveryMinutes ?? this.appliedDeliveryMinutes,
+      quickDeliveryOnly: quickDeliveryOnly ?? this.quickDeliveryOnly,
     );
   }
 }

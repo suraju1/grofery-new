@@ -255,8 +255,8 @@ class StoreCartSection extends StatelessWidget {
 
   Widget _buildProductImage(String imageUrl, int productId) {
     return Container(
-      width: 50,
-      height: 50,
+      width: 65,
+      height: 65,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
         color: Colors.white,

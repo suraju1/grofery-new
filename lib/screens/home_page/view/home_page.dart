@@ -43,6 +43,7 @@ import '../widgets/location_bottom_sheet.dart';
 import '../widgets/product_feature_section_widget.dart';
 import '../widgets/sub_category_feature_section_widget.dart';
 import '../widgets/explore_more_carousel.dart';
+import '../widgets/target_gift_progress_widget.dart';
 import 'package:grofery_user/utils/widgets/empty_states_page.dart';
 import '../bloc/sub_category/sub_category_state.dart';
 import '../bloc/explore/explore_bloc.dart';
@@ -51,6 +52,8 @@ import '../bloc/explore/explore_state.dart';
 import '../bloc/recommended_products/recommended_products_bloc.dart';
 import '../bloc/recommended_products/recommended_products_event.dart';
 import '../bloc/recommended_products/recommended_products_state.dart';
+import '../bloc/target_gift/target_gift_bloc.dart';
+import '../bloc/target_gift/target_gift_event.dart';
 import '../../product_listing_page/model/product_listing_type.dart';
 import 'package:grofery_user/router/app_routes.dart';
 import 'package:go_router/go_router.dart';
@@ -441,6 +444,7 @@ class _HomePageState extends State<HomePage>
 
       // Fetch recommended products alongside others
       context.read<RecommendedProductsBloc>().add(FetchRecommendedProducts());
+      context.read<TargetGiftBloc>().add(FetchTargetGift());
     } else {
       context
           .read<SubCategoryBloc>()
@@ -1114,6 +1118,7 @@ class _HomePageState extends State<HomePage>
                                                         enlargeCenterPage: true,
                                                         enlargeFactor: 0.18,
                                                       ),
+                                                      const TargetGiftProgressWidget(),
                                                     ],
                                                   );
                                                 } else if (state

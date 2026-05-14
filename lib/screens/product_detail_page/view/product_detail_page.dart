@@ -1953,38 +1953,28 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   }
 
   Widget _buildQuickDeliveryBadge(bool available) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-      decoration: BoxDecoration(
-        color: available ? const Color(0xFFE8F5E9) : const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(6.r),
-        border: Border.all(
-          color: available ? const Color(0xFFC8E6C9) : const Color(0xFFE0E0E0),
-          width: 0.8,
+    if (!available) return const SizedBox.shrink();
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          TablerIcons.bolt,
+          color: const Color(0xFFFFB300), // Bright yellow/orange
+          size: 18.sp,
         ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            available ? Icons.bolt_rounded : Icons.local_shipping_rounded,
-            color:
-                available ? const Color(0xFF2E7D32) : const Color(0xFF757575),
-            size: 16.sp,
+        SizedBox(width: 4.w),
+        Text(
+          "Quick",
+          style: TextStyle(
+            color: const Color(0xFFFFB300),
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w900,
+            fontStyle: FontStyle.italic,
+            fontFamily: AppTheme.fontFamily,
           ),
-          SizedBox(width: 4.w),
-          Text(
-            available ? "Quick Delivery" : "Standard Delivery",
-            style: TextStyle(
-              color:
-                  available ? const Color(0xFF2E7D32) : const Color(0xFF757575),
-              fontSize: 10.sp,
-              fontWeight: FontWeight.w800,
-              fontFamily: AppTheme.fontFamily,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

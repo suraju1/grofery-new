@@ -82,12 +82,18 @@ android {
     //     }
     // }
     buildTypes {
-    release {
-        signingConfig signingConfigs.release
-        minifyEnabled false
-        shrinkResources false
+        release {
+            // Use release signing only if keystore file actually exists
+            // Otherwise fall back to debug signing (allows building without keystore)
+            if (keystorePropertiesFile.exists() && keystoreProperties.getProperty('storeFile')) {
+                signingConfig signingConfigs.release
+            } else {
+                signingConfig signingConfigs.debug
+            }
+            minifyEnabled false
+            shrinkResources false
+        }
     }
-}
 
 }
 

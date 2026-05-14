@@ -74,7 +74,7 @@ class OrderDeliveryCard extends StatelessWidget {
             // Product images - Horizontal ListView
             if (productImages.isNotEmpty)
               SizedBox(
-                height: 80,
+                height: 95,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: productImages.length,
@@ -84,8 +84,8 @@ class OrderDeliveryCard extends StatelessWidget {
                         right: index < productImages.length - 1 ? 15 : 0,
                       ),
                       child: Container(
-                        width: 80,
-                        height: 80,
+                        width: 95,
+                        height: 95,
                         decoration: BoxDecoration(
                           color: Colors.grey[100],
                           borderRadius: BorderRadius.circular(8),

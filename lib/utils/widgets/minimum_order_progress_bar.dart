@@ -6,11 +6,13 @@ import '../../config/theme.dart';
 class MinimumOrderProgressBar extends StatelessWidget {
   final double currentTotal;
   final bool isSmall;
+  final bool isBottomAttached;
 
   const MinimumOrderProgressBar({
     super.key,
     required this.currentTotal,
     this.isSmall = false,
+    this.isBottomAttached = true,
   });
 
   @override
@@ -22,72 +24,48 @@ class MinimumOrderProgressBar extends StatelessWidget {
 
     if (currentTotal <= 0 && !isSmall) return const SizedBox.shrink();
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (!isSmall) ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                isGoalReached 
-                    ? "Minimum order reached!" 
-                    : "Add ${AppConstant.currency}${remaining.toStringAsFixed(0)} more to order",
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w600,
-                  color: isGoalReached ? AppTheme.successColor : Colors.grey.shade700,
-                ),
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: isBottomAttached ? 16.w : 16.w, 
+        vertical: 12.h
+      ),
+      decoration: BoxDecoration(
+        color: isGoalReached ? AppTheme.successColor.withValues(alpha: 0.1) : const Color(0xFFFFF3E0),
+        borderRadius: isBottomAttached 
+            ? BorderRadius.only(
+                topLeft: Radius.circular(20.r),
+                topRight: Radius.circular(20.r),
+              )
+            : BorderRadius.circular(20.r),
+        border: isBottomAttached 
+            ? null 
+            : Border.all(
+                color: isGoalReached ? AppTheme.successColor.withValues(alpha: 0.3) : Colors.orange.shade200,
               ),
-              if (!isGoalReached)
-                Text(
-                  "${(progress * 100).toInt()}%",
-                  style: TextStyle(
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryColor,
-                  ),
-                ),
-            ],
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isGoalReached ? Icons.check_circle_outline : Icons.error_outline,
+            color: isGoalReached ? AppTheme.successColor : Colors.deepOrange,
+            size: 20.sp,
           ),
-          SizedBox(height: 6.h),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: Text(
+              isGoalReached 
+                  ? "Minimum order reached!" 
+                  : "Add ${AppConstant.currency}${remaining.toInt()} more for minimum order of ${AppConstant.currency}${minAmount.toInt()}",
+              style: TextStyle(
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w500,
+                color: isGoalReached ? AppTheme.successColor : Colors.black87,
+              ),
+            ),
+          ),
         ],
-        Container(
-          height: isSmall ? 4.h : 8.h,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: isSmall ? Colors.black.withValues(alpha: 0.1) : Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(10.r),
-          ),
-          child: Stack(
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 500),
-                curve: Curves.easeOut,
-                width: MediaQuery.of(context).size.width * progress,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: isGoalReached
-                        ? [AppTheme.successColor, AppTheme.successColor.withValues(alpha: 0.7)]
-                        : [AppTheme.primaryColor, AppTheme.primaryColor.withValues(alpha: 0.8)],
-                  ),
-                  borderRadius: BorderRadius.circular(10.r),
-                  boxShadow: [
-                    if (!isSmall)
-                      BoxShadow(
-                        color: (isGoalReached ? AppTheme.successColor : AppTheme.primaryColor)
-                            .withValues(alpha: 0.3),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

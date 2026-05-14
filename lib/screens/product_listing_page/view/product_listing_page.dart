@@ -235,25 +235,18 @@ class _ProductListingPageState extends State<ProductListingPage> {
               isSelected: _selectedIndicator == 'non_veg',
             ),
             SizedBox(width: 8.w),
-            _buildFilterChip(
-              onTap: () {
-                setState(() {
-                  if (_selectedMaxDeliveryMinutes == 30 &&
-                      _selectedMinDeliveryMinutes == null) {
-                    _selectedMaxDeliveryMinutes = null;
-                    _selectedMinDeliveryMinutes = null;
-                  } else {
-                    _selectedMaxDeliveryMinutes = 30;
-                    _selectedMinDeliveryMinutes = null;
-                  }
-                });
-                context.read<ProductListingBloc>().add(FilterByDeliveryTime(
-                    maxMinutes: _selectedMaxDeliveryMinutes,
-                    minMinutes: _selectedMinDeliveryMinutes));
+            BlocBuilder<ProductListingBloc, ProductListingState>(
+              builder: (context, state) {
+                final bool isQuickDelivery = state is ProductListingLoaded && state.quickDeliveryOnly;
+                return _buildFilterChip(
+                  onTap: () {
+                    context.read<ProductListingBloc>().add(FilterByDeliveryTime(
+                        quickDeliveryOnly: !isQuickDelivery));
+                  },
+                  label: "⚡ Fast Delivery",
+                  isSelected: isQuickDelivery,
+                );
               },
-              label: "⚡ Fast Delivery",
-              isSelected: _selectedMaxDeliveryMinutes == 30 &&
-                  _selectedMinDeliveryMinutes == null,
             ),
             SizedBox(width: 8.w),
             _buildFilterChip(
@@ -607,8 +600,8 @@ class _ProductListingPageState extends State<ProductListingPage> {
                             if (variant == null) return const SizedBox.shrink();
 
                             return Padding(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 8.w, vertical: 4.h),
+                              padding: EdgeInsets.only(
+                                  left: 4.w, right: 8.w, top: 2.h, bottom: 2.h),
                               child: CustomProductCard(
                                 productId: product.id,
                                 productImage: product.mainImage,

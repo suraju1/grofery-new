@@ -47,6 +47,7 @@ class ProductListingBloc
   // Frontend-only filter tracking
   int? appliedMaxDeliveryMinutes;
   int? appliedMinDeliveryMinutes;
+  bool appliedQuickDelivery = false;
 
   Future<void> _onFetchListingProducts(
       FetchListingProducts event, Emitter<ProductListingState> emit) async {
@@ -145,7 +146,7 @@ class ProductListingBloc
 
         if (response['success'] == true) {
           emit(ProductListingLoaded(
-              message: response['message'],
+              message: response['message'] ?? '',
               productList: _applyFrontendFilters(products),
               fullProductList: products,
               hasReachedMax: hasReachedMax,
@@ -157,7 +158,8 @@ class ProductListingBloc
               categoryIds: categoryIds,
               brandIds: brandIds,
               brandsList: brandsList,
-              appliedDeliveryMinutes: appliedMaxDeliveryMinutes));
+              appliedDeliveryMinutes: appliedMaxDeliveryMinutes,
+              quickDeliveryOnly: appliedQuickDelivery));
         } else {
           emit(ProductListingFailed(error: response['message']));
         }
@@ -276,7 +278,7 @@ class ProductListingBloc
           }
 
           emit(ProductListingLoaded(
-              message: response['message'],
+              message: response['message'] ?? '',
               productList: _applyFrontendFilters(updatedProductList),
               fullProductList: updatedProductList,
               hasReachedMax: hasReachedMax,
@@ -288,7 +290,8 @@ class ProductListingBloc
               categoryIds: categoryIds,
               brandIds: brandIds,
               brandsList: brandsList,
-              appliedDeliveryMinutes: appliedMaxDeliveryMinutes));
+              appliedDeliveryMinutes: appliedMaxDeliveryMinutes,
+              quickDeliveryOnly: appliedQuickDelivery));
         } else {
           emit(ProductListingFailed(
               error: response['message'] ?? 'No products found'));
@@ -388,7 +391,7 @@ class ProductListingBloc
 
         if (response['success'] == true) {
           emit(ProductListingLoaded(
-              message: response['message'],
+              message: response['message'] ?? '',
               productList: _applyFrontendFilters(products),
               fullProductList: products,
               hasReachedMax: hasReachedMax,
@@ -400,7 +403,8 @@ class ProductListingBloc
               categoryIds: categoryIds,
               brandIds: brandIds,
               brandsList: brandsList,
-              appliedDeliveryMinutes: appliedMaxDeliveryMinutes));
+              appliedDeliveryMinutes: appliedMaxDeliveryMinutes,
+              quickDeliveryOnly: appliedQuickDelivery));
         } else {
           emit(ProductListingFailed(error: response['message']));
         }
@@ -427,17 +431,11 @@ class ProductListingBloc
 
     // Show loading state while keeping existing products visible
     if (currentState is ProductListingLoaded) {
-      emit(ProductListingLoaded(
-          message: currentState.message,
-          productList: currentState.productList,
-          hasReachedMax: false,
-          isFilterLoading: true,
-          isLoading: false,
-          currentSortType: currentState.currentSortType,
-          totalProducts: currentState.totalProducts,
-          keywords: currentState.keywords,
-          categoryIds: currentState.categoryIds,
-          brandIds: currentState.brandIds));
+      emit(currentState.copyWith(
+        isFilterLoading: true,
+        hasReachedMax: false,
+        isLoading: false,
+      ));
     } else {
       emit(ProductListingLoading());
     }
@@ -529,7 +527,7 @@ class ProductListingBloc
 
         if (response['success'] == true) {
           emit(ProductListingLoaded(
-              message: response['message'],
+              message: response['message'] ?? '',
               productList: _applyFrontendFilters(products),
               fullProductList: products,
               hasReachedMax: hasReachedMax,
@@ -541,7 +539,8 @@ class ProductListingBloc
               categoryIds: categoryIds,
               brandIds: brandIds,
               brandsList: brandsList,
-              appliedDeliveryMinutes: appliedMaxDeliveryMinutes));
+              appliedDeliveryMinutes: appliedMaxDeliveryMinutes,
+              quickDeliveryOnly: appliedQuickDelivery));
         } else {
           emit(ProductListingFailed(error: response['message']));
         }
@@ -614,6 +613,7 @@ class ProductListingBloc
   ) {
     appliedMaxDeliveryMinutes = event.maxMinutes;
     appliedMinDeliveryMinutes = event.minMinutes;
+    appliedQuickDelivery = event.quickDeliveryOnly ?? false;
 
     final currentState = state;
     if (currentState is ProductListingLoaded) {
@@ -621,6 +621,7 @@ class ProductListingBloc
       emit(currentState.copyWith(
         productList: filteredList,
         appliedDeliveryMinutes: appliedMaxDeliveryMinutes,
+        quickDeliveryOnly: appliedQuickDelivery,
       ));
     }
   }
@@ -629,8 +630,13 @@ class ProductListingBloc
     List<ProductData> result = products;
 
     if (appliedMaxDeliveryMinutes != null ||
-        appliedMinDeliveryMinutes != null) {
+        appliedMinDeliveryMinutes != null ||
+        appliedQuickDelivery) {
       result = result.where((product) {
+        if (appliedQuickDelivery && !product.quickDeliveryAvailable) {
+          return false;
+        }
+
         final minutes = _parseDeliveryTime(product.estimatedDeliveryTime);
         if (minutes == null)
           return true; // Keep if we can't parse? or filter out? Usually keep.

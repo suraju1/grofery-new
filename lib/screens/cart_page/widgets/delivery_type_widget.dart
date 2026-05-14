@@ -377,28 +377,26 @@ class DeliveryTypeWidget extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (deliveryType == DeliveryType.rush) ...[
-                Container(
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFAA0C),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(Icons.bolt, size: 18, color: Colors.white),
-                      SizedBox(width: 2),
-                      Text(
-                        'Fastest Option',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      )
-                    ],
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.bolt,
+                      size: 16.sp,
+                      color: const Color(0xFFFFB300),
+                    ),
+                    SizedBox(width: 2.w),
+                    Text(
+                      'Fastest Option',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: const Color(0xFFFFB300),
+                        fontWeight: FontWeight.w900,
+                        fontStyle: FontStyle.italic,
+                        fontFamily: AppTheme.fontFamily,
+                      ),
+                    )
+                  ],
                 ),
                 SizedBox(height: 8),
               ],

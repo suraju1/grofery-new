@@ -44,7 +44,7 @@ dependencies:
   cached_network_image: ^3.4.1
   flutter_cache_manager: ^3.4.1
   flutter_html: ^3.0.0
-  animations: ^2.0.11
+  animations: ^2.2.0
   circular_gradient_spinner: ^0.0.3
   confetti: ^0.8.0
   image_picker: ^1.2.0

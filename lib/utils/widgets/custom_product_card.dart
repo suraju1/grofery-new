@@ -171,8 +171,9 @@ class CustomProductCard extends StatelessWidget {
                                     currentQty > 0 ? currentQty : 1);
                             final double original =
                                 double.tryParse(productPrice) ?? 0.0;
-                            final displayQty =
-                                currentQty > 0 ? currentQty : (minQty > 0 ? minQty : 1);
+                            final displayQty = currentQty > 0
+                                ? currentQty
+                                : (minQty > 0 ? minQty : 1);
                             final totalPrice = effectivePrice * displayQty;
                             final totalOriginalPrice = original * displayQty;
 
@@ -229,7 +230,6 @@ class CustomProductCard extends StatelessWidget {
                                     ),
                                   ],
                                   SizedBox(height: 4.h),
-                                  SizedBox(height: 4.h),
                                 ],
                               ),
                             );
@@ -259,38 +259,28 @@ class CustomProductCard extends StatelessWidget {
   }
 
   Widget _buildQuickDeliveryBadge(bool available) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 3.h),
-      decoration: BoxDecoration(
-        color: available ? const Color(0xFFE8F5E9) : const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(6.r),
-        border: Border.all(
-          color: available ? const Color(0xFFC8E6C9) : const Color(0xFFE0E0E0),
-          width: 1,
+    if (!available) return const SizedBox.shrink();
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          TablerIcons.bolt,
+          size: 14.sp,
+          color: const Color(0xFFFFB300), // Bright yellow/orange
         ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            available ? TablerIcons.bolt : TablerIcons.truck_delivery,
-            size: 11.sp,
-            color:
-                available ? const Color(0xFF2E7D32) : const Color(0xFF757575),
+        SizedBox(width: 2.w),
+        Text(
+          'Quick',
+          style: TextStyle(
+            fontSize: 12.sp,
+            color: const Color(0xFFFFB300),
+            fontWeight: FontWeight.w900,
+            fontStyle: FontStyle.italic,
+            fontFamily: AppTheme.fontFamily,
           ),
-          SizedBox(width: 4.w),
-          Text(
-            available ? 'Quick Delivery' : 'Standard Delivery',
-            style: TextStyle(
-              fontSize: 9.sp,
-              color:
-                  available ? const Color(0xFF2E7D32) : const Color(0xFF757575),
-              fontWeight: FontWeight.w700,
-              fontFamily: AppTheme.fontFamily,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -307,7 +297,7 @@ class CustomProductCard extends StatelessWidget {
           Container(
             margin: EdgeInsetsDirectional.only(end: 8.w, bottom: 4.h),
             width: double.infinity,
-            height: 120.h,
+            height: 140.h,
             decoration: BoxDecoration(
               color: Colors.grey.shade50,
               borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
@@ -576,7 +566,8 @@ class CustomProductCard extends StatelessWidget {
     );
   }
 
-  Widget _buildWishlistButton(BuildContext context, {double size = 30, double iconSize = 18}) {
+  Widget _buildWishlistButton(BuildContext context,
+      {double size = 30, double iconSize = 18}) {
     if (!showWishlist) return const SizedBox.shrink();
 
     return BlocBuilder<UserWishlistBloc, UserWishlistState>(
@@ -738,7 +729,8 @@ class CustomProductCard extends StatelessWidget {
       onAddToCart: onAddToCart,
       getCartItem: (state) => _getCartItem(state),
       basePrice: double.tryParse(productPrice) ?? 0.0,
-      packSize: quantityStepSize > 0 ? quantityStepSize : 1,
+      mrp: double.tryParse(mrp ?? '') ?? 0.0,
+      packSize: 1,
     );
   }
 
@@ -799,7 +791,7 @@ class CustomProductCard extends StatelessWidget {
                 children: [
                   // 1. Image on top
                   SizedBox(
-                    height: 95.h,
+                    height: 100.h,
                     child: Stack(
                       children: [
                         Container(
@@ -880,12 +872,14 @@ class CustomProductCard extends StatelessWidget {
                           final cartItem = _getCartItem(state);
                           final int currentQty = cartItem?.quantity ?? 0;
                           final double effectivePrice =
-                              _calculateEffectivePrice(
-                                  currentQty > 0 ? currentQty : (minQty > 0 ? minQty : 1));
+                              _calculateEffectivePrice(currentQty > 0
+                                  ? currentQty
+                                  : (minQty > 0 ? minQty : 1));
                           final double original =
                               double.tryParse(productPrice) ?? 0.0;
-                          final displayQty =
-                              currentQty > 0 ? currentQty : (minQty > 0 ? minQty : 1);
+                          final displayQty = currentQty > 0
+                              ? currentQty
+                              : (minQty > 0 ? minQty : 1);
                           final totalPrice = effectivePrice * displayQty;
                           final totalOriginalPrice = original * displayQty;
 
@@ -912,16 +906,16 @@ class CustomProductCard extends StatelessWidget {
                                       final double originalPrice = parsedMrp;
                                       if (originalPrice <= 0)
                                         return const SizedBox.shrink();
-                                        return Text(
-                                          "₹${formatPrice(totalOriginalPrice)}",
-                                          style: TextStyle(
-                                            fontSize: 12.sp,
-                                            color: Colors.grey.shade400,
-                                            decoration:
-                                                TextDecoration.lineThrough,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        );
+                                      return Text(
+                                        "₹${formatPrice(totalOriginalPrice)}",
+                                        style: TextStyle(
+                                          fontSize: 12.sp,
+                                          color: Colors.grey.shade400,
+                                          decoration:
+                                              TextDecoration.lineThrough,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      );
                                     }),
                                   ],
                                 ],
@@ -1068,7 +1062,7 @@ class CustomProductCard extends StatelessWidget {
         .toString();
 
     return Container(
-      margin: EdgeInsets.only(bottom: 6.h, left: 2.w, right: 2.w),
+      margin: EdgeInsets.only(bottom: 4.h, left: 0, right: 2.w),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.r),
@@ -1106,7 +1100,7 @@ class CustomProductCard extends StatelessWidget {
                   // Top Half
                   Padding(
                     padding: EdgeInsets.only(
-                        left: 8.w, right: 12.w, top: 12.h, bottom: 8.h),
+                        left: 8.w, right: 10.w, top: 8.h, bottom: 4.h),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1189,8 +1183,8 @@ class CustomProductCard extends StatelessWidget {
                           clipBehavior: Clip.none,
                           children: [
                             Container(
-                              width: 80.w,
-                              height: 80.w,
+                              width: 105.w,
+                              height: 105.w,
                               decoration: BoxDecoration(
                                 color: Colors.grey.shade50,
                                 borderRadius: BorderRadius.circular(8.r),
@@ -1211,7 +1205,8 @@ class CustomProductCard extends StatelessWidget {
                             PositionedDirectional(
                               bottom: 4.w,
                               end: 4.w,
-                              child: _buildWishlistButton(context, size: 24, iconSize: 14),
+                              child: _buildWishlistButton(context,
+                                  size: 24, iconSize: 14),
                             ),
                             // Veg indicator on image
                             if (indicator != null &&
@@ -1252,7 +1247,7 @@ class CustomProductCard extends StatelessWidget {
                   // Bottom Half Pricing & Action
                   Padding(
                     padding:
-                        EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                        EdgeInsets.only(left: 8.w, right: 10.w, top: 6.h, bottom: 4.h),
                     child: BlocBuilder<CartBloc, CartState>(
                       builder: (context, state) {
                         final cartItem = _getCartItem(state);
@@ -1262,8 +1257,9 @@ class CustomProductCard extends StatelessWidget {
                         final double parsedMrp =
                             double.tryParse(mrp ?? '') ?? 0.0;
                         final double original = parsedMrp;
-                        final displayQty =
-                            currentQty > 0 ? currentQty : (minQty > 0 ? minQty : 1);
+                        final displayQty = currentQty > 0
+                            ? currentQty
+                            : (minQty > 0 ? minQty : 1);
                         final totalPrice = effectivePrice * displayQty;
                         final totalOriginalPrice = original * displayQty;
 
@@ -1853,6 +1849,7 @@ class _TieredPricingExpandableList extends StatefulWidget {
   final Function(int) onAddToCart;
   final UserCart? Function(CartState) getCartItem;
   final double basePrice;
+  final double mrp;
   final int packSize;
 
   const _TieredPricingExpandableList({
@@ -1862,6 +1859,7 @@ class _TieredPricingExpandableList extends StatefulWidget {
     required this.onAddToCart,
     required this.getCartItem,
     required this.basePrice,
+    required this.mrp,
     required this.packSize,
   }) : super(key: key);
 
@@ -1908,15 +1906,16 @@ class _TieredPricingExpandableListState
                 // isExactMatch is used to determine if we should "Toggle Off" or just "Reset to Tier Min"
                 final bool isExactMatch = widget.currentQty == tier.minQty;
 
-                // Calculation: (BasePricePerUnit * currentQty) - (TierUnitPrice * currentQty)
+                // Calculation: (MrpPerUnit * currentQty) - (TierUnitPrice * currentQty)
                 final double unitBasePrice = widget.basePrice / widget.packSize;
+                final double unitMrp = (widget.mrp > 0 ? widget.mrp : widget.basePrice) / widget.packSize;
                 final double tierUnitPrice = tier.price / tier.minQty;
 
                 // Use current quantity if this is the active tier, otherwise use tier min
                 final int effectiveQty =
                     isSelectedTier ? widget.currentQty : tier.minQty;
                 final double savings =
-                    (unitBasePrice - tierUnitPrice) * effectiveQty;
+                    (unitMrp - tierUnitPrice) * effectiveQty;
 
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
@@ -1982,68 +1981,68 @@ class _TieredPricingExpandableListState
                                         : const Color(0xFF1E5BB2),
                                   ),
                                 ),
-                                if (isSelectedTier && savings > 0)
-                                  Padding(
-                                    padding: EdgeInsets.only(top: 2.h),
-                                    child: Row(
-                                      children: [
-                                        Text(
-                                          "₹${formatPriceLocally(savings)} saved on ${widget.currentQty} pcs",
-                                          style: TextStyle(
-                                            fontSize: 9.sp,
-                                            fontWeight: FontWeight.bold,
-                                            color: const Color(0xFF1D8936),
-                                          ),
-                                        ),
-                                        SizedBox(width: 4.w),
-                                      ],
-                                    ),
-                                  ),
                               ],
                             ),
                           ),
                           SizedBox(width: 4.w),
-                          if (isSelectedTier)
-                            Container(
-                              padding: EdgeInsets.all(2.r),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF1D8936),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.check,
-                                size: 12.sp,
-                                color: Colors.white,
-                              ),
-                            )
-                          else
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 10.w, vertical: 4.h),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(6.r),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    "Add ${tier.minQty}",
-                                    style: TextStyle(
-                                      fontSize: 10.sp,
-                                      fontWeight: FontWeight.bold,
-                                      color: const Color(0xFFE54A50),
-                                    ),
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              if (isSelectedTier)
+                                Container(
+                                  padding: EdgeInsets.all(2.r),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF1D8936),
+                                    shape: BoxShape.circle,
                                   ),
-                                  SizedBox(width: 4.w),
-                                  Icon(
-                                    TablerIcons.plus,
-                                    size: 14.sp,
-                                    color: const Color(0xFFE54A50),
+                                  child: Icon(
+                                    Icons.check,
+                                    size: 12.sp,
+                                    color: Colors.white,
                                   ),
-                                ],
-                              ),
-                            ),
+                                )
+                              else
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 10.w, vertical: 6.h),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.transparent,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        "ADD",
+                                        style: TextStyle(
+                                          fontSize: 13.sp,
+                                          fontWeight: FontWeight.w800,
+                                          color: const Color(0xFFE54A50),
+                                        ),
+                                      ),
+                                      SizedBox(width: 2.w),
+                                      Icon(
+                                        TablerIcons.plus,
+                                        size: 16.sp,
+                                        color: const Color(0xFFE54A50),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              if (isSelectedTier && savings > 0) ...[
+                                SizedBox(height: 2.h),
+                                Text(
+                                  "Saved ₹${formatPriceLocally(savings)}",
+                                  style: TextStyle(
+                                    fontSize: 10.sp,
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color(0xFF1D8936),
+                                    fontFamily: AppTheme.fontFamily,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
                         ],
                       ),
                     ),

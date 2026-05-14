@@ -983,7 +983,8 @@ class _CartPageState extends State<CartPage> {
                                       padding:
                                           EdgeInsets.symmetric(vertical: 16.h),
                                       child: MinimumOrderProgressBar(
-                                          currentTotal: itemsTotal),
+                                          currentTotal: itemsTotal,
+                                          isBottomAttached: false),
                                     ),
                                     BillSummaryWidget(
                                       itemsOriginalPrice: originalItemsTotal >

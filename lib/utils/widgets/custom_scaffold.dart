@@ -31,7 +31,8 @@ class CustomScaffold extends StatefulWidget {
   final bool showViewCart;
   final FutureOr<void> Function(BuildContext context)? onConnectivityRestored;
   final FutureOr<void> Function(BuildContext context)? onConnectivityLost;
-  final FutureOr<void> Function(bool isConnected, BuildContext context)? onConnectivityChanged;
+  final FutureOr<void> Function(bool isConnected, BuildContext context)?
+      onConnectivityChanged;
   final bool notifyConnectivityStatusOnInit;
 
   const CustomScaffold({
@@ -58,7 +59,8 @@ class CustomScaffold extends StatefulWidget {
   State<CustomScaffold> createState() => _CustomScaffoldState();
 }
 
-class _CustomScaffoldState extends State<CustomScaffold> with TickerProviderStateMixin {
+class _CustomScaffoldState extends State<CustomScaffold>
+    with TickerProviderStateMixin {
   late AnimationController _slideController;
   late AnimationController _expandController;
   late Animation<double> _slideAnimation;
@@ -75,7 +77,6 @@ class _CustomScaffoldState extends State<CustomScaffold> with TickerProviderStat
   int _previousItemCount = 0;
   bool _hasInitializedCart = false;
   int _stableItemCount = 0;
-
 
   @override
   void initState() {
@@ -216,8 +217,9 @@ class _CustomScaffoldState extends State<CustomScaffold> with TickerProviderStat
       notifyStatusChangeOnInit: widget.notifyConnectivityStatusOnInit,
       child: BlocBuilder<CartBloc, CartState>(
         builder: (context, cartBlocState) {
-          final hasCartItems = (cartBlocState is CartLoaded && cartBlocState.items.isNotEmpty) ||
-                               (cartBlocState is CartLoading && cartBlocState.items.isNotEmpty);
+          final hasCartItems = (cartBlocState is CartLoaded &&
+                  cartBlocState.items.isNotEmpty) ||
+              (cartBlocState is CartLoading && cartBlocState.items.isNotEmpty);
 
           int currentItemCount = 0;
           bool isValidCart = false;
@@ -236,7 +238,8 @@ class _CustomScaffoldState extends State<CustomScaffold> with TickerProviderStat
 
           // Only skip process animation logic if it's truly the initial state (CartInitial)
           // or if no items exist. If content is available (Loaded or Loading), we process it.
-          final isCartDataLoaded = cartBlocState is CartLoaded || cartBlocState is CartLoading;
+          final isCartDataLoaded =
+              cartBlocState is CartLoaded || cartBlocState is CartLoading;
 
           // Animation logic
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -259,7 +262,9 @@ class _CustomScaffoldState extends State<CustomScaffold> with TickerProviderStat
                 });
 
                 // Show animation only on app startup with existing items
-                if (!_hasAnimatedGlobally && !_hasShownFullCartAnimation && currentItemCount > 0) {
+                if (!_hasAnimatedGlobally &&
+                    !_hasShownFullCartAnimation &&
+                    currentItemCount > 0) {
                   log('Initial load: Animating app startup with existing cart');
                   _hasAnimatedGlobally = true;
                   _animateIn();
@@ -288,14 +293,14 @@ class _CustomScaffoldState extends State<CustomScaffold> with TickerProviderStat
               // Show full animation or just display cart
               if (shouldShowFullAnimation) {
                 _animateIn();
-              } else if ((_slideController.value != 1.0 || _expandController.value != 1.0) &&
+              } else if ((_slideController.value != 1.0 ||
+                      _expandController.value != 1.0) &&
                   !_slideController.isAnimating &&
                   !_expandController.isAnimating) {
                 log('Showing cart without full animation (page navigation or additional product)');
                 _showCartWithoutAnimation();
               }
-            }
-            else if (!hasCartItems && _isCartVisible && _hasInitializedCart) {
+            } else if (!hasCartItems && _isCartVisible && _hasInitializedCart) {
               log('Animating out: Cart is now empty');
               _animateOut();
               _hasInitializedCart = false;
@@ -308,31 +313,41 @@ class _CustomScaffoldState extends State<CustomScaffold> with TickerProviderStat
           log('Building CustomScaffold: hasCartItems=$hasCartItems, itemCount=$currentItemCount, _isCartVisible=$_isCartVisible');
 
           return Scaffold(
-            backgroundColor: widget.backgroundColor ?? Theme.of(context).colorScheme.surface,
+            backgroundColor:
+                widget.backgroundColor ?? Theme.of(context).colorScheme.surface,
             appBar: widget.appBar ??
                 (widget.showAppBar == true
                     ? AppBar(
-                  title: widget.title != null ? Text(
-                    widget.title!,) : null,
-                  titleTextStyle: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.tertiary,
-                      fontSize: isTablet(context) ? 24 : 16.sp
-                  ),
-                  actions: widget.appBarActions,
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  shadowColor: Theme.of(context).colorScheme.surfaceContainer.withValues(alpha: 0.2),
-                )
+                        title: widget.title != null
+                            ? Text(
+                                widget.title!,
+                              )
+                            : null,
+                        titleTextStyle: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.tertiary,
+                            fontSize: isTablet(context) ? 24 : 16.sp),
+                        actions: widget.appBarActions,
+                        backgroundColor: Theme.of(context).colorScheme.surface,
+                        shadowColor: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainer
+                            .withValues(alpha: 0.2),
+                      )
                     : null),
             body: Stack(
               children: [
                 widget.body,
+
                 /// Animated VIEW CART
-                if (_isCartVisible && widget.showViewCart && _previousItemCount > 0)
+                if (_isCartVisible &&
+                    widget.showViewCart &&
+                    _previousItemCount > 0)
                   Directionality(
                     textDirection: TextDirection.ltr,
                     child: AnimatedBuilder(
-                      animation: Listenable.merge([_slideController, _expandController]),
+                      animation: Listenable.merge(
+                          [_slideController, _expandController]),
                       builder: (context, child) {
                         return Positioned(
                           bottom: _slideAnimation.value,
@@ -346,36 +361,6 @@ class _CustomScaffoldState extends State<CustomScaffold> with TickerProviderStat
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    if (_widthAnimation.value > 150.w)
-                                      Padding(
-                                        padding: EdgeInsets.only(
-                                            left: 20.w,
-                                            right: 20.w,
-                                            bottom: 12.h),
-                                        child: Container(
-                                          padding: EdgeInsets.symmetric(
-                                              horizontal: 16.w, vertical: 8.h),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius:
-                                                BorderRadius.circular(12.r),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black
-                                                    .withValues(alpha: 0.1),
-                                                blurRadius: 10,
-                                                offset: const Offset(0, 4),
-                                              ),
-                                            ],
-                                          ),
-                                          child: MinimumOrderProgressBar(
-                                            currentTotal:
-                                                cartBlocState is CartLoaded
-                                                    ? cartBlocState.totalAmount
-                                                    : 0.0,
-                                          ),
-                                        ),
-                                      ),
                                     _buildCartButton(context, cartBlocState),
                                   ],
                                 ),
@@ -388,7 +373,19 @@ class _CustomScaffoldState extends State<CustomScaffold> with TickerProviderStat
                   ),
               ],
             ),
-            bottomNavigationBar: widget.bottomNavigationBar,
+            bottomNavigationBar: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_isCartVisible && widget.showViewCart && _previousItemCount > 0)
+                  MinimumOrderProgressBar(
+                    currentTotal: cartBlocState is CartLoaded
+                        ? cartBlocState.totalAmount
+                        : 0.0,
+                  ),
+                if (widget.bottomNavigationBar != null)
+                  widget.bottomNavigationBar!,
+              ],
+            ),
             floatingActionButton: widget.floatingActionButton,
             floatingActionButtonLocation: widget.floatingActionButtonLocation,
           );
@@ -417,7 +414,7 @@ class _CustomScaffoldState extends State<CustomScaffold> with TickerProviderStat
     return AnimatedButton(
       animationType: TapAnimationType.scale,
       onTap: () {
-        if(Global.userData != null) {
+        if (Global.userData != null) {
           GoRouter.of(context).push(AppRoutes.cart);
         } else {
           GoRouter.of(context).push(AppRoutes.login);
@@ -453,11 +450,11 @@ class _CustomScaffoldState extends State<CustomScaffold> with TickerProviderStat
                         : _imageSlideAnimation.value * 20.w,
                     child: _widthAnimation.value < 48.0.w
                         ? SingleProductImage(
-                      imageUrl: _getCartItems(cartBlocState).first,
-                    )
+                            imageUrl: _getCartItems(cartBlocState).first,
+                          )
                         : AnimatedFacePile(
-                      cartItems: _getCartItems(cartBlocState),
-                    ),
+                            cartItems: _getCartItems(cartBlocState),
+                          ),
                   ),
                 ),
               ),
@@ -497,7 +494,6 @@ class _CustomScaffoldState extends State<CustomScaffold> with TickerProviderStat
                           ],
                         ),
                       ),
-
                       Directionality(
                         textDirection: TextDirection.ltr,
                         child: Container(
@@ -518,8 +514,6 @@ class _CustomScaffoldState extends State<CustomScaffold> with TickerProviderStat
                   ),
                 ),
               ),
-
-
           ],
         ),
       ),
@@ -536,7 +530,8 @@ class _CustomScaffoldState extends State<CustomScaffold> with TickerProviderStat
     }
   }
 
-  void _invokeFutureOr(FutureOr<void> Function(BuildContext context)? callback) {
+  void _invokeFutureOr(
+      FutureOr<void> Function(BuildContext context)? callback) {
     if (callback == null) return;
 
     final result = callback(context);
@@ -558,7 +553,8 @@ class SingleProductImage extends StatefulWidget {
   State<SingleProductImage> createState() => _SingleProductImageState();
 }
 
-class _SingleProductImageState extends State<SingleProductImage> with SingleTickerProviderStateMixin {
+class _SingleProductImageState extends State<SingleProductImage>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _opacityAnimation;
@@ -652,7 +648,8 @@ class AnimatedFacePile extends StatefulWidget {
   State<AnimatedFacePile> createState() => _AnimatedFacePileState();
 }
 
-class _AnimatedFacePileState extends State<AnimatedFacePile> with TickerProviderStateMixin {
+class _AnimatedFacePileState extends State<AnimatedFacePile>
+    with TickerProviderStateMixin {
   late AnimationController _pileController;
   late AnimationController _newItemController;
   late List<Animation<double>> _slideAnimations;
@@ -770,7 +767,7 @@ class _AnimatedFacePileState extends State<AnimatedFacePile> with TickerProvider
           child: Stack(
             children: List.generate(
               count,
-                  (index) {
+              (index) {
                 final slide = index < _slideAnimations.length
                     ? _slideAnimations[index]
                     : AlwaysStoppedAnimation<double>(index * 10.0);
