@@ -191,10 +191,12 @@ class _MyAppState extends State<MyApp> {
           create: (context) => SubCategoryBloc(),
         ),
         BlocProvider(
-          create: (context) => RecommendedProductsBloc(RecommendedProductsRepository()),
+          create: (context) =>
+              RecommendedProductsBloc(RecommendedProductsRepository()),
         ),
         BlocProvider(
-          create: (context) => TargetGiftBloc(TargetGiftRepository())..add(FetchTargetGift()),
+          create: (context) =>
+              TargetGiftBloc(TargetGiftRepository())..add(FetchTargetGift()),
         ),
         BlocProvider(create: (context) => UserDataBloc()),
         BlocProvider(

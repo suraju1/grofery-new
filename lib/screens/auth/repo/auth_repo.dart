@@ -213,7 +213,8 @@ class AuthRepository {
   }) async {
     try {
       String? fcmToken = await getFCMToken();
-      String? apiUrl = isApple ? ApiRoutes.appleAuthApi : ApiRoutes.googleAuthApi;
+      String? apiUrl =
+          isApple ? ApiRoutes.appleAuthApi : ApiRoutes.googleAuthApi;
 
       log('🔑 Sending SocialAuth: firebase_token=${firebaseToken.substring(0, 10)}..., name=$name, email=$email');
 
@@ -256,7 +257,8 @@ class AuthRepository {
       try {
         // Attempt to get access token, but don't let it block the whole flow if it fails
         // as idToken is often sufficient for Firebase login.
-        final authorization = await googleUser.authorizationClient.authorizeScopes(['email']);
+        final authorization =
+            await googleUser.authorizationClient.authorizeScopes(['email']);
         accessToken = authorization.accessToken;
         log('🔵 Step 6: Got access token: ${accessToken.isNotEmpty ? "EXISTS" : "EMPTY"}');
       } catch (authzError) {

@@ -58,5 +58,3 @@ class UserStatusChecked extends UserDataState {
   // TODO: implement props
   List<Object?> get props => [isLoggedIn, token, userData];
 }
-
-

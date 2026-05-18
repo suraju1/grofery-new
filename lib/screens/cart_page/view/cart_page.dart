@@ -57,6 +57,9 @@ import '../bloc/get_user_cart/get_user_cart_bloc.dart';
 import '../bloc/promo_code/promo_code_bloc.dart';
 import '../bloc/promo_code/promo_code_event.dart';
 import '../bloc/promo_code/promo_code_state.dart';
+import '../bloc/validate_promo_code/validate_promo_code_bloc.dart';
+// import '../bloc/validate_promo_code/validate_promo_code_event.dart';
+// import '../bloc/validate_promo_code/validate_promo_code_state.dart';
 import '../bloc/clear_cart/clear_cart_state.dart';
 import '../model/get_cart_model.dart';
 import '../widgets/cart_product_item.dart';
@@ -93,7 +96,15 @@ class _CartPageState extends State<CartPage> {
   String orderNote = '';
   double walletAmountUsedValue = 0.0;
   double walletBalance = 0.0;
+  final TextEditingController _promoController = TextEditingController();
   TimeSlot? selectedTimeSlot;
+
+  // Calculated totals for UI consistency
+  double calculatedItemsTotal = 0.0;
+  double originalItemsTotal = 0.0;
+  double itemSavings = 0.0;
+  double currentDeliveryCharge = 0.0;
+  double rushCharge = 99.0;
 
   @override
   void initState() {
@@ -114,6 +125,12 @@ class _CartPageState extends State<CartPage> {
       walletBalance =
           double.tryParse(walletState.userWallet.first.balance ?? '0.0') ?? 0.0;
     }
+  }
+
+  @override
+  void dispose() {
+    _promoController.dispose();
+    super.dispose();
   }
 
   bool get canUseWallet {
@@ -137,6 +154,111 @@ class _CartPageState extends State<CartPage> {
             promoCode: promoCode,
           ),
         );
+  }
+
+  void _calculateTotals(List<GetCartModel> cartData) {
+    if (cartData.isEmpty || cartData.first.data?.items == null) {
+      setState(() {
+        itemsTotal = 0;
+        totalAmount = 0;
+        calculatedItemsTotal = 0;
+        originalItemsTotal = 0;
+        itemSavings = 0;
+        currentDeliveryCharge = 0;
+        walletAmountUsedValue = 0;
+      });
+      return;
+    }
+
+    final data = cartData.first.data!;
+    final billSummaryData = data.paymentSummary;
+
+    cartId = data.id;
+    final newDeliveryZoneId = data.deliveryZone?.zoneId;
+
+    // Only fetch addresses if deliveryZoneId changed or is first time set
+    if (newDeliveryZoneId != null && newDeliveryZoneId != previousDeliveryZoneId) {
+      deliveryZoneId = newDeliveryZoneId;
+      previousDeliveryZoneId = newDeliveryZoneId;
+      // Fetch address list with deliveryZoneId for checkout (only when zone changes)
+      context.read<GetAddressListBloc>().add(FetchUserAddressList(deliveryZoneId: deliveryZoneId));
+    } else {
+      deliveryZoneId = newDeliveryZoneId;
+    }
+
+    // 1. Initial values from backend
+    double rawTotalAmount = billSummaryData?.payableAmount?.toDouble() ?? 0.0;
+    double rawWalletUsed = billSummaryData?.walletAmountUsed?.toDouble() ?? 0.0;
+    double rawItemsTotal = billSummaryData?.itemsTotal?.toDouble() ?? rawTotalAmount;
+
+    // 2. Recalculate items totals (Overriding inaccurate backend totals)
+    double calcItemsTotal = 0;
+    double origItemsTotal = 0;
+
+    for (var item in data.items!) {
+      double unitPrice = (item.variant?.specialPrice ?? 0).toDouble();
+      if (item.variant?.tieredPricing != null && item.variant!.tieredPricing!.isNotEmpty) {
+        for (var tier in item.variant!.tieredPricing!) {
+          if ((item.quantity ?? 1) >= tier.minQty) {
+            unitPrice = tier.price / tier.minQty;
+          }
+        }
+      }
+      calcItemsTotal += unitPrice * (item.quantity ?? 1);
+      origItemsTotal += (item.variant?.price ?? 0) * (item.quantity ?? 1);
+    }
+
+    // 3. Sync itemsTotal with calculation
+    // IMPORTANT: We use the calculated total for the minimum order check
+    itemsTotal = calcItemsTotal;
+
+    // 4. Calculate price differences and adjust grand total
+    double backendItemsTotal = billSummaryData?.itemsTotal?.toDouble() ?? 0;
+    double priceDifference = backendItemsTotal - calcItemsTotal;
+    double rawGrandTotal = rawTotalAmount - priceDifference;
+    double savings = origItemsTotal - calcItemsTotal;
+
+    // 5. Delivery charge logic
+    double rCharge = data.deliveryZone?.rushDeliveryCharges?.toDouble() ?? 99.0;
+    if (rCharge < 99.0) rCharge = 99.0;
+
+    double regCharge = 0.0;
+    double curDeliveryCharge = billSummaryData?.totalDeliveryCharges?.toDouble() ?? 0;
+    double exactGrandTotal = rawGrandTotal;
+
+    double targetCharge = selectedDeliveryType == DeliveryType.rush ? rCharge : regCharge;
+
+    if (curDeliveryCharge < targetCharge) {
+      double additionalFee = targetCharge - curDeliveryCharge;
+      curDeliveryCharge = targetCharge;
+      exactGrandTotal += additionalFee;
+    }
+
+    // 6. Wallet coverage logic
+    double finalWalletUsed = rawWalletUsed;
+    double finalGrandTotal = exactGrandTotal;
+    double effectiveWalletBalance = walletBalance > 0
+        ? walletBalance
+        : (billSummaryData?.walletBalance?.toDouble() ?? 0.0);
+
+    if (effectiveUseWallet && effectiveWalletBalance > finalWalletUsed && finalGrandTotal > 0) {
+      double extraCoverage = math.min(effectiveWalletBalance - finalWalletUsed, finalGrandTotal);
+      finalWalletUsed += extraCoverage;
+      finalGrandTotal -= extraCoverage;
+    }
+
+    // 7. Final State Update
+    setState(() {
+      itemsTotal = calcItemsTotal;
+      totalAmount = finalGrandTotal;
+      calculatedItemsTotal = calcItemsTotal;
+      originalItemsTotal = origItemsTotal;
+      itemSavings = savings;
+      currentDeliveryCharge = curDeliveryCharge;
+      rushCharge = rCharge;
+      walletAmountUsedValue = finalWalletUsed;
+      stateData = cartData;
+    });
   }
 
   @override
@@ -264,28 +386,7 @@ class _CartPageState extends State<CartPage> {
                       developer.log('Get User Cart Bloc  $state');
 
                       if (state is GetUserCartLoaded) {
-                        setState(() {
-                          isCartLoading = false;
-                          // Extract deliveryZoneId from cart data
-                          if (state.cartData.isNotEmpty &&
-                              state.cartData.first.data?.deliveryZone != null) {
-                            final newDeliveryZoneId =
-                                state.cartData.first.data?.deliveryZone!.zoneId;
-                            // Only fetch addresses if deliveryZoneId changed or is first time set
-                            if (newDeliveryZoneId != null &&
-                                newDeliveryZoneId != previousDeliveryZoneId) {
-                              deliveryZoneId = newDeliveryZoneId;
-                              previousDeliveryZoneId = newDeliveryZoneId;
-                              // Fetch address list with deliveryZoneId for checkout (only when zone changes)
-                              context.read<GetAddressListBloc>().add(
-                                  FetchUserAddressList(
-                                      deliveryZoneId: deliveryZoneId));
-                            } else if (newDeliveryZoneId != null) {
-                              // Update deliveryZoneId but don't fetch addresses if it hasn't changed
-                              deliveryZoneId = newDeliveryZoneId;
-                            }
-                          }
-                        });
+                        _calculateTotals(state.cartData);
                         context.read<CartUIBloc>().add(SetWalletLoading(false));
                       } else if (state is GetUserCartLoading) {
                         setState(() {
@@ -565,6 +666,33 @@ class _CartPageState extends State<CartPage> {
                         }
                       },
                     ),
+                    BlocListener<ValidatePromoCodeBloc, ValidatePromoCodeState>(
+                      listener: (context, state) {
+                        if (state is ValidatePromoCodeLoaded) {
+                          final validatedCode = context
+                              .read<ValidatePromoCodeBloc>()
+                              .selectedPromoCode;
+                          setState(() {
+                            promoCode = validatedCode;
+                            _promoController.text = validatedCode;
+                            isCartLoading = true;
+                          });
+                          _refreshCart();
+                          ToastManager.show(
+                            context: context,
+                            message: AppLocalizations.of(context)!
+                                .promoCodeAppliedOnYourCart,
+                            type: ToastType.success,
+                          );
+                        } else if (state is ValidatePromoCodeFailed) {
+                          ToastManager.show(
+                            context: context,
+                            message: state.error,
+                            type: ToastType.error,
+                          );
+                        }
+                      },
+                    ),
                   ],
                   child: BlocBuilder<GetUserCartBloc, GetUserCartState>(
                     builder: (BuildContext context, GetUserCartState state) {
@@ -651,122 +779,21 @@ class _CartPageState extends State<CartPage> {
                               }
 
                               isCartLoading = false;
-                              if (stateData.first.data?.items != null) {
+                              if (stateData.isNotEmpty && stateData.first.data?.items != null) {
                                 isCartLoading = false;
-                                cartId = stateData.first.data?.id;
                                 final cartData = stateData;
-                                final billSummaryData =
-                                    cartData.first.data!.paymentSummary;
-                                deliveryZoneId =
-                                    cartData.first.data?.deliveryZone!.zoneId;
-                                totalAmount = billSummaryData?.payableAmount
-                                        ?.toDouble() ??
-                                    0.0;
-                                // Grab the exact wallet amount used
-                                walletAmountUsedValue = billSummaryData
-                                        ?.walletAmountUsed
-                                        ?.toDouble() ??
-                                    0.0;
-                                // Store items total (before wallet) for minimum order check
-                                itemsTotal =
-                                    billSummaryData?.itemsTotal?.toDouble() ??
-                                        totalAmount;
-
-                                // Overriding inaccurate backend totals
-                                double calculatedItemsTotal = 0;
-                                double originalItemsTotal = 0;
-                                if (stateData.first.data?.items != null) {
-                                  for (var item
-                                      in stateData.first.data!.items!) {
-                                    double unitPrice =
-                                        (item.variant?.specialPrice ?? 0)
-                                            .toDouble();
-                                    if (item.variant?.tieredPricing != null &&
-                                        item.variant!.tieredPricing!
-                                            .isNotEmpty) {
-                                      for (var tier
-                                          in item.variant!.tieredPricing!) {
-                                        if ((item.quantity ?? 1) >=
-                                            tier.minQty) {
-                                          unitPrice = tier.price / tier.minQty;
-                                        }
-                                      }
-                                    }
-                                    calculatedItemsTotal +=
-                                        unitPrice * (item.quantity ?? 1);
-                                    originalItemsTotal +=
-                                        (item.variant?.price ?? 0) *
-                                            (item.quantity ?? 1);
-                                  }
-                                }
-
-                                double backendItemsTotal =
-                                    billSummaryData?.itemsTotal?.toDouble() ??
-                                        0;
-                                double priceDifference =
-                                    backendItemsTotal - calculatedItemsTotal;
-                                double rawGrandTotal = (billSummaryData
-                                            ?.payableAmount
-                                            ?.toDouble() ??
-                                        0) -
-                                    priceDifference;
-                                double itemSavings =
-                                    originalItemsTotal - calculatedItemsTotal;
-
-                                // Final delivery charge logic (Fix for FREE rush/regular delivery bug)
-                                double rushCharge = stateData.first.data
-                                        ?.deliveryZone?.rushDeliveryCharges
-                                        ?.toDouble() ??
-                                    99.0;
-                                if (rushCharge < 99.0) rushCharge = 99.0;
-
-                                double regularCharge = 0.0;
-
-                                double currentDeliveryCharge = billSummaryData
-                                        ?.totalDeliveryCharges
-                                        ?.toDouble() ??
-                                    0;
-                                double exactGrandTotal = rawGrandTotal;
-
-                                // Calculate correct charge and total based on selected type
-                                double targetCharge =
-                                    selectedDeliveryType == DeliveryType.rush
-                                        ? rushCharge
-                                        : regularCharge;
-
-                                if (currentDeliveryCharge < targetCharge) {
-                                  double additionalFee =
-                                      targetCharge - currentDeliveryCharge;
-                                  currentDeliveryCharge = targetCharge;
-                                  exactGrandTotal += additionalFee;
-                                }
-                                
-                                double finalWalletAmountUsed = walletAmountUsedValue;
-                                double finalGrandTotal = exactGrandTotal;
-
-                                // Force wallet to cover delivery/handling/fees if possible
-                                double effectiveWalletBalance = walletBalance > 0
+                                final billSummaryData = cartData.first.data!.paymentSummary;
+                                final finalWalletAmountUsed = walletAmountUsedValue;
+                                final finalGrandTotal = totalAmount;
+                                final calculatedItemsTotalVal = calculatedItemsTotal;
+                                final originalItemsTotalVal = originalItemsTotal;
+                                final itemSavingsVal = itemSavings;
+                                final currentDeliveryChargeVal = currentDeliveryCharge;
+                                final effectiveWalletBalance = walletBalance > 0
                                     ? walletBalance
-                                    : (billSummaryData?.walletBalance
-                                            ?.toDouble() ??
-                                        0.0);
+                                    : (billSummaryData?.walletBalance?.toDouble() ?? 0.0);
 
-                                if (_userWantsWallet &&
-                                    effectiveWalletBalance >
-                                        finalWalletAmountUsed &&
-                                    finalGrandTotal > 0) {
-                                  double extraCoverage = math.min(
-                                      effectiveWalletBalance -
-                                          finalWalletAmountUsed,
-                                      finalGrandTotal);
-                                  finalWalletAmountUsed += extraCoverage;
-                                  finalGrandTotal -= extraCoverage;
-                                }
-                                
-                                // Update member variables for order processing and UI logic
-                                walletAmountUsedValue = finalWalletAmountUsed;
-                                totalAmount = finalGrandTotal;
-
+                                // Calculations handled by _calculateTotals
                                 return Column(
                                   children: [
                                     RemovedItemsWidget(
@@ -801,8 +828,6 @@ class _CartPageState extends State<CartPage> {
                                             DeliveryType.rush,
                                         useWallet: _userWantsWallet,
                                         promoCode: promoCode),
-                                    SizedBox(height: 12.h),
-                                    offerAndCouponButton(),
                                     SizedBox(
                                       height: 9.h,
                                     ),
@@ -898,9 +923,8 @@ class _CartPageState extends State<CartPage> {
                                       DeliveryTimeSlotWidget(
                                         timeSlots:
                                             stateData.first.data?.timeSlots ??
-                                                stateData
-                                                    .first.data?.deliveryZone
-                                                    ?.timeSlots,
+                                                stateData.first.data
+                                                    ?.deliveryZone?.timeSlots,
                                         initialSelectedSlot: selectedTimeSlot,
                                         onSlotSelected: (slot) {
                                           setState(() {
@@ -940,19 +964,22 @@ class _CartPageState extends State<CartPage> {
                                               return const SizedBox.shrink();
                                             }
 
-                                             // Show toggle only when allowed
-                                             return Column(
-                                               children: [
-                                                 SizedBox(
-                                                   height: 9.h,
-                                                 ),
+                                            // Show toggle only when allowed
+                                            return Column(
+                                              children: [
+                                                SizedBox(
+                                                  height: 9.h,
+                                                ),
                                                 WalletUsageWidget(
                                                   isWalletEnabled:
                                                       effectiveUseWallet,
                                                   isLoading: isCartLoading ||
                                                       uiState.isWalletLoading,
-                                                   walletAmountUsed: finalWalletAmountUsed,
-                                                   remainingBalance: effectiveWalletBalance - finalWalletAmountUsed,
+                                                  walletAmountUsed:
+                                                      finalWalletAmountUsed,
+                                                  remainingBalance:
+                                                      effectiveWalletBalance -
+                                                          finalWalletAmountUsed,
                                                   onWalletToggle: !uiState
                                                               .isWalletLoading &&
                                                           !isCartLoading
@@ -986,24 +1013,26 @@ class _CartPageState extends State<CartPage> {
                                           currentTotal: itemsTotal,
                                           isBottomAttached: false),
                                     ),
+                                    offerAndCouponButton(),
+                                    SizedBox(height: 12.h),
                                     BillSummaryWidget(
-                                      itemsOriginalPrice: originalItemsTotal >
-                                              calculatedItemsTotal
-                                          ? originalItemsTotal
+                                      itemsOriginalPrice: originalItemsTotalVal >
+                                              calculatedItemsTotalVal
+                                          ? originalItemsTotalVal
                                           : -1,
                                       itemsDiscountedPrice:
-                                          calculatedItemsTotal,
+                                          calculatedItemsTotalVal,
                                       itemsSavings:
-                                          itemSavings > 0 ? itemSavings : 0,
+                                          itemSavingsVal > 0 ? itemSavingsVal : 0,
                                       deliveryChargeOriginal:
-                                          currentDeliveryCharge,
+                                          currentDeliveryChargeVal,
                                       handlingCharge: billSummaryData
                                               ?.handlingCharges
                                               ?.toDouble() ??
                                           0,
                                       grandTotal: finalGrandTotal,
                                       totalSavings:
-                                          itemSavings > 0 ? itemSavings : 0,
+                                          itemSavingsVal > 0 ? itemSavingsVal : 0,
                                       perStoreDropOffFees: billSummaryData
                                               ?.perStoreDropOffFee
                                               ?.toDouble() ??
@@ -1057,26 +1086,11 @@ class _CartPageState extends State<CartPage> {
                 bottomNavigationBar:
                     BlocBuilder<GetUserCartBloc, GetUserCartState>(
                   builder: (context, state) {
-                    bool hasItems = true;
-                    // Update total amount from cart data
                     if (state is GetUserCartLoaded) {
-                      stateData = state.cartData;
-                      if (stateData.isNotEmpty) {
-                        hasItems = stateData.first.data?.items != null;
-                      } else {
-                        hasItems = false;
-                      }
+                      // Note: itemsTotal and totalAmount are updated via _calculateTotals in the BlocListener
                     }
 
-                    if (hasItems) {
-                      if (stateData.isNotEmpty) {
-                        totalAmount = stateData
-                                .first.data?.paymentSummary!.payableAmount
-                                ?.toDouble() ??
-                            0.0;
-                      } else {
-                        totalAmount = 0.0;
-                      }
+                    if (itemsTotal > 0) {
                       return Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -1170,62 +1184,313 @@ class _CartPageState extends State<CartPage> {
 
   Widget offerAndCouponButton() {
     final l10n = AppLocalizations.of(context);
-    return GestureDetector(
-      onTap: () async {
-        final result =
-            await GoRouter.of(context).push(AppRoutes.promoCode, extra: {
-          'cartAmount':
-              stateData.first.data?.paymentSummary?.itemsTotal?.toDouble() ??
-                  0.0,
-          'deliveryCharges': stateData
-                  .first.data?.paymentSummary?.totalDeliveryCharges
-                  ?.toDouble() ??
-              0.0,
-        });
-        if (result != null && result is String && result.isNotEmpty) {
-          if (mounted) {
-            context.read<CartUIBloc>().add(SetCartLoading(true));
-            promoCode = result;
-            context.read<GetUserCartBloc>().add(FetchUserCart(
-                  addressId: selectedAddress?.id,
-                  promoCode: promoCode,
-                  rushDelivery: selectedDeliveryType == DeliveryType.rush,
-                  useWallet: _userWantsWallet,
-                ));
-          }
-        }
-      },
-      child: Container(
-        height: 60,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16.r),
-        ),
-        padding: EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: EdgeInsets.all(12.r),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    TablerIcons.rosette_discount_filled,
+                    color: const Color(0xFF149400),
+                    size: 20.r,
+                  ),
+                  SizedBox(width: 8.w),
+                  Text(
+                    l10n?.promoCodeCoupons ?? 'Promo Code & Coupons',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              GestureDetector(
+                onTap: () async {
+                  final result = await GoRouter.of(context)
+                      .push(AppRoutes.promoCode, extra: {
+                    'cartAmount': stateData.first.data?.paymentSummary?.itemsTotal
+                            ?.toDouble() ??
+                        0.0,
+                    'deliveryCharges': stateData.first.data?.paymentSummary
+                            ?.totalDeliveryCharges
+                            ?.toDouble() ??
+                        0.0,
+                  });
+                  if (result != null && result is String && result.isNotEmpty) {
+                    if (mounted) {
+                      setState(() {
+                        promoCode = result;
+                        _promoController.text = result;
+                      });
+                      _refreshCart();
+                    }
+                  }
+                },
+                child: Text(
+                  'View All',
+                  style: TextStyle(
+                    color: AppTheme.primaryColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13.sp,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 10.h),
+          if (promoCode != null && promoCode!.isNotEmpty)
+            Container(
+              margin: EdgeInsets.only(bottom: 8.h),
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+              decoration: BoxDecoration(
+                color: const Color(0xFF149400).withOpacity(0.06),
+                borderRadius: BorderRadius.circular(8.r),
+                border: Border.all(
+                  color: const Color(0xFF149400).withOpacity(0.2),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    TablerIcons.circle_check_filled,
+                    color: const Color(0xFF149400),
+                    size: 18.r,
+                  ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: Text(
+                      '${promoCode?.toUpperCase()} Applied!',
+                      style: TextStyle(
+                        color: const Color(0xFF149400),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13.sp,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        isCartLoading = true;
+                        promoCode = '';
+                        _promoController.clear();
+                      });
+                      context.read<PromoCodeBloc>().add(RemovePromoCode());
+                      _refreshCart();
+                    },
+                    child: Text(
+                      'Remove',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12.sp,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
             Row(
               children: [
-                Icon(
-                  TablerIcons.rosette_discount_filled,
-                  color: Color(0xFF149400),
-                  size: isTablet(context) ? 18.r : 26.r,
+                Expanded(
+                  child: Container(
+                    height: 40.h,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(8.r),
+                      border: Border.all(color: Colors.grey[200]!),
+                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 10.w),
+                    child: TextField(
+                      controller: _promoController,
+                      decoration: InputDecoration(
+                        hintText: l10n?.promoCode ?? 'Enter Promo Code',
+                        border: InputBorder.none,
+                        hintStyle: TextStyle(fontSize: 13.sp, color: Colors.grey),
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(vertical: 10.h),
+                      ),
+                      style: TextStyle(fontSize: 13.sp),
+                    ),
+                  ),
                 ),
+                SizedBox(width: 8.w),
                 SizedBox(
-                  width: 5.w,
-                ),
-                Text(
-                  l10n?.viewCouponOffers ?? 'View Coupon & Offers',
-                  style: TextStyle(
-                      fontSize: isTablet(context) ? 22 : 15.sp,
-                      fontWeight: FontWeight.w600),
+                  height: 40.h,
+                  child:
+                      BlocBuilder<ValidatePromoCodeBloc, ValidatePromoCodeState>(
+                    builder: (context, state) {
+                      final isLoading = state is ValidatePromoCodeLoading;
+                      return ElevatedButton(
+                        onPressed: isLoading
+                            ? null
+                            : () {
+                                final code = _promoController.text.trim();
+                                if (code.isNotEmpty) {
+                                  context
+                                      .read<ValidatePromoCodeBloc>()
+                                      .selectedPromoCode = code;
+                                  context.read<ValidatePromoCodeBloc>().add(
+                                        ValidatePromoCodeRequest(
+                                          promoCode: code,
+                                          cartAmount: stateData.first.data
+                                                  ?.paymentSummary?.itemsTotal
+                                                  ?.toInt() ??
+                                              0,
+                                          deliveryCharges: stateData
+                                                  .first
+                                                  .data
+                                                  ?.paymentSummary
+                                                  ?.totalDeliveryCharges
+                                                  ?.toInt() ??
+                                              0,
+                                        ),
+                                      );
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryColor,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                          elevation: 0,
+                          padding: EdgeInsets.symmetric(horizontal: 16.w),
+                        ),
+                        child: isLoading
+                            ? SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor:
+                                      AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : Text(
+                                'Apply',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13.sp,
+                                ),
+                              ),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
-            Icon(Icons.chevron_right)
-          ],
-        ),
+          // Suggested Coupons List
+          BlocBuilder<PromoCodeBloc, PromoCodeState>(
+            builder: (context, state) {
+              if (state is PromoCodeLoaded && state.promoCodeData.isNotEmpty) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: 16.h),
+                    Text(
+                      'Suggested Offers',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
+                    SizedBox(
+                      height: 40.h,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: math.min(state.promoCodeData.length, 5),
+                        itemBuilder: (context, index) {
+                          final coupon = state.promoCodeData[index];
+                          final isApplied = coupon.code != null &&
+                              promoCode != null &&
+                              coupon.code!.toLowerCase() ==
+                                  promoCode!.toLowerCase();
+                          return Padding(
+                            padding: EdgeInsets.only(right: 8.w),
+                            child: ActionChip(
+                              avatar: isApplied
+                                  ? Icon(
+                                      Icons.check_circle,
+                                      size: 14.r,
+                                      color: const Color(0xFF149400),
+                                    )
+                                  : null,
+                              label: Text(
+                                coupon.code ?? '',
+                                style: TextStyle(
+                                  color: isApplied
+                                      ? const Color(0xFF149400)
+                                      : AppTheme.primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12.sp,
+                                ),
+                              ),
+                              backgroundColor: isApplied
+                                  ? const Color(0xFF149400).withOpacity(0.1)
+                                  : AppTheme.primaryColor.withOpacity(0.1),
+                              side: BorderSide(
+                                color: isApplied
+                                    ? const Color(0xFF149400).withOpacity(0.3)
+                                    : AppTheme.primaryColor.withOpacity(0.3),
+                              ),
+                              onPressed: isApplied
+                                  ? null
+                                  : () {
+                                      _promoController.text = coupon.code ?? '';
+                                      context
+                                          .read<ValidatePromoCodeBloc>()
+                                          .selectedPromoCode = coupon.code ?? '';
+                                      context.read<ValidatePromoCodeBloc>().add(
+                                            ValidatePromoCodeRequest(
+                                              promoCode: coupon.code ?? '',
+                                              cartAmount: stateData
+                                                      .first
+                                                      .data
+                                                      ?.paymentSummary
+                                                      ?.itemsTotal
+                                                      ?.toInt() ??
+                                                  0,
+                                              deliveryCharges: stateData
+                                                      .first
+                                                      .data
+                                                      ?.paymentSummary
+                                                      ?.totalDeliveryCharges
+                                                      ?.toInt() ??
+                                                  0,
+                                            ),
+                                          );
+                                    },
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
       ),
     );
   }

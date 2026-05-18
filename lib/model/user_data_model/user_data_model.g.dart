@@ -27,7 +27,7 @@ class UserDataModelAdapter extends TypeAdapter<UserDataModel> {
       profileImage: fields[7] as String,
       referralCode: fields[8] as String,
       language: fields[9] as String,
-      shopName: fields[10] as String? ?? '',
+      shopName: fields[10] == null ? '' : fields[10] as String,
     );
   }
 

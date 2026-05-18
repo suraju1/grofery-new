@@ -565,7 +565,8 @@ class BillSummaryWidget extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: Theme.of(context).colorScheme.tertiary.withOpacity(0.8),
+                  color:
+                      Theme.of(context).colorScheme.tertiary.withOpacity(0.8),
                 ),
               ),
               if (additionalInfo != null)
@@ -587,10 +588,8 @@ class BillSummaryWidget extends StatelessWidget {
                 originalPrice,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .tertiary
-                      .withOpacity(0.3),
+                  color:
+                      Theme.of(context).colorScheme.tertiary.withOpacity(0.3),
                   decoration: TextDecoration.lineThrough,
                 ),
               ),

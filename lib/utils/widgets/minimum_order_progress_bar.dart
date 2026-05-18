@@ -22,7 +22,7 @@ class MinimumOrderProgressBar extends StatelessWidget {
     final double progress = (currentTotal / minAmount).clamp(0.0, 1.0);
     final bool isGoalReached = progress >= 1.0;
 
-    if (currentTotal <= 0 && !isSmall) return const SizedBox.shrink();
+    if ((currentTotal <= 0 && !isSmall) || isGoalReached) return const SizedBox.shrink();
 
     return Container(
       width: double.infinity,

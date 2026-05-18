@@ -617,19 +617,46 @@ class CustomProductCard extends StatelessWidget {
 
               // CASE 2: Product not wishlisted -> Try to add directly if any wishlist exists
               if (!finalIsWishListed) {
-                if (wishlistState is UserWishlistLoaded &&
-                    wishlistState.wishlistData.isNotEmpty) {
-                  final wishlist = wishlistState.wishlistData.first;
+                if (wishlistState is UserWishlistLoaded) {
+                  if (wishlistState.wishlistData.isNotEmpty) {
+                    final wishlist = wishlistState.wishlistData.first;
+                    wishlistBloc.add(
+                      AddItemInWishlist(
+                        wishlistTitle: wishlist.title ?? '',
+                        productId: productId,
+                        productVariantId: productVariantId,
+                        storeId: storeId,
+                      ),
+                    );
+                  } else {
+                    // CASE 3: No wishlist yet -> Create default one and add product
+                    final userName = Global.userData?.name ?? 'My Wishlist';
+                    wishlistBloc.add(
+                      CreateNewWishlist(
+                        title: userName,
+                        productId: productId,
+                        productVariantId: productVariantId,
+                        storeId: storeId,
+                      ),
+                    );
+                  }
+                } else if (wishlistState is UserWishlistInitial) {
+                  // If not even loaded once, trigger load and also optimistically add
+                  wishlistBloc.add(GetUserWishlistRequest());
+                  
+                  // Fallback to creation if load fails or we want to proceed anyway
+                  final userName = Global.userData?.name ?? 'My Wishlist';
                   wishlistBloc.add(
-                    AddItemInWishlist(
-                      wishlistTitle: wishlist.title ?? '',
+                    CreateNewWishlist(
+                      title: userName,
                       productId: productId,
                       productVariantId: productVariantId,
                       storeId: storeId,
                     ),
                   );
-                } else {
-                  // CASE 3: No wishlist yet -> Create default one and add product
+                } else if (wishlistState is UserWishlistLoading) {
+                  // Already loading, just wait or try to add with default name
+                  // The BLoC will handle the 'already exists' if we try to create
                   final userName = Global.userData?.name ?? 'My Wishlist';
                   wishlistBloc.add(
                     CreateNewWishlist(
