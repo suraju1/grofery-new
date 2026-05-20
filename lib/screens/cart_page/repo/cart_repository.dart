@@ -65,6 +65,7 @@ class CartRepository {
       // Construct the URL with query parameters
       final uri = Uri.parse(ApiRoutes.getCartApi).replace(queryParameters: queryParams);
 
+      debugPrint("DEBUG_API: [CartRepository.getCartItems] Requesting API: ${uri.toString()}");
       final response = await AppConstant.apiBaseHelper.getAPICall(
           uri.toString(),
           {},

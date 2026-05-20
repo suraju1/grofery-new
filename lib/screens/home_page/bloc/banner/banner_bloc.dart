@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:grofery_user/screens/home_page/bloc/banner/banner_event.dart';
 import 'package:grofery_user/screens/home_page/bloc/banner/banner_state.dart';
@@ -21,6 +22,7 @@ class BannerBloc extends Bloc<BannerEvent, BannerState> {
       FetchBanner event, Emitter<BannerState> emit) async {
     emit(BannerLoading());
     try {
+      debugPrint("DEBUG_API: [BannerBloc._onFetchBanner] Event received, slug: ${event.categorySlug}");
       List<Top> topBannerData = [];
       List<Top> middleBannerData = [];
       perPage = 18;

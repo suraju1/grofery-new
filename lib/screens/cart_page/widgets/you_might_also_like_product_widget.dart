@@ -101,15 +101,11 @@ class YouMightAlsoLikeProductWidget extends StatelessWidget {
                   },
                   isStoreOpen: product.storeStatus?.isOpen ?? true,
                   isWishListed: product.favorite != null &&
-                      product.favorite!.any((f) => f.wishlistId == 1),
+                      product.favorite!.isNotEmpty,
                   productVariantId: product.variants.first.id,
                   storeId: product.variants.first.storeId,
-                  wishlistItemId:
-                      (product.favorite?.any((f) => f.wishlistId == 1) ?? false)
-                          ? product.favorite!
-                                  .firstWhere((f) => f.wishlistId == 1)
-                                  .id ??
-                              0
+                  wishlistItemId: (product.favorite != null && product.favorite!.isNotEmpty)
+                          ? product.favorite!.first.id ?? 0
                           : 0,
                   totalStocks: product.variants.first.stock,
                   imageFit: product.imageFit,

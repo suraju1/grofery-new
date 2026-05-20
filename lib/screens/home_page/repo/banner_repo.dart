@@ -24,6 +24,7 @@ class BannerRepository {
         apiUrl =
             '${ApiRoutes.bannerApi}?latitude=$latitude&longitude=$longitude';
       }
+      debugPrint("DEBUG_API: [BannerRepository.fetchBanners] Requesting API: $apiUrl");
       final response = await AppConstant.apiBaseHelper.getAPICall(apiUrl, {});
       debugPrint("Banner Response: ${response.data}");
       return response.data;

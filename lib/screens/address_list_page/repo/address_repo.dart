@@ -1,4 +1,5 @@
 
+import 'package:flutter/foundation.dart';
 import 'package:grofery_user/config/api_base_helper.dart';
 import 'package:grofery_user/config/api_routes.dart';
 import 'package:grofery_user/config/constant.dart';
@@ -62,6 +63,7 @@ class AddressRepository {
       } else {
         apiUrl = ApiRoutes.getAddressesApi;
       }
+      debugPrint("DEBUG_API: [AddressRepository.fetchAddressList] Requesting API: $apiUrl");
       final response = await AppConstant.apiBaseHelper.getAPICall(
         apiUrl,
         {},

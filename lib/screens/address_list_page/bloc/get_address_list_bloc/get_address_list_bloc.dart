@@ -1,5 +1,6 @@
 import 'dart:developer';
 
+import 'package:flutter/foundation.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -30,6 +31,7 @@ class GetAddressListBloc extends Bloc<GetAddressListEvent, GetAddressListState> 
   Future<void> _onFetchUserAddressList(FetchUserAddressList event, Emitter<GetAddressListState> emit) async {
     emit(GetAddressListLoading());
     try{
+      debugPrint("DEBUG_API: [GetAddressListBloc._onFetchUserAddressList] Event received, zoneId: ${event.deliveryZoneId}");
       List<AddressListData> addressList = [];
       perPage = 18;
       currentPage = 1;

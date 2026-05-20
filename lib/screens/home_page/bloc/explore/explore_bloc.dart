@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'explore_event.dart';
 import 'explore_state.dart';
@@ -15,6 +16,7 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
       FetchExplores event, Emitter<ExploreState> emit) async {
     emit(ExploreLoading());
     try {
+      debugPrint("DEBUG_API: [ExploreBloc._onFetchExplores] Event received");
       final response = await repository.fetchExplores();
       if (response['success'] == true && response['data'] != null) {
         final exploreModel = ExploreModel.fromJson(response);

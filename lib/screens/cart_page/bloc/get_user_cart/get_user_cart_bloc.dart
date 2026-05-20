@@ -35,6 +35,7 @@ class GetUserCartBloc extends Bloc<GetUserCartEvent, GetUserCartState> {
   Future<void> _onFetchUserCart(FetchUserCart event, Emitter<GetUserCartState> emit) async {
     emit(GetUserCartLoading());
     try{
+      debugPrint("DEBUG_API: [GetUserCartBloc._onFetchUserCart] Event received, isRefresh: ${event.isRefresh}");
       final getCartData = await repository.getCartItems(
         addressId: event.addressId,
         promoCode: event.promoCode,

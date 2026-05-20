@@ -45,6 +45,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    debugPrint("DEBUG_API: [SplashScreen.initState]");
     getFcm();
     // Dispatch initial settings fetch immediately
     context.read<SettingsBloc>().add(FetchSettingsData(context: context));
@@ -69,47 +70,48 @@ class _SplashScreenState extends State<SplashScreen> {
   // Helper method to show the location access dialog
   Future<bool?> _showLocationAccessDialog() async {
     if (!mounted || _hasNavigated || _isDialogShowing) return null;
-    
+
     _isDialogShowing = true;
     try {
       return await showDialog<bool>(
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) => AlertDialog(
-        title: Text(AppLocalizations.of(dialogContext)?.locationAccessNeeded ??
-            'Location Access Needed'),
-        content: Text(
-          AppLocalizations.of(dialogContext)?.locationAccessDescription ??
-              'Please allow location access to use the app.',
+          title: Text(
+              AppLocalizations.of(dialogContext)?.locationAccessNeeded ??
+                  'Location Access Needed'),
+          content: Text(
+            AppLocalizations.of(dialogContext)?.locationAccessDescription ??
+                'Please allow location access to use the app.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(AppLocalizations.of(dialogContext)?.later ?? 'Later'),
+            ),
+            TextButton(
+              onPressed: () async {
+                await Geolocator.openLocationSettings();
+                if (mounted) {
+                  Navigator.pop(context, true);
+                }
+              },
+              child: Text(AppLocalizations.of(dialogContext)?.openSettings ??
+                  'Open Settings'),
+            ),
+            TextButton(
+              onPressed: () async {
+                await openAppSettings();
+                if (mounted) {
+                  Navigator.pop(context, true);
+                }
+              },
+              child: Text(AppLocalizations.of(dialogContext)?.appPermissions ??
+                  'Permissions'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(AppLocalizations.of(dialogContext)?.later ?? 'Later'),
-          ),
-          TextButton(
-            onPressed: () async {
-              await Geolocator.openLocationSettings();
-              if (mounted) {
-                Navigator.pop(context, true);
-              }
-            },
-            child: Text(AppLocalizations.of(dialogContext)?.openSettings ??
-                'Open Settings'),
-          ),
-          TextButton(
-            onPressed: () async {
-              await openAppSettings();
-              if (mounted) {
-                Navigator.pop(context, true);
-              }
-            },
-            child: Text(AppLocalizations.of(dialogContext)?.appPermissions ??
-                'Permissions'),
-          ),
-        ],
-      ),
-    );
+      );
     } finally {
       _isDialogShowing = false;
     }
@@ -261,7 +263,8 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     // Logic to handle case where SettingsBloc is already loaded when SplashScreen is built
-    if (context.read<SettingsBloc>().state is SettingsLoaded && !_hasInitialized) {
+    if (context.read<SettingsBloc>().state is SettingsLoaded &&
+        !_hasInitialized) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && !_hasInitialized) {
           _handleConnectivityChanged(_lastKnownConnectivity);
@@ -523,6 +526,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint("DEBUG_API: [SplashScreen.build]");
     return MultiBlocListener(
       listeners: [
         BlocListener<UserDataBloc, UserDataState>(
@@ -533,6 +537,7 @@ class _SplashScreenState extends State<SplashScreen> {
       ],
       child: BlocConsumer<SettingsBloc, SettingsState>(
         listener: (BuildContext context, SettingsState state) {
+          debugPrint("DEBUG_API: [SplashScreen.SettingsBloc listener] state: $state");
           if (state is SettingsLoaded) {
             _handleSettingsSuccess();
           } else if (state is SettingsFailure) {

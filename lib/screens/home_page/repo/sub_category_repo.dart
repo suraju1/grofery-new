@@ -34,6 +34,7 @@ class SubCategoryRepository {
         apiUrl =
             '${ApiRoutes.subCategoryApi}?slug=$slug&latitude=$latitude&longitude=$longitude&per_page=$perPage$pageParam';
       }
+      debugPrint("DEBUG_API: [SubCategoryRepository.fetchSubCategory] Requesting API: $apiUrl");
       final response = await AppConstant.apiBaseHelper.getAPICall(apiUrl, {});
       debugPrint('SubCategory Response: ${response.data}');
       return response.data;

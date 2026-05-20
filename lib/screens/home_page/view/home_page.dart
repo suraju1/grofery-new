@@ -100,6 +100,7 @@ class _HomePageState extends State<HomePage>
 
   @override
   void initState() {
+    debugPrint("DEBUG_API: [HomePage.initState]");
     _isImageEmpty = backgroundImagePath.isEmpty;
     super.initState();
     _tabController = TabController(length: 1, vsync: this);
@@ -910,9 +911,13 @@ class _HomePageState extends State<HomePage>
 
   @override
   Widget build(BuildContext context) {
+    debugPrint("DEBUG_API: [HomePage.build]");
     super.build(context);
     return BlocListener<GetUserCartBloc, GetUserCartState>(
-      listener: (BuildContext context, GetUserCartState state) {},
+      listener: (BuildContext context, GetUserCartState state) {
+        debugPrint(
+            "DEBUG_API: [HomePage.GetUserCartBloc listener] state: $state");
+      },
       child: CustomScaffold(
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
         floatingActionButton: Padding(

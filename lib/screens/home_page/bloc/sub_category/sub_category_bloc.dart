@@ -1,5 +1,6 @@
 import 'dart:developer';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:grofery_user/screens/home_page/bloc/sub_category/sub_category_event.dart';
 import 'package:grofery_user/screens/home_page/bloc/sub_category/sub_category_state.dart';
@@ -25,6 +26,7 @@ class SubCategoryBloc extends Bloc<SubCategoryEvent, SubCategoryState> {
       FetchSubCategory event, Emitter<SubCategoryState> emit) async {
     emit(SubCategoryLoading());
     try {
+      debugPrint("DEBUG_API: [SubCategoryBloc._onFetchSubCategory] Event received, slug: ${event.slug}");
       List<SubCategoryData> subCategoryData = [];
       perPage = 80;
       currentPage = 1;

@@ -6,6 +6,7 @@ import 'package:grofery_user/config/constant.dart';
 class ExploreRepository {
   Future<Map<String, dynamic>> fetchExplores() async {
     try {
+      debugPrint("DEBUG_API: [ExploreRepository.fetchExplores] Requesting API: ${ApiRoutes.exploreApi}");
       final response = await AppConstant.apiBaseHelper.getAPICall(
         ApiRoutes.exploreApi,
         {}
