@@ -91,6 +91,8 @@ class _HomePageState extends State<HomePage>
   static const double _scrollThreshold = 100.0;
   double _latestScrollPixels = 0.0;
   bool isRetry = false;
+  bool _hasShownHolidayPopup = false;
+  bool _isHolidayPopupShowing = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -119,13 +121,126 @@ class _HomePageState extends State<HomePage>
       if (mounted) {
         _applyHomeGeneralSettingsToAppBar();
         context.read<UserProfileBloc>().add(FetchUserProfile());
+        _checkHolidayPopup();
 
-        if (!_hasShownGstPopup) {
+        if (!_hasShownGstPopup && !_hasShownHolidayPopup) {
           _hasShownGstPopup = true;
           _showGstPopup();
         }
       }
     });
+  }
+
+  void _showHolidayPopup(String message) {
+    if (_isHolidayPopupShowing || !mounted) return;
+    _isHolidayPopupShowing = true;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24.r),
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: EdgeInsets.all(22.w),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24.r),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 18,
+                  spreadRadius: 2,
+                  offset: Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  height: 70.h,
+                  width: 70.w,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withOpacity(0.10),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.event_busy,
+                    color: AppTheme.primaryColor,
+                    size: 34.sp,
+                  ),
+                ),
+                SizedBox(height: 18.h),
+                Text(
+                  'Holiday Notice',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 21.sp,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: AppTheme.fontFamily,
+                    color: Colors.black87,
+                  ),
+                ),
+                SizedBox(height: 10.h),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    height: 1.5,
+                    color: Colors.black54,
+                    fontFamily: AppTheme.fontFamily,
+                  ),
+                ),
+                SizedBox(height: 24.h),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48.h,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14.r),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    child: Text(
+                      'OK',
+                      style: TextStyle(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                        fontFamily: AppTheme.fontFamily,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ).then((_) {
+      _isHolidayPopupShowing = false;
+    });
+  }
+
+  void _checkHolidayPopup() {
+    if (_hasShownHolidayPopup || _isHolidayPopupShowing) return;
+
+    final systemSettings = SettingsData.instance.system;
+    if (systemSettings != null && systemSettings.isTodayHoliday) {
+      _hasShownHolidayPopup = true;
+      _showHolidayPopup(systemSettings.vacationMessage);
+    }
   }
 
   void _showGstPopup() {
@@ -913,11 +1028,22 @@ class _HomePageState extends State<HomePage>
   Widget build(BuildContext context) {
     debugPrint("DEBUG_API: [HomePage.build]");
     super.build(context);
-    return BlocListener<GetUserCartBloc, GetUserCartState>(
-      listener: (BuildContext context, GetUserCartState state) {
-        debugPrint(
-            "DEBUG_API: [HomePage.GetUserCartBloc listener] state: $state");
-      },
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<SettingsBloc, SettingsState>(
+          listener: (BuildContext context, SettingsState state) {
+            if (state is SettingsLoaded) {
+              _checkHolidayPopup();
+            }
+          },
+        ),
+        BlocListener<GetUserCartBloc, GetUserCartState>(
+          listener: (BuildContext context, GetUserCartState state) {
+            debugPrint(
+                "DEBUG_API: [HomePage.GetUserCartBloc listener] state: $state");
+          },
+        ),
+      ],
       child: CustomScaffold(
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
         floatingActionButton: Padding(

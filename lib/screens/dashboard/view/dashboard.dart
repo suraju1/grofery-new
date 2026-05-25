@@ -202,7 +202,7 @@ class _DashboardState extends State<Dashboard> {
                   label: l10n?.home ?? 'Home',
                 ),
                 BottomNavigationBarItem(
-                  icon: Icon(widget.index == 1 ? RemixIcons.heart_3_fill : RemixIcons.heart_3_line),
+                  icon: Icon(widget.index == 1 ? Icons.list_alt : Icons.list_alt_outlined),
                   label: l10n?.myList ?? 'My List',
                 ),
                 BottomNavigationBarItem(

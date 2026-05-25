@@ -75,7 +75,13 @@ class CategoryProductRepository {
 
       final response = await AppConstant.apiBaseHelper.getAPICall(apiUrl, {});
       log('🚀 FINAL API URL: $apiUrl');
-      log('📦 RESPONSE DATA COUNT: ${response.data['data'] != null && response.data['data']['data'] != null ? (response.data['data']['data'] as List).length : '0'}');
+      if (response.data['data'] is Map && response.data['data']['data'] != null) {
+        log('📦 RESPONSE DATA COUNT: ${(response.data['data']['data'] as List).length}');
+      } else if (response.data['data'] is List) {
+        log('📦 RESPONSE DATA COUNT: ${(response.data['data'] as List).length}');
+      } else {
+        log('📦 RESPONSE DATA COUNT: 0');
+      }
       return response.data;
     } catch (e) {
       throw ApiException(e.toString());

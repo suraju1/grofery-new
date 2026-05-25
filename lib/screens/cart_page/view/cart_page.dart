@@ -58,8 +58,6 @@ import '../bloc/promo_code/promo_code_bloc.dart';
 import '../bloc/promo_code/promo_code_event.dart';
 import '../bloc/promo_code/promo_code_state.dart';
 import '../bloc/validate_promo_code/validate_promo_code_bloc.dart';
-// import '../bloc/validate_promo_code/validate_promo_code_event.dart';
-// import '../bloc/validate_promo_code/validate_promo_code_state.dart';
 import '../bloc/clear_cart/clear_cart_state.dart';
 import '../model/get_cart_model.dart';
 import '../widgets/cart_product_item.dart';
@@ -83,13 +81,20 @@ class _CartPageState extends State<CartPage> {
   double itemsTotal = 0.0;
   String? selectedPaymentMethod;
   dynamic selectedPaymentMethodType;
+
+  // FIX: Use a single loading flag managed only via setState in listeners/callbacks.
+  // Never mutate this directly inside build().
   bool isCartLoading = true;
   bool isClearingCart = false;
   bool isWholePageProgress = false;
   DeliveryType selectedDeliveryType = DeliveryType.regular;
   int? cartId;
   late bool _userWantsWallet = false;
+
+  // FIX: stateData is only ever updated inside setState() from the BlocListener,
+  // never directly assigned inside build().
   List<GetCartModel> stateData = [];
+
   int? deliveryZoneId;
   int? previousDeliveryZoneId;
   String? promoCode;
@@ -110,7 +115,6 @@ class _CartPageState extends State<CartPage> {
   void initState() {
     super.initState();
     _userWantsWallet = false;
-    // context.read<GetUserCartBloc>().add(SyncCart());
     context.read<GetUserCartBloc>().add(FetchUserCart());
     context.read<SettingsBloc>().add(FetchSettingsData(context: context));
     context.read<SimilarProductBloc>().add(FetchSimilarProduct(
@@ -119,7 +123,6 @@ class _CartPageState extends State<CartPage> {
     context.read<UserWalletBloc>().add(FetchUserWallet());
     context.read<AttachmentBloc>().add(ClearAllAttachments());
 
-    // Initialize wallet balance from current state if available
     final walletState = context.read<UserWalletBloc>().state;
     if (walletState is UserWalletLoaded && walletState.userWallet.isNotEmpty) {
       walletBalance =
@@ -145,7 +148,6 @@ class _CartPageState extends State<CartPage> {
     if (resetWalletPreference) {
       _userWantsWallet = false;
     }
-
     context.read<GetUserCartBloc>().add(
           FetchUserCart(
             addressId: selectedAddress?.id,
@@ -159,6 +161,7 @@ class _CartPageState extends State<CartPage> {
   void _calculateTotals(List<GetCartModel> cartData) {
     if (cartData.isEmpty || cartData.first.data?.items == null) {
       setState(() {
+        stateData = cartData;
         itemsTotal = 0;
         totalAmount = 0;
         calculatedItemsTotal = 0;
@@ -166,6 +169,7 @@ class _CartPageState extends State<CartPage> {
         itemSavings = 0;
         currentDeliveryCharge = 0;
         walletAmountUsedValue = 0;
+        isCartLoading = false;
       });
       return;
     }
@@ -176,28 +180,27 @@ class _CartPageState extends State<CartPage> {
     cartId = data.id;
     final newDeliveryZoneId = data.deliveryZone?.zoneId;
 
-    // Only fetch addresses if deliveryZoneId changed or is first time set
-    if (newDeliveryZoneId != null && newDeliveryZoneId != previousDeliveryZoneId) {
+    if (newDeliveryZoneId != null &&
+        newDeliveryZoneId != previousDeliveryZoneId) {
       deliveryZoneId = newDeliveryZoneId;
       previousDeliveryZoneId = newDeliveryZoneId;
-      // Fetch address list with deliveryZoneId for checkout (only when zone changes)
-      context.read<GetAddressListBloc>().add(FetchUserAddressList(deliveryZoneId: deliveryZoneId));
+      context
+          .read<GetAddressListBloc>()
+          .add(FetchUserAddressList(deliveryZoneId: deliveryZoneId));
     } else {
       deliveryZoneId = newDeliveryZoneId;
     }
 
-    // 1. Initial values from backend
     double rawTotalAmount = billSummaryData?.payableAmount?.toDouble() ?? 0.0;
     double rawWalletUsed = billSummaryData?.walletAmountUsed?.toDouble() ?? 0.0;
-    double rawItemsTotal = billSummaryData?.itemsTotal?.toDouble() ?? rawTotalAmount;
 
-    // 2. Recalculate items totals (Overriding inaccurate backend totals)
     double calcItemsTotal = 0;
     double origItemsTotal = 0;
 
     for (var item in data.items!) {
       double unitPrice = (item.variant?.specialPrice ?? 0).toDouble();
-      if (item.variant?.tieredPricing != null && item.variant!.tieredPricing!.isNotEmpty) {
+      if (item.variant?.tieredPricing != null &&
+          item.variant!.tieredPricing!.isNotEmpty) {
         for (var tier in item.variant!.tieredPricing!) {
           if ((item.quantity ?? 1) >= tier.minQty) {
             unitPrice = tier.price / tier.minQty;
@@ -208,25 +211,21 @@ class _CartPageState extends State<CartPage> {
       origItemsTotal += (item.variant?.price ?? 0) * (item.quantity ?? 1);
     }
 
-    // 3. Sync itemsTotal with calculation
-    // IMPORTANT: We use the calculated total for the minimum order check
-    itemsTotal = calcItemsTotal;
-
-    // 4. Calculate price differences and adjust grand total
     double backendItemsTotal = billSummaryData?.itemsTotal?.toDouble() ?? 0;
     double priceDifference = backendItemsTotal - calcItemsTotal;
     double rawGrandTotal = rawTotalAmount - priceDifference;
     double savings = origItemsTotal - calcItemsTotal;
 
-    // 5. Delivery charge logic
     double rCharge = data.deliveryZone?.rushDeliveryCharges?.toDouble() ?? 99.0;
     if (rCharge < 99.0) rCharge = 99.0;
 
     double regCharge = 0.0;
-    double curDeliveryCharge = billSummaryData?.totalDeliveryCharges?.toDouble() ?? 0;
+    double curDeliveryCharge =
+        billSummaryData?.totalDeliveryCharges?.toDouble() ?? 0;
     double exactGrandTotal = rawGrandTotal;
 
-    double targetCharge = selectedDeliveryType == DeliveryType.rush ? rCharge : regCharge;
+    double targetCharge =
+        selectedDeliveryType == DeliveryType.rush ? rCharge : regCharge;
 
     if (curDeliveryCharge < targetCharge) {
       double additionalFee = targetCharge - curDeliveryCharge;
@@ -234,21 +233,24 @@ class _CartPageState extends State<CartPage> {
       exactGrandTotal += additionalFee;
     }
 
-    // 6. Wallet coverage logic
     double finalWalletUsed = rawWalletUsed;
     double finalGrandTotal = exactGrandTotal;
     double effectiveWalletBalance = walletBalance > 0
         ? walletBalance
         : (billSummaryData?.walletBalance?.toDouble() ?? 0.0);
 
-    if (effectiveUseWallet && effectiveWalletBalance > finalWalletUsed && finalGrandTotal > 0) {
-      double extraCoverage = math.min(effectiveWalletBalance - finalWalletUsed, finalGrandTotal);
+    if (effectiveUseWallet &&
+        effectiveWalletBalance > finalWalletUsed &&
+        finalGrandTotal > 0) {
+      double extraCoverage =
+          math.min(effectiveWalletBalance - finalWalletUsed, finalGrandTotal);
       finalWalletUsed += extraCoverage;
       finalGrandTotal -= extraCoverage;
     }
 
-    // 7. Final State Update
+    // FIX: stateData is updated here inside setState — the single source of truth.
     setState(() {
+      stateData = cartData;
       itemsTotal = calcItemsTotal;
       totalAmount = finalGrandTotal;
       calculatedItemsTotal = calcItemsTotal;
@@ -257,135 +259,120 @@ class _CartPageState extends State<CartPage> {
       currentDeliveryCharge = curDeliveryCharge;
       rushCharge = rCharge;
       walletAmountUsedValue = finalWalletUsed;
-      stateData = cartData;
+      isCartLoading = false;
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // BUILD
+  // ---------------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return BlocBuilder<PaymentBloc, PaymentState>(
-      builder: (BuildContext context, PaymentState state) {
+      builder: (BuildContext context, PaymentState paymentState) {
         return Stack(
           children: [
             CustomScaffold(
-                showViewCart: false,
-                backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-                title: l10n?.cart ?? 'Cart',
-                appBarActions: [
-                  BlocBuilder<GetUserCartBloc, GetUserCartState>(
-                    builder: (BuildContext context, GetUserCartState state) {
-                      bool hasItems = true;
-
-                      if (state is GetUserCartLoaded &&
-                          state.cartData.isNotEmpty) {
-                        hasItems = state.cartData.first.data?.items != null;
-                      }
-                      if (hasItems) {
-                        return Container(
-                          padding: EdgeInsets.only(right: 10),
-                          child: TextButton(
-                              onPressed: () async {
-                                final shouldClear =
-                                    await _showClearCartConfirmDialog(context);
-                                if (shouldClear) {
-                                  if (context.mounted) {
-                                    context
-                                        .read<ClearCartBloc>()
-                                        .add(ClearCartRequest());
-                                    context
-                                        .read<CartBloc>()
-                                        .add(ClearCart(context: context));
-                                  }
-                                }
-                                Future.delayed(Duration(milliseconds: 200), () {
-                                  if (context.mounted) {
-                                    context.read<GetUserCartBloc>().add(
-                                        FetchUserCart(
-                                            addressId: selectedAddress?.id,
-                                            rushDelivery:
-                                                selectedDeliveryType ==
-                                                    DeliveryType.rush,
-                                            useWallet: _userWantsWallet,
-                                            promoCode: promoCode));
-                                  }
-                                });
-                              },
-                              child: Text(
-                                AppLocalizations.of(context)!.clearCart,
-                                style: TextStyle(
-                                    color: AppTheme.primaryColor, fontSize: 14),
-                              )),
-                        );
-                      } else {
-                        return SizedBox.shrink();
+              showViewCart: false,
+              backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+              title: l10n?.cart ?? 'Cart',
+              appBarActions: [
+                // Clear-cart button — reads from stateData, no bloc needed here
+                if (stateData.isNotEmpty && stateData.first.data?.items != null)
+                  Container(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: TextButton(
+                      onPressed: () async {
+                        final shouldClear =
+                            await _showClearCartConfirmDialog(context);
+                        if (shouldClear && context.mounted) {
+                          context.read<ClearCartBloc>().add(ClearCartRequest());
+                          context
+                              .read<CartBloc>()
+                              .add(ClearCart(context: context));
+                          Future.delayed(const Duration(milliseconds: 200), () {
+                            if (context.mounted) {
+                              context.read<GetUserCartBloc>().add(
+                                    FetchUserCart(
+                                      addressId: selectedAddress?.id,
+                                      rushDelivery: selectedDeliveryType ==
+                                          DeliveryType.rush,
+                                      useWallet: _userWantsWallet,
+                                      promoCode: promoCode,
+                                    ),
+                                  );
+                            }
+                          });
+                        }
+                      },
+                      child: Text(
+                        AppLocalizations.of(context)!.clearCart,
+                        style: TextStyle(
+                            color: AppTheme.primaryColor, fontSize: 14),
+                      ),
+                    ),
+                  )
+                else
+                  const SizedBox.shrink(),
+              ],
+              showAppBar: true,
+              body: MultiBlocListener(
+                listeners: [
+                  BlocListener<SettingsBloc, SettingsState>(
+                    listener: (context, settingsState) {
+                      if (settingsState is SettingsLoaded) {
+                        final walletAllowed =
+                            SettingsData.instance.payment?.wallet ?? false;
+                        if (!walletAllowed && _userWantsWallet) {
+                          setState(() {
+                            _userWantsWallet = false;
+                          });
+                          _refreshCart();
+                        }
                       }
                     },
                   ),
-                ],
-                showAppBar: true,
-                body: MultiBlocListener(
-                  listeners: [
-                    BlocListener<SettingsBloc, SettingsState>(
-                      listener: (context, settingsState) {
-                        developer.log('Get Address List Bloc  $state');
-                        if (settingsState is SettingsLoaded) {
-                          final walletAllowed =
-                              SettingsData.instance.payment?.wallet ?? false;
-                          if (!walletAllowed && _userWantsWallet) {
-                            setState(() {
-                              _userWantsWallet = false;
-                            });
-
-                            // Refresh cart immediately with wallet off
-                            _refreshCart();
-                          }
-                        }
-                      },
-                    ),
-                    BlocListener<CartBloc, CartState>(
-                      listener: (context, cartState) {
-                        if (cartState is CartLoaded &&
-                            cartState.errorMessage != null) {
-                          ToastManager.show(
-                            context: context,
-                            message: cartState.errorMessage!,
-                            type: ToastType.error,
-                          );
-                          // Refresh cart to get correct state from server
-                          _refreshCart();
-                        }
-                      },
-                    ),
-                    BlocListener<GetAddressListBloc, GetAddressListState>(
-                      listener: (context, addressState) {
-                        developer.log('Get Address List Bloc  $state');
-                        // Auto-select first address when addresses are loaded
-                        if (addressState is GetAddressListLoaded &&
-                            selectedAddress == null &&
-                            addressState.addressList.isNotEmpty) {
-                          setState(() {
-                            selectedAddress = addressState.addressList.first;
-                            isCartLoading = true;
-                          });
-                          // Save selected address to Hive
-                          HiveSelectedAddressHelper.setSelectedAddress(
-                              addressState.addressList.first);
-                          // Update cart with selected address
-                          context.read<GetUserCartBloc>().add(FetchUserCart(
+                  BlocListener<CartBloc, CartState>(
+                    listener: (context, cartState) {
+                      if (cartState is CartLoaded &&
+                          cartState.errorMessage != null) {
+                        ToastManager.show(
+                          context: context,
+                          message: cartState.errorMessage!,
+                          type: ToastType.error,
+                        );
+                        _refreshCart();
+                      }
+                    },
+                  ),
+                  BlocListener<GetAddressListBloc, GetAddressListState>(
+                    listener: (context, addressState) {
+                      if (addressState is GetAddressListLoaded &&
+                          selectedAddress == null &&
+                          addressState.addressList.isNotEmpty) {
+                        setState(() {
+                          selectedAddress = addressState.addressList.first;
+                          isCartLoading = true;
+                        });
+                        HiveSelectedAddressHelper.setSelectedAddress(
+                            addressState.addressList.first);
+                        context.read<GetUserCartBloc>().add(FetchUserCart(
                               addressId: selectedAddress?.id,
                               rushDelivery:
                                   selectedDeliveryType == DeliveryType.rush,
                               useWallet: _userWantsWallet,
-                              promoCode: promoCode));
-                        }
-                      },
-                    ),
-                    BlocListener<GetUserCartBloc, GetUserCartState>(
-                        listener: (context, state) {
+                              promoCode: promoCode,
+                            ));
+                      }
+                    },
+                  ),
+                  // FIX: This is the ONLY place stateData and isCartLoading are updated.
+                  BlocListener<GetUserCartBloc, GetUserCartState>(
+                    listener: (context, state) {
                       developer.log('Get User Cart Bloc  $state');
-
                       if (state is GetUserCartLoaded) {
+                        // _calculateTotals calls setState internally and sets stateData.
                         _calculateTotals(state.cartData);
                         context.read<CartUIBloc>().add(SetWalletLoading(false));
                       } else if (state is GetUserCartLoading) {
@@ -399,722 +386,567 @@ class _CartPageState extends State<CartPage> {
                         });
                         context.read<CartUIBloc>().add(SetWalletLoading(false));
                       }
-                    }),
-                    BlocListener<RemoveItemFromCartBloc,
-                        RemoveItemFromCartState>(
-                      listener: (context, state) {
-                        developer.log('Remove Item From Cart Bloc  $state');
-                        if (state is RemoveItemFromCartLoading) {
-                          setState(() {
-                            isCartLoading = true;
-                          });
-                        }
-                        if (state is RemoveItemFromCartSuccess) {
-                          // Keep loading true, will be set to false when cart loads
-                          context.read<GetUserCartBloc>().add(FetchUserCart(
+                    },
+                  ),
+                  BlocListener<RemoveItemFromCartBloc, RemoveItemFromCartState>(
+                    listener: (context, state) {
+                      if (state is RemoveItemFromCartLoading) {
+                        setState(() {
+                          isCartLoading = true;
+                        });
+                      } else if (state is RemoveItemFromCartSuccess) {
+                        context.read<GetUserCartBloc>().add(FetchUserCart(
                               addressId: selectedAddress?.id,
                               rushDelivery:
                                   selectedDeliveryType == DeliveryType.rush,
                               useWallet: _userWantsWallet,
-                              promoCode: promoCode));
-                        }
-                        if (state is RemoveItemFromCartFailed) {
-                          setState(() {
-                            isCartLoading = true;
-                          });
-                        }
-                      },
-                    ),
-                    BlocListener<ClearCartBloc, ClearCartState>(
-                      listener: (context, state) {
-                        developer.log('Clear Cart Bloc  $state');
-                        if (state is ClearCartLoading) {
-                          setState(() {
-                            isCartLoading = true;
-                            isClearingCart = true;
-                          });
-                        } else if (state is ClearCartSuccess ||
-                            state is ClearCartFailed) {
-                          // context.read<GetUserCartBloc>().add(RefreshUserCart(
-                          //     addressId: selectedAddress?.id,
-                          //     rushDelivery: selectedDeliveryType == DeliveryType.rush,
-                          //     useWallet: useWallet,
-                          //     promoCode: promoCode ?? ''
-                          // ));
-                          setState(() {
-                            isCartLoading = false;
-                            isClearingCart = false;
-                          });
-                        }
-                      },
-                    ),
-                    BlocListener<SaveForLaterBloc, SaveForLaterState>(
-                      listener: (context, state) {
-                        developer.log('Save For Later Bloc  $state');
-                        if (state is SaveForLaterLoading) {
-                          setState(() {
-                            isCartLoading = true;
-                          });
-                        } else if (state is ProductSavedSuccess) {
-                          // Cart will be refreshed automatically
-                          setState(() {
-                            isCartLoading = false;
-                          });
-
-                          ToastManager.show(
-                              context: context,
-                              message:
-                                  '${state.productName} is saved for later');
-                          context.read<GetUserCartBloc>().add(FetchUserCart(
-                              addressId: selectedAddress?.id,
-                              rushDelivery:
-                                  selectedDeliveryType == DeliveryType.rush,
-                              useWallet: _userWantsWallet,
-                              promoCode: promoCode));
-                        } else if (state is SaveForLaterFailed) {
-                          setState(() {
-                            isCartLoading = false;
-                          });
-                        }
-                      },
-                    ),
-                    BlocListener<CreateOrderBloc, CreateOrderState>(
-                      listener: (context, state) {
-                        developer.log('Create Order Bloc  $state');
-                        if (state is CreateOrderSuccess) {
-                          context
-                              .read<CartUIBloc>()
-                              .add(SetWholePageProgress(true));
-                          context
-                              .read<CartUIBloc>()
-                              .add(SetWalletLoading(false));
-                          setState(() {
-                            isWholePageProgress = true;
-                            isCartLoading = true;
-                          });
-                          if (selectedPaymentMethodType ==
-                              PaymentMethodType.flutterwave) {
-                            Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => WebViewPaymentPage(
-                                          paymentUrl: state.paymentUrl!,
-                                          onPaymentSuccess: () {
-                                            setState(() {
-                                              isWholePageProgress = false;
-                                              isCartLoading = false;
-                                            });
-                                          },
-                                          onPaymentFailure: () {
-                                            setState(() {
-                                              isWholePageProgress = false;
-                                              isCartLoading = false;
-                                            });
-                                            context.read<GetUserCartBloc>().add(
-                                                FetchUserCart(
-                                                    addressId:
-                                                        selectedAddress?.id,
-                                                    rushDelivery:
-                                                        selectedDeliveryType ==
-                                                            DeliveryType.rush,
-                                                    useWallet: _userWantsWallet,
-                                                    promoCode: promoCode));
-                                          },
-                                        )));
-                          } else {
-                            final displayAddress = selectedAddress != null
-                                ? formatAddressFromModel(selectedAddress!)
-                                : null;
-
-                            GoRouter.of(context).pop();
-                            developer
-                                .log('Payment successful: ${state.message}');
-
-                            // Navigate to order success page
-                            GoRouter.of(context).push(
-                              AppRoutes.orderSuccess,
-                              extra: {
-                                'address': displayAddress,
-                                'addressType': selectedAddress!.addressType,
-                                'orderSlug': state.orderSlug,
-                              },
-                            );
-                          }
-                        } else if (state is CreateOrderFailure) {
-                          setState(() {
-                            isWholePageProgress = false;
-                            isCartLoading = false;
-                          });
-                          ToastManager.show(
-                            context: context,
-                            message: state.error,
-                            type: ToastType.error,
-                          );
-                        } else if (state is CreateOrderProgress) {
-                          setState(() {
-                            isWholePageProgress = true;
-                          });
-                        }
-                      },
-                    ),
-                    // Payment BLoC Listener
-                    BlocListener<PaymentBloc, PaymentState>(
-                      listener: (context, state) {
-                        developer.log('Payment Bloc  $state');
-                        developer.log('Payment Success  $state');
-                        if (state is PaymentSuccess) {
-                          setState(() {
-                            isWholePageProgress = false;
-                          });
-                          context
-                              .read<CartUIBloc>()
-                              .add(SetWalletLoading(false));
-                          _initiatePayment(
-                              paymentId: state.transactionId,
-                              signature: state.signature,
-                              orderId: state.orderId);
-                        } else if (state is PaymentFailure) {
-                          setState(() {
-                            isWholePageProgress = false;
-                          });
-                          context
-                              .read<CartUIBloc>()
-                              .add(SetWalletLoading(false));
-                          ToastManager.show(
-                              context: context,
-                              message: state.error,
-                              type: ToastType.error);
-                        } else if (state is PaymentLoading) {
-                          setState(() {
-                            isWholePageProgress = true;
-                          });
-                        }
-                      },
-                    ),
-                    BlocListener<UpdateItemQuantityBloc,
-                        UpdateItemQuantityState>(
-                      listener: (context, state) {
-                        developer.log('Update Item Quantity Bloc  $state');
-                        if (state is UpdateItemQuantityLoading) {
-                          setState(() {
-                            isCartLoading = true;
-                          });
-                        }
-                        if (state is UpdateItemQuantitySuccess) {
-                          // Keep loading true, will be set to false when cart loads
-                          context.read<GetUserCartBloc>().add(FetchUserCart(
-                              addressId: selectedAddress?.id,
-                              rushDelivery:
-                                  selectedDeliveryType == DeliveryType.rush,
-                              useWallet: _userWantsWallet,
-                              promoCode: promoCode));
-                        }
-                        if (state is UpdateItemQuantityFailed) {
-                          setState(() {
-                            isCartLoading = false;
-                          });
-                        }
-                      },
-                    ),
-                    BlocListener<PromoCodeBloc, PromoCodeState>(
-                      listener: (context, state) {
-                        if (state is PromoCodeRemoving ||
-                            state is PromoCodeApplying ||
-                            state is PromoCodeLoading) {
-                          setState(() {
-                            isCartLoading = true;
-                          });
-                        }
-                        if (state is PromoCodeFailed) {
-                          setState(() {
-                            isCartLoading = false;
-                          });
-                          ToastManager.show(
-                              context: context,
-                              message: AppLocalizations.of(context)!
-                                  .promoCodeAppliedOnYourCart);
-                        }
-                        if (state is PromoCodeSelected) {
-                          setState(() {
-                            promoCode = state.promoCode;
-                            isCartLoading = false;
-                          });
-                          if (state.promoCode.isNotEmpty) {
-                            ToastManager.show(
-                                context: context,
-                                message: AppLocalizations.of(context)!
-                                    .promoCodeAppliedOnYourCart);
-                          }
-                        }
-                        if (state is PromoCodeRemoved) {
-                          setState(() {
-                            promoCode = state.promoCode;
-                            isCartLoading = false;
-                          });
-                        }
-                      },
-                    ),
-                    BlocListener<UserWalletBloc, UserWalletState>(
-                      listener: (context, state) {
-                        if (state is UserWalletLoaded &&
-                            state.userWallet.isNotEmpty) {
-                          setState(() {
-                            walletBalance = double.tryParse(
-                                    state.userWallet.first.balance ?? '0.0') ??
-                                0.0;
-                          });
-                        }
-                      },
-                    ),
-                    BlocListener<ValidatePromoCodeBloc, ValidatePromoCodeState>(
-                      listener: (context, state) {
-                        if (state is ValidatePromoCodeLoaded) {
-                          final validatedCode = context
-                              .read<ValidatePromoCodeBloc>()
-                              .selectedPromoCode;
-                          setState(() {
-                            promoCode = validatedCode;
-                            _promoController.text = validatedCode;
-                            isCartLoading = true;
-                          });
-                          _refreshCart();
-                          ToastManager.show(
-                            context: context,
-                            message: AppLocalizations.of(context)!
-                                .promoCodeAppliedOnYourCart,
-                            type: ToastType.success,
-                          );
-                        } else if (state is ValidatePromoCodeFailed) {
-                          ToastManager.show(
-                            context: context,
-                            message: state.error,
-                            type: ToastType.error,
-                          );
-                        }
-                      },
-                    ),
-                  ],
-                  child: BlocBuilder<GetUserCartBloc, GetUserCartState>(
-                    builder: (BuildContext context, GetUserCartState state) {
-                      if (state is UserCartInitialLoading) {
-                        return CustomCircularProgressIndicator();
+                              promoCode: promoCode,
+                            ));
+                      } else if (state is RemoveItemFromCartFailed) {
+                        setState(() {
+                          isCartLoading = false;
+                        });
                       }
-                      return CustomRefreshIndicator(
-                        onRefresh: () async {
-                          context.read<GetUserCartBloc>().add(RefreshUserCart(
+                    },
+                  ),
+                  BlocListener<ClearCartBloc, ClearCartState>(
+                    listener: (context, state) {
+                      if (state is ClearCartLoading) {
+                        setState(() {
+                          isCartLoading = true;
+                          isClearingCart = true;
+                        });
+                      } else if (state is ClearCartSuccess ||
+                          state is ClearCartFailed) {
+                        setState(() {
+                          isCartLoading = false;
+                          isClearingCart = false;
+                        });
+                      }
+                    },
+                  ),
+                  BlocListener<SaveForLaterBloc, SaveForLaterState>(
+                    listener: (context, state) {
+                      if (state is SaveForLaterLoading) {
+                        setState(() {
+                          isCartLoading = true;
+                        });
+                      } else if (state is ProductSavedSuccess) {
+                        setState(() {
+                          isCartLoading = false;
+                        });
+                        ToastManager.show(
+                            context: context,
+                            message: '${state.productName} is saved for later');
+                        context.read<GetUserCartBloc>().add(FetchUserCart(
                               addressId: selectedAddress?.id,
                               rushDelivery:
                                   selectedDeliveryType == DeliveryType.rush,
                               useWallet: _userWantsWallet,
-                              promoCode: promoCode));
-                          context
-                              .read<SettingsBloc>()
-                              .add(FetchSettingsData(context: context));
-                          context.read<GetAddressListBloc>().add(
-                              FetchUserAddressList(
-                                  deliveryZoneId: deliveryZoneId));
-                          context.read<UserWalletBloc>().add(FetchUserWallet());
-                        },
-                        child: SingleChildScrollView(
-                          physics: AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.all(16),
-                          child: BlocBuilder<GetUserCartBloc, GetUserCartState>(
-                            builder:
-                                (BuildContext context, GetUserCartState state) {
-                              if (state is GetUserCartLoaded) {
-                                stateData = state.cartData;
-                                developer.log(
-                                    '🛒 Cart updated: ${stateData.length} sections found',
-                                    name: 'CartPage');
-                              }
-                              if (isClearingCart) {
-                                return Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      SizedBox(height: 50.h),
-                                      CustomCircularProgressIndicator(),
-                                      SizedBox(height: 10.h),
-                                      Text(
-                                          AppLocalizations.of(context)!
-                                              .clearingYourCart,
-                                          style: TextStyle(color: Colors.grey)),
-                                    ],
-                                  ),
-                                );
-                              }
-                              if (stateData.isEmpty) {
-                                final localCartState =
-                                    context.read<CartBloc>().state;
-                                bool hasLocalItems = false;
-                                if (localCartState is CartLoaded) {
-                                  hasLocalItems =
-                                      localCartState.items.isNotEmpty;
-                                }
-
-                                if (isCartLoading) {
-                                  // We have local items but server/stateData is empty => SYNCING
-                                  // OR we are just generically loading (isCartLoading = true) and have no data yet
-                                  return Center(
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        SizedBox(height: 50.h),
-                                        CustomCircularProgressIndicator(),
-                                        SizedBox(height: 10.h),
-                                        Text(
-                                            hasLocalItems
-                                                ? "Syncing your cart..."
-                                                : "Loading...",
-                                            style:
-                                                TextStyle(color: Colors.grey)),
-                                      ],
-                                    ),
-                                  );
-                                }
-
-                                isCartLoading = false;
-                                return _buildEmptyCartState();
-                              }
-
-                              isCartLoading = false;
-                              if (stateData.isNotEmpty && stateData.first.data?.items != null) {
-                                isCartLoading = false;
-                                final cartData = stateData;
-                                final billSummaryData = cartData.first.data!.paymentSummary;
-                                final finalWalletAmountUsed = walletAmountUsedValue;
-                                final finalGrandTotal = totalAmount;
-                                final calculatedItemsTotalVal = calculatedItemsTotal;
-                                final originalItemsTotalVal = originalItemsTotal;
-                                final itemSavingsVal = itemSavings;
-                                final currentDeliveryChargeVal = currentDeliveryCharge;
-                                final effectiveWalletBalance = walletBalance > 0
-                                    ? walletBalance
-                                    : (billSummaryData?.walletBalance?.toDouble() ?? 0.0);
-
-                                // Calculations handled by _calculateTotals
-                                return Column(
-                                  children: [
-                                    RemovedItemsWidget(
-                                      removedItems:
-                                          cartData.first.data?.removedItems ??
-                                              [],
-                                    ),
-                                    CartWidget(
-                                        items: cartData.first.data!.items!,
-                                        deliveryTime: cartData
-                                            .first
-                                            .data!
-                                            .paymentSummary!
-                                            .estimatedDeliveryTime
-                                            .toString(),
-                                        onQuantityChanged:
-                                            _handleQuantityChanged,
-                                        onRemoveItem: _handleRemoveItem,
-                                        onAddMoreItems: _handleAddMoreItems,
-                                        // Customization options
-                                        backgroundColor: Theme.of(context)
-                                            .colorScheme
-                                            .surface,
-                                        quantityButtonColor:
-                                            AppTheme.primaryColor,
-                                        priceColor: Colors.black,
-                                        originalPriceColor: Colors.grey[500],
-                                        totalItem:
-                                            cartData.first.data!.totalQuantity,
-                                        addressId: selectedAddress?.id,
-                                        rushDelivery: selectedDeliveryType ==
-                                            DeliveryType.rush,
-                                        useWallet: _userWantsWallet,
-                                        promoCode: promoCode),
-                                    SizedBox(
-                                      height: 9.h,
-                                    ),
-                                    BlocBuilder<SimilarProductBloc,
-                                            SimilarProductState>(
-                                        builder: (context, similarState) {
-                                      if (similarState
-                                          is SimilarProductLoaded) {
-                                        // Collect active store IDs from the current cart state
-                                        final cartStoreIds = <int>{};
-                                        if (state is GetUserCartLoaded) {
-                                          for (var cartModel
-                                              in state.cartData) {
-                                            if (cartModel.data?.items != null) {
-                                              for (var item
-                                                  in cartModel.data!.items!) {
-                                                if (item.storeId != null)
-                                                  cartStoreIds
-                                                      .add(item.storeId!);
-                                                if (item.store?.id != null)
-                                                  cartStoreIds
-                                                      .add(item.store!.id!);
-                                              }
-                                            }
-                                          }
-                                        }
-
-                                        developer.log(
-                                            '🏪 Active Cart Stores: $cartStoreIds',
-                                            name: 'CartPage');
-
-                                        // Filter: only show products from stores already serving this cart
-                                        final filteredProducts = cartStoreIds
-                                                .isNotEmpty
-                                            ? similarState.similarProduct
-                                                .where((product) {
-                                                if (product.variants.isEmpty)
-                                                  return false;
-                                                final pid = product.id;
-                                                final sid = product
-                                                    .variants.first.storeId;
-                                                final isAllowed =
-                                                    cartStoreIds.contains(sid);
-                                                developer.log(
-                                                    '🔍 Product "$pid" from store "$sid" allowed? $isAllowed',
-                                                    name: 'CartPage');
-                                                return isAllowed;
-                                              }).toList()
-                                            : <ProductData>[];
-
-                                        if (filteredProducts.isEmpty) {
-                                          return const SizedBox.shrink();
-                                        }
-
-                                        return YouMightAlsoLikeProductWidget(
-                                            productData: filteredProducts,
-                                            addressId: selectedAddress?.id,
-                                            rushDelivery:
-                                                selectedDeliveryType ==
-                                                    DeliveryType.rush,
-                                            useWallet: _userWantsWallet,
-                                            promoCode: promoCode,
-                                            isFromCartPage: true);
-                                      } else if (similarState
-                                          is SimilarProductLoading) {
-                                        return productListShimmer(3);
-                                      }
-                                      return SizedBox.shrink();
-                                    }),
-                                    SizedBox(
-                                      height: 9.h,
-                                    ),
-                                    DeliveryTypeWidget(
-                                      selectedDeliveryType:
-                                          selectedDeliveryType,
-                                      rushDeliveryCharge: rushCharge,
-                                      regularDeliveryCharge: 0.0,
-                                      isRushDeliveryDisabled: billSummaryData
-                                              ?.isRushDeliveryAvailable ==
-                                          false,
-                                      onDeliveryTypeChanged:
-                                          (DeliveryType type) {
-                                        setState(() {
-                                          selectedDeliveryType = type;
-                                        });
-                                        // Update cart with new delivery type
-                                        _updateCartWithDeliveryType(type);
-                                      },
-                                    ),
-                                    if (selectedDeliveryType !=
-                                        DeliveryType.rush) ...[
-                                      SizedBox(height: 9.h),
-                                      DeliveryTimeSlotWidget(
-                                        timeSlots:
-                                            stateData.first.data?.timeSlots ??
-                                                stateData.first.data
-                                                    ?.deliveryZone?.timeSlots,
-                                        initialSelectedSlot: selectedTimeSlot,
-                                        onSlotSelected: (slot) {
+                              promoCode: promoCode,
+                            ));
+                      } else if (state is SaveForLaterFailed) {
+                        setState(() {
+                          isCartLoading = false;
+                        });
+                      }
+                    },
+                  ),
+                  BlocListener<CreateOrderBloc, CreateOrderState>(
+                    listener: (context, state) {
+                      if (state is CreateOrderSuccess) {
+                        context
+                            .read<CartUIBloc>()
+                            .add(SetWholePageProgress(true));
+                        context.read<CartUIBloc>().add(SetWalletLoading(false));
+                        setState(() {
+                          isWholePageProgress = true;
+                          isCartLoading = true;
+                        });
+                        if (selectedPaymentMethodType ==
+                            PaymentMethodType.flutterwave) {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => WebViewPaymentPage(
+                                        paymentUrl: state.paymentUrl!,
+                                        onPaymentSuccess: () {
                                           setState(() {
-                                            selectedTimeSlot = slot;
+                                            isWholePageProgress = false;
+                                            isCartLoading = false;
                                           });
                                         },
-                                      ),
-                                    ],
-                                    BlocBuilder<CartUIBloc, CartUIState>(
-                                      builder: (context, uiState) {
-                                        return BlocBuilder<SettingsBloc,
-                                            SettingsState>(
-                                          builder: (context, settingsState) {
-                                            final walletAllowed =
-                                                settingsState is SettingsLoaded
-                                                    ? SettingsData.instance
-                                                            .payment?.wallet ??
-                                                        false
-                                                    : false;
-
-                                            // Defensive clamp (in case listener missed edge case)
-                                            if (!walletAllowed &&
-                                                _userWantsWallet) {
-                                              WidgetsBinding.instance
-                                                  .addPostFrameCallback((_) {
-                                                if (mounted) {
-                                                  setState(() {
-                                                    _userWantsWallet = false;
-                                                  });
-                                                  _refreshCart();
-                                                }
-                                              });
-                                            }
-
-                                            // Hide completely when not allowed
-                                            if (!walletAllowed) {
-                                              return const SizedBox.shrink();
-                                            }
-
-                                            // Show toggle only when allowed
-                                            return Column(
-                                              children: [
-                                                SizedBox(
-                                                  height: 9.h,
-                                                ),
-                                                WalletUsageWidget(
-                                                  isWalletEnabled:
-                                                      effectiveUseWallet,
-                                                  isLoading: isCartLoading ||
-                                                      uiState.isWalletLoading,
-                                                  walletAmountUsed:
-                                                      finalWalletAmountUsed,
-                                                  remainingBalance:
-                                                      effectiveWalletBalance -
-                                                          finalWalletAmountUsed,
-                                                  onWalletToggle: !uiState
-                                                              .isWalletLoading &&
-                                                          !isCartLoading
-                                                      ? (bool value) {
-                                                          setState(() {
-                                                            _userWantsWallet =
-                                                                value;
-                                                          });
-                                                          _refreshCart();
-                                                        }
-                                                      : (value) {}, // disables interaction while loading
-                                                ),
-                                              ],
-                                            );
-                                          },
-                                        );
-                                      },
-                                    ),
-                                    OrderNoteWidget(
-                                      onNoteChanged: (note) {
-                                        setState(() {
-                                          orderNote = note;
-                                        });
-                                      },
-                                      isEnabled: !isCartLoading,
-                                    ),
-                                    Padding(
-                                      padding:
-                                          EdgeInsets.symmetric(vertical: 16.h),
-                                      child: MinimumOrderProgressBar(
-                                          currentTotal: itemsTotal,
-                                          isBottomAttached: false),
-                                    ),
-                                    offerAndCouponButton(),
-                                    SizedBox(height: 12.h),
-                                    BillSummaryWidget(
-                                      itemsOriginalPrice: originalItemsTotalVal >
-                                              calculatedItemsTotalVal
-                                          ? originalItemsTotalVal
-                                          : -1,
-                                      itemsDiscountedPrice:
-                                          calculatedItemsTotalVal,
-                                      itemsSavings:
-                                          itemSavingsVal > 0 ? itemSavingsVal : 0,
-                                      deliveryChargeOriginal:
-                                          currentDeliveryChargeVal,
-                                      handlingCharge: billSummaryData
-                                              ?.handlingCharges
-                                              ?.toDouble() ??
-                                          0,
-                                      grandTotal: finalGrandTotal,
-                                      totalSavings:
-                                          itemSavingsVal > 0 ? itemSavingsVal : 0,
-                                      perStoreDropOffFees: billSummaryData
-                                              ?.perStoreDropOffFee
-                                              ?.toDouble() ??
-                                          0.0,
-                                      promoCode: billSummaryData?.promoCode,
-                                      promoDiscount: double.tryParse(
-                                              billSummaryData?.promoDiscount ??
-                                                  '0') ??
-                                          0,
-                                      promoError: billSummaryData?.promoError,
-                                      removeCoupon: () {
-                                        setState(() {
-                                          isCartLoading = true;
-                                          promoCode = '';
-                                        });
-                                        context
-                                            .read<PromoCodeBloc>()
-                                            .add(RemovePromoCode());
-                                        context.read<GetUserCartBloc>().add(
-                                            FetchUserCart(
+                                        onPaymentFailure: () {
+                                          setState(() {
+                                            isWholePageProgress = false;
+                                            isCartLoading = false;
+                                          });
+                                          context
+                                              .read<GetUserCartBloc>()
+                                              .add(FetchUserCart(
                                                 addressId: selectedAddress?.id,
                                                 rushDelivery:
                                                     selectedDeliveryType ==
                                                         DeliveryType.rush,
                                                 useWallet: _userWantsWallet,
-                                                promoCode: promoCode ?? ''));
-                                      },
-                                      promoMode: billSummaryData
-                                              ?.promoApplied?.promoMode ??
-                                          '',
-                                      discountAmount: billSummaryData
-                                              ?.promoApplied?.discountAmount ??
-                                          '',
-                                      isRushDelivery:
-                                          billSummaryData?.isRushDelivery,
-                                      walletAmountUsed: finalWalletAmountUsed,
-                                    )
-                                  ],
-                                );
-                              } else {
-                                isCartLoading = false;
-                                return _buildEmptyCartState();
-                              }
+                                                promoCode: promoCode,
+                                              ));
+                                        },
+                                      )));
+                        } else {
+                          final displayAddress = selectedAddress != null
+                              ? formatAddressFromModel(selectedAddress!)
+                              : null;
+                          GoRouter.of(context).pop();
+                          GoRouter.of(context).push(
+                            AppRoutes.orderSuccess,
+                            extra: {
+                              'address': displayAddress,
+                              'addressType': selectedAddress!.addressType,
+                              'orderSlug': state.orderSlug,
                             },
-                          ),
-                        ),
-                      );
+                          );
+                        }
+                      } else if (state is CreateOrderFailure) {
+                        setState(() {
+                          isWholePageProgress = false;
+                          isCartLoading = false;
+                        });
+                        ToastManager.show(
+                          context: context,
+                          message: state.error,
+                          type: ToastType.error,
+                        );
+                      } else if (state is CreateOrderProgress) {
+                        setState(() {
+                          isWholePageProgress = true;
+                        });
+                      }
                     },
                   ),
-                ),
-                bottomNavigationBar:
-                    BlocBuilder<GetUserCartBloc, GetUserCartState>(
-                  builder: (context, state) {
-                    if (state is GetUserCartLoaded) {
-                      // Note: itemsTotal and totalAmount are updated via _calculateTotals in the BlocListener
-                    }
-
-                    if (itemsTotal > 0) {
-                      return Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (selectedAddress != null)
-                            DeliveryAddressWidget(
-                              selectedAddress: selectedAddress,
-                              onTap: () {
-                                _showAddressSelectionBottomSheet();
-                              },
-                            ),
-                          _buildCheckoutSection(),
-                        ],
-                      );
-                    } else {
-                      return SizedBox.shrink();
-                    }
-                  },
-                )),
+                  BlocListener<PaymentBloc, PaymentState>(
+                    listener: (context, state) {
+                      if (state is PaymentSuccess) {
+                        setState(() {
+                          isWholePageProgress = false;
+                        });
+                        context.read<CartUIBloc>().add(SetWalletLoading(false));
+                        _initiatePayment(
+                            paymentId: state.transactionId,
+                            signature: state.signature,
+                            orderId: state.orderId);
+                      } else if (state is PaymentFailure) {
+                        setState(() {
+                          isWholePageProgress = false;
+                        });
+                        context.read<CartUIBloc>().add(SetWalletLoading(false));
+                        ToastManager.show(
+                            context: context,
+                            message: state.error,
+                            type: ToastType.error);
+                      } else if (state is PaymentLoading) {
+                        setState(() {
+                          isWholePageProgress = true;
+                        });
+                      }
+                    },
+                  ),
+                  BlocListener<UpdateItemQuantityBloc, UpdateItemQuantityState>(
+                    listener: (context, state) {
+                      if (state is UpdateItemQuantityLoading) {
+                        setState(() {
+                          isCartLoading = true;
+                        });
+                      } else if (state is UpdateItemQuantitySuccess) {
+                        context.read<GetUserCartBloc>().add(FetchUserCart(
+                              addressId: selectedAddress?.id,
+                              rushDelivery:
+                                  selectedDeliveryType == DeliveryType.rush,
+                              useWallet: _userWantsWallet,
+                              promoCode: promoCode,
+                            ));
+                      } else if (state is UpdateItemQuantityFailed) {
+                        setState(() {
+                          isCartLoading = false;
+                        });
+                      }
+                    },
+                  ),
+                  BlocListener<PromoCodeBloc, PromoCodeState>(
+                    listener: (context, state) {
+                      if (state is PromoCodeRemoving ||
+                          state is PromoCodeApplying ||
+                          state is PromoCodeLoading) {
+                        setState(() {
+                          isCartLoading = true;
+                        });
+                      } else if (state is PromoCodeFailed) {
+                        setState(() {
+                          isCartLoading = false;
+                        });
+                        ToastManager.show(
+                            context: context,
+                            message: AppLocalizations.of(context)!
+                                .promoCodeAppliedOnYourCart);
+                      } else if (state is PromoCodeSelected) {
+                        setState(() {
+                          promoCode = state.promoCode;
+                          isCartLoading = false;
+                        });
+                        if (state.promoCode.isNotEmpty) {
+                          ToastManager.show(
+                              context: context,
+                              message: AppLocalizations.of(context)!
+                                  .promoCodeAppliedOnYourCart);
+                        }
+                      } else if (state is PromoCodeRemoved) {
+                        setState(() {
+                          promoCode = state.promoCode;
+                          isCartLoading = false;
+                        });
+                      }
+                    },
+                  ),
+                  BlocListener<UserWalletBloc, UserWalletState>(
+                    listener: (context, state) {
+                      if (state is UserWalletLoaded &&
+                          state.userWallet.isNotEmpty) {
+                        setState(() {
+                          walletBalance = double.tryParse(
+                                  state.userWallet.first.balance ?? '0.0') ??
+                              0.0;
+                        });
+                      }
+                    },
+                  ),
+                  BlocListener<ValidatePromoCodeBloc, ValidatePromoCodeState>(
+                    listener: (context, state) {
+                      if (state is ValidatePromoCodeLoaded) {
+                        final validatedCode = context
+                            .read<ValidatePromoCodeBloc>()
+                            .selectedPromoCode;
+                        setState(() {
+                          promoCode = validatedCode;
+                          _promoController.text = validatedCode;
+                          isCartLoading = true;
+                        });
+                        _refreshCart();
+                        ToastManager.show(
+                          context: context,
+                          message: AppLocalizations.of(context)!
+                              .promoCodeAppliedOnYourCart,
+                          type: ToastType.success,
+                        );
+                      } else if (state is ValidatePromoCodeFailed) {
+                        ToastManager.show(
+                          context: context,
+                          message: state.error,
+                          type: ToastType.error,
+                        );
+                      }
+                    },
+                  ),
+                ],
+                // FIX: Single BlocBuilder — no more nested BlocBuilder for the same bloc.
+                // All rendering uses the `stateData` field, which is always up-to-date
+                // because it is set inside setState() in _calculateTotals / the listener.
+                child: _buildCartBody(context, l10n),
+              ),
+              bottomNavigationBar: _buildBottomNav(context),
+            ),
             if (isWholePageProgress) WholePageProgress(),
           ],
         );
       },
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // CART BODY — reads only from local state fields, never from bloc directly
+  // ---------------------------------------------------------------------------
+  Widget _buildCartBody(BuildContext context, AppLocalizations? l10n) {
+    return CustomRefreshIndicator(
+      onRefresh: () async {
+        context.read<GetUserCartBloc>().add(RefreshUserCart(
+              addressId: selectedAddress?.id,
+              rushDelivery: selectedDeliveryType == DeliveryType.rush,
+              useWallet: _userWantsWallet,
+              promoCode: promoCode,
+            ));
+        context.read<SettingsBloc>().add(FetchSettingsData(context: context));
+        context
+            .read<GetAddressListBloc>()
+            .add(FetchUserAddressList(deliveryZoneId: deliveryZoneId));
+        context.read<UserWalletBloc>().add(FetchUserWallet());
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: _buildCartContent(context, l10n),
+      ),
+    );
+  }
+
+  Widget _buildCartContent(BuildContext context, AppLocalizations? l10n) {
+    // Clearing spinner
+    if (isClearingCart) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(height: 50.h),
+            const CustomCircularProgressIndicator(),
+            SizedBox(height: 10.h),
+            Text(
+              AppLocalizations.of(context)!.clearingYourCart,
+              style: const TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Empty / still syncing — never flash empty UI before API responds
+    if (stateData.isEmpty || stateData.first.data?.items == null) {
+      final cartBlocState = context.read<GetUserCartBloc>().state;
+      if (cartBlocState is GetUserCartLoading ||
+          cartBlocState is UserCartInitialLoading ||
+          isCartLoading) {
+        return SizedBox(
+          height: MediaQuery.of(context).size.height * 0.7,
+          child: const Center(
+            child: CustomCircularProgressIndicator(),
+          ),
+        );
+      }
+      return _buildEmptyCartState();
+    }
+
+    // --- Cart has items — build the full content from local stateData ---
+    final cartData = stateData;
+    final billSummaryData = cartData.first.data!.paymentSummary;
+
+    // Snapshot computed values for this frame (already stored in state fields)
+    final finalWalletAmountUsed = walletAmountUsedValue;
+    final finalGrandTotal = totalAmount;
+    final calculatedItemsTotalVal = calculatedItemsTotal;
+    final originalItemsTotalVal = originalItemsTotal;
+    final itemSavingsVal = itemSavings;
+    final currentDeliveryChargeVal = currentDeliveryCharge;
+    final effectiveWalletBalance = walletBalance > 0
+        ? walletBalance
+        : (billSummaryData?.walletBalance?.toDouble() ?? 0.0);
+
+    return Column(
+      children: [
+        RemovedItemsWidget(
+          removedItems: cartData.first.data?.removedItems ?? [],
+        ),
+        CartWidget(
+          items: cartData.first.data!.items!,
+          deliveryTime: cartData
+              .first.data!.paymentSummary!.estimatedDeliveryTime
+              .toString(),
+          onQuantityChanged: _handleQuantityChanged,
+          onRemoveItem: _handleRemoveItem,
+          onAddMoreItems: _handleAddMoreItems,
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          quantityButtonColor: AppTheme.primaryColor,
+          priceColor: Colors.black,
+          originalPriceColor: Colors.grey[500],
+          totalItem: cartData.first.data!.totalQuantity,
+          addressId: selectedAddress?.id,
+          rushDelivery: selectedDeliveryType == DeliveryType.rush,
+          useWallet: _userWantsWallet,
+          promoCode: promoCode,
+        ),
+        SizedBox(height: 9.h),
+        // You-might-also-like
+        BlocBuilder<SimilarProductBloc, SimilarProductState>(
+          builder: (context, similarState) {
+            if (similarState is SimilarProductLoaded) {
+              final cartStoreIds = <int>{};
+              for (var cartModel in cartData) {
+                if (cartModel.data?.items != null) {
+                  for (var item in cartModel.data!.items!) {
+                    if (item.storeId != null) cartStoreIds.add(item.storeId!);
+                    if (item.store?.id != null)
+                      cartStoreIds.add(item.store!.id!);
+                  }
+                }
+              }
+
+              final filteredProducts = cartStoreIds.isNotEmpty
+                  ? similarState.similarProduct.where((product) {
+                      if (product.variants.isEmpty) return false;
+                      final sid = product.variants.first.storeId;
+                      return cartStoreIds.contains(sid);
+                    }).toList()
+                  : <ProductData>[];
+
+              if (filteredProducts.isEmpty) return const SizedBox.shrink();
+
+              return YouMightAlsoLikeProductWidget(
+                productData: filteredProducts,
+                addressId: selectedAddress?.id,
+                rushDelivery: selectedDeliveryType == DeliveryType.rush,
+                useWallet: _userWantsWallet,
+                promoCode: promoCode,
+                isFromCartPage: true,
+              );
+            } else if (similarState is SimilarProductLoading) {
+              return productListShimmer(3);
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+        SizedBox(height: 9.h),
+        DeliveryTypeWidget(
+          selectedDeliveryType: selectedDeliveryType,
+          rushDeliveryCharge: rushCharge,
+          regularDeliveryCharge: 0.0,
+          isRushDeliveryDisabled:
+              billSummaryData?.isRushDeliveryAvailable == false,
+          onDeliveryTypeChanged: (DeliveryType type) {
+            setState(() {
+              selectedDeliveryType = type;
+            });
+            _updateCartWithDeliveryType(type);
+          },
+        ),
+        if (selectedDeliveryType != DeliveryType.rush) ...[
+          SizedBox(height: 9.h),
+          DeliveryTimeSlotWidget(
+            timeSlots: stateData.first.data?.timeSlots ??
+                stateData.first.data?.deliveryZone?.timeSlots,
+            initialSelectedSlot: selectedTimeSlot,
+            onSlotSelected: (slot) {
+              setState(() {
+                selectedTimeSlot = slot;
+              });
+            },
+          ),
+        ],
+        // Wallet toggle
+        BlocBuilder<CartUIBloc, CartUIState>(
+          builder: (context, uiState) {
+            return BlocBuilder<SettingsBloc, SettingsState>(
+              builder: (context, settingsState) {
+                final walletAllowed = settingsState is SettingsLoaded
+                    ? SettingsData.instance.payment?.wallet ?? false
+                    : false;
+
+                if (!walletAllowed && _userWantsWallet) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      setState(() {
+                        _userWantsWallet = false;
+                      });
+                      _refreshCart();
+                    }
+                  });
+                }
+
+                if (!walletAllowed) return const SizedBox.shrink();
+
+                return Column(
+                  children: [
+                    SizedBox(height: 9.h),
+                    WalletUsageWidget(
+                      isWalletEnabled: effectiveUseWallet,
+                      isLoading: isCartLoading || uiState.isWalletLoading,
+                      walletAmountUsed: finalWalletAmountUsed,
+                      remainingBalance:
+                          effectiveWalletBalance - finalWalletAmountUsed,
+                      onWalletToggle: !uiState.isWalletLoading && !isCartLoading
+                          ? (bool value) {
+                              setState(() {
+                                _userWantsWallet = value;
+                              });
+                              _refreshCart();
+                            }
+                          : (value) {},
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        ),
+        OrderNoteWidget(
+          onNoteChanged: (note) {
+            setState(() {
+              orderNote = note;
+            });
+          },
+          isEnabled: !isCartLoading,
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 16.h),
+          child: MinimumOrderProgressBar(
+              currentTotal: itemsTotal, isBottomAttached: false),
+        ),
+        offerAndCouponButton(),
+        SizedBox(height: 12.h),
+        BillSummaryWidget(
+          itemsOriginalPrice: originalItemsTotalVal > calculatedItemsTotalVal
+              ? originalItemsTotalVal
+              : -1,
+          itemsDiscountedPrice: calculatedItemsTotalVal,
+          itemsSavings: itemSavingsVal > 0 ? itemSavingsVal : 0,
+          deliveryChargeOriginal: currentDeliveryChargeVal,
+          handlingCharge: billSummaryData?.handlingCharges?.toDouble() ?? 0,
+          grandTotal: finalGrandTotal,
+          totalSavings: itemSavingsVal > 0 ? itemSavingsVal : 0,
+          perStoreDropOffFees:
+              billSummaryData?.perStoreDropOffFee?.toDouble() ?? 0.0,
+          promoCode: billSummaryData?.promoCode,
+          promoDiscount:
+              double.tryParse(billSummaryData?.promoDiscount ?? '0') ?? 0,
+          promoError: billSummaryData?.promoError,
+          removeCoupon: () {
+            setState(() {
+              isCartLoading = true;
+              promoCode = '';
+            });
+            context.read<PromoCodeBloc>().add(RemovePromoCode());
+            context.read<GetUserCartBloc>().add(FetchUserCart(
+                  addressId: selectedAddress?.id,
+                  rushDelivery: selectedDeliveryType == DeliveryType.rush,
+                  useWallet: _userWantsWallet,
+                  promoCode: promoCode ?? '',
+                ));
+          },
+          promoMode: billSummaryData?.promoApplied?.promoMode ?? '',
+          discountAmount: billSummaryData?.promoApplied?.discountAmount ?? '',
+          isRushDelivery: billSummaryData?.isRushDelivery,
+          walletAmountUsed: finalWalletAmountUsed,
+        ),
+      ],
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // BOTTOM NAV — reads from local state, no bloc rebuild needed
+  // ---------------------------------------------------------------------------
+  Widget _buildBottomNav(BuildContext context) {
+    if (itemsTotal <= 0) return const SizedBox.shrink();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (selectedAddress != null)
+          DeliveryAddressWidget(
+            selectedAddress: selectedAddress,
+            onTap: _showAddressSelectionBottomSheet,
+          ),
+        _buildCheckoutSection(),
+      ],
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // HELPERS (unchanged logic, just grouped)
+  // ---------------------------------------------------------------------------
 
   List<CartItems> _getProductsMissingRequiredAttachment(
     BuildContext context,
@@ -1126,12 +958,7 @@ class _CartPageState extends State<CartPage> {
         : <int, CartItemAttachment?>{};
 
     return cartItems.where((item) {
-      // Only check products that require attachment
-      if (item.product?.isAttachmentRequired != true) {
-        return false;
-      }
-
-      // Check if we have an attachment for this product
+      if (item.product?.isAttachmentRequired != true) return false;
       final attachment = attachmentsMap[item.productId ?? -1];
       return attachment == null;
     }).toList();
@@ -1139,47 +966,43 @@ class _CartPageState extends State<CartPage> {
 
   Future<bool> _showClearCartConfirmDialog(BuildContext context) async {
     final l10n = AppLocalizations.of(context);
-
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) {
-        return AlertDialog(
-          title: Text(
-            AppLocalizations.of(context)!.clearAllItems,
-            textAlign: TextAlign.center,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          AppLocalizations.of(context)!.clearAllItems,
+          textAlign: TextAlign.center,
+        ),
+        content: Text(
+          AppLocalizations.of(context)!.allItemsWillBeRemovedCannotBeUndone,
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n?.no ?? 'No'),
           ),
-          content: Text(
-            AppLocalizations.of(context)!.allItemsWillBeRemovedCannotBeUndone,
-            textAlign: TextAlign.center,
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              l10n?.yesClear ?? 'Yes, clear',
+              style: TextStyle(color: AppTheme.primaryColor),
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text(l10n?.no ?? 'No'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text(
-                l10n?.yesClear ?? 'Yes, clear',
-                style: TextStyle(color: AppTheme.primaryColor),
-              ),
-            ),
-          ],
-        );
-      },
+        ],
+      ),
     );
-
     return result ?? false;
   }
 
   void _updateCartWithDeliveryType(DeliveryType type) {
-    // Update your cart with the selected delivery type
     context.read<GetUserCartBloc>().add(FetchUserCart(
-        addressId: selectedAddress?.id,
-        rushDelivery: type == DeliveryType.rush,
-        useWallet: _userWantsWallet,
-        promoCode: promoCode ?? ''));
+          addressId: selectedAddress?.id,
+          rushDelivery: type == DeliveryType.rush,
+          useWallet: _userWantsWallet,
+          promoCode: promoCode ?? '',
+        ));
   }
 
   Widget offerAndCouponButton() {
@@ -1205,18 +1028,13 @@ class _CartPageState extends State<CartPage> {
             children: [
               Row(
                 children: [
-                  Icon(
-                    TablerIcons.rosette_discount_filled,
-                    color: const Color(0xFF149400),
-                    size: 20.r,
-                  ),
+                  Icon(TablerIcons.rosette_discount_filled,
+                      color: const Color(0xFF149400), size: 20.r),
                   SizedBox(width: 8.w),
                   Text(
                     l10n?.promoCodeCoupons ?? 'Promo Code & Coupons',
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style:
+                        TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -1224,22 +1042,24 @@ class _CartPageState extends State<CartPage> {
                 onTap: () async {
                   final result = await GoRouter.of(context)
                       .push(AppRoutes.promoCode, extra: {
-                    'cartAmount': stateData.first.data?.paymentSummary?.itemsTotal
+                    'cartAmount': stateData
+                            .first.data?.paymentSummary?.itemsTotal
                             ?.toDouble() ??
                         0.0,
-                    'deliveryCharges': stateData.first.data?.paymentSummary
-                            ?.totalDeliveryCharges
+                    'deliveryCharges': stateData
+                            .first.data?.paymentSummary?.totalDeliveryCharges
                             ?.toDouble() ??
                         0.0,
                   });
-                  if (result != null && result is String && result.isNotEmpty) {
-                    if (mounted) {
-                      setState(() {
-                        promoCode = result;
-                        _promoController.text = result;
-                      });
-                      _refreshCart();
-                    }
+                  if (result != null &&
+                      result is String &&
+                      result.isNotEmpty &&
+                      mounted) {
+                    setState(() {
+                      promoCode = result;
+                      _promoController.text = result;
+                    });
+                    _refreshCart();
                   }
                 },
                 child: Text(
@@ -1261,17 +1081,13 @@ class _CartPageState extends State<CartPage> {
               decoration: BoxDecoration(
                 color: const Color(0xFF149400).withOpacity(0.06),
                 borderRadius: BorderRadius.circular(8.r),
-                border: Border.all(
-                  color: const Color(0xFF149400).withOpacity(0.2),
-                ),
+                border:
+                    Border.all(color: const Color(0xFF149400).withOpacity(0.2)),
               ),
               child: Row(
                 children: [
-                  Icon(
-                    TablerIcons.circle_check_filled,
-                    color: const Color(0xFF149400),
-                    size: 18.r,
-                  ),
+                  Icon(TablerIcons.circle_check_filled,
+                      color: const Color(0xFF149400), size: 18.r),
                   SizedBox(width: 8.w),
                   Expanded(
                     child: Text(
@@ -1296,10 +1112,9 @@ class _CartPageState extends State<CartPage> {
                     child: Text(
                       'Remove',
                       style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12.sp,
-                      ),
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12.sp),
                     ),
                   ),
                 ],
@@ -1322,7 +1137,8 @@ class _CartPageState extends State<CartPage> {
                       decoration: InputDecoration(
                         hintText: l10n?.promoCode ?? 'Enter Promo Code',
                         border: InputBorder.none,
-                        hintStyle: TextStyle(fontSize: 13.sp, color: Colors.grey),
+                        hintStyle:
+                            TextStyle(fontSize: 13.sp, color: Colors.grey),
                         isDense: true,
                         contentPadding: EdgeInsets.symmetric(vertical: 10.h),
                       ),
@@ -1333,8 +1149,8 @@ class _CartPageState extends State<CartPage> {
                 SizedBox(width: 8.w),
                 SizedBox(
                   height: 40.h,
-                  child:
-                      BlocBuilder<ValidatePromoCodeBloc, ValidatePromoCodeState>(
+                  child: BlocBuilder<ValidatePromoCodeBloc,
+                      ValidatePromoCodeState>(
                     builder: (context, state) {
                       final isLoading = state is ValidatePromoCodeLoading;
                       return ElevatedButton(
@@ -1346,57 +1162,52 @@ class _CartPageState extends State<CartPage> {
                                   context
                                       .read<ValidatePromoCodeBloc>()
                                       .selectedPromoCode = code;
-                                  context.read<ValidatePromoCodeBloc>().add(
-                                        ValidatePromoCodeRequest(
-                                          promoCode: code,
-                                          cartAmount: stateData.first.data
-                                                  ?.paymentSummary?.itemsTotal
-                                                  ?.toInt() ??
-                                              0,
-                                          deliveryCharges: stateData
-                                                  .first
-                                                  .data
-                                                  ?.paymentSummary
-                                                  ?.totalDeliveryCharges
-                                                  ?.toInt() ??
-                                              0,
-                                        ),
-                                      );
+                                  context
+                                      .read<ValidatePromoCodeBloc>()
+                                      .add(ValidatePromoCodeRequest(
+                                        promoCode: code,
+                                        cartAmount: stateData.first.data
+                                                ?.paymentSummary?.itemsTotal
+                                                ?.toInt() ??
+                                            0,
+                                        deliveryCharges: stateData
+                                                .first
+                                                .data
+                                                ?.paymentSummary
+                                                ?.totalDeliveryCharges
+                                                ?.toInt() ??
+                                            0,
+                                      ));
                                 }
                               },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primaryColor,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8.r),
-                          ),
+                              borderRadius: BorderRadius.circular(8.r)),
                           elevation: 0,
                           padding: EdgeInsets.symmetric(horizontal: 16.w),
                         ),
                         child: isLoading
-                            ? SizedBox(
+                            ? const SizedBox(
                                 width: 16,
                                 height: 16,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor:
-                                      AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
                                 ),
                               )
-                            : Text(
-                                'Apply',
+                            : Text('Apply',
                                 style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13.sp,
-                                ),
-                              ),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13.sp)),
                       );
                     },
                   ),
                 ),
               ],
             ),
-          // Suggested Coupons List
           BlocBuilder<PromoCodeBloc, PromoCodeState>(
             builder: (context, state) {
               if (state is PromoCodeLoaded && state.promoCodeData.isNotEmpty) {
@@ -1407,10 +1218,9 @@ class _CartPageState extends State<CartPage> {
                     Text(
                       'Suggested Offers',
                       style: TextStyle(
-                        fontSize: 12.sp,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
+                          fontSize: 12.sp,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500),
                     ),
                     SizedBox(height: 8.h),
                     SizedBox(
@@ -1428,11 +1238,9 @@ class _CartPageState extends State<CartPage> {
                             padding: EdgeInsets.only(right: 8.w),
                             child: ActionChip(
                               avatar: isApplied
-                                  ? Icon(
-                                      Icons.check_circle,
+                                  ? Icon(Icons.check_circle,
                                       size: 14.r,
-                                      color: const Color(0xFF149400),
-                                    )
+                                      color: const Color(0xFF149400))
                                   : null,
                               label: Text(
                                 coupon.code ?? '',
@@ -1457,27 +1265,25 @@ class _CartPageState extends State<CartPage> {
                                   : () {
                                       _promoController.text = coupon.code ?? '';
                                       context
+                                              .read<ValidatePromoCodeBloc>()
+                                              .selectedPromoCode =
+                                          coupon.code ?? '';
+                                      context
                                           .read<ValidatePromoCodeBloc>()
-                                          .selectedPromoCode = coupon.code ?? '';
-                                      context.read<ValidatePromoCodeBloc>().add(
-                                            ValidatePromoCodeRequest(
-                                              promoCode: coupon.code ?? '',
-                                              cartAmount: stateData
-                                                      .first
-                                                      .data
-                                                      ?.paymentSummary
-                                                      ?.itemsTotal
-                                                      ?.toInt() ??
-                                                  0,
-                                              deliveryCharges: stateData
-                                                      .first
-                                                      .data
-                                                      ?.paymentSummary
-                                                      ?.totalDeliveryCharges
-                                                      ?.toInt() ??
-                                                  0,
-                                            ),
-                                          );
+                                          .add(ValidatePromoCodeRequest(
+                                            promoCode: coupon.code ?? '',
+                                            cartAmount: stateData.first.data
+                                                    ?.paymentSummary?.itemsTotal
+                                                    ?.toInt() ??
+                                                0,
+                                            deliveryCharges: stateData
+                                                    .first
+                                                    .data
+                                                    ?.paymentSummary
+                                                    ?.totalDeliveryCharges
+                                                    ?.toInt() ??
+                                                0,
+                                          ));
                                     },
                             ),
                           );
@@ -1528,19 +1334,19 @@ class _CartPageState extends State<CartPage> {
         selectedAddress: selectedAddress,
         deliveryZoneId: deliveryZoneId,
         onAddressSelected: (address) {
-          if (address.id != selectedAddress!.id) {
+          if (address.id != selectedAddress?.id) {
             setState(() {
               selectedAddress = address;
               selectedDeliveryType = DeliveryType.regular;
               isCartLoading = true;
             });
-            // Save selected address to Hive
             HiveSelectedAddressHelper.setSelectedAddress(address);
             context.read<GetUserCartBloc>().add(FetchUserCart(
-                addressId: address.id,
-                useWallet: _userWantsWallet,
-                rushDelivery: selectedDeliveryType == DeliveryType.rush,
-                promoCode: promoCode));
+                  addressId: address.id,
+                  useWallet: _userWantsWallet,
+                  rushDelivery: selectedDeliveryType == DeliveryType.rush,
+                  promoCode: promoCode,
+                ));
           }
         },
       ),
@@ -1560,9 +1366,7 @@ class _CartPageState extends State<CartPage> {
 
     final paymentMethodType = await context.push(
       AppRoutes.paymentOptions,
-      extra: {
-        'totalAmount': totalAmount,
-      },
+      extra: {'totalAmount': totalAmount},
     );
 
     if (paymentMethodType != null && paymentMethodType is PaymentMethodType) {
@@ -1579,12 +1383,10 @@ class _CartPageState extends State<CartPage> {
 
   void _processOrder(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-
     if (totalAmount <= 0) {
       _initiatePayment();
       return;
     }
-
     if (selectedPaymentMethod == null) {
       ToastManager.show(
           context: context,
@@ -1593,23 +1395,22 @@ class _CartPageState extends State<CartPage> {
           type: ToastType.error);
       return;
     }
-
-    // Process payment based on method
     if (selectedPaymentMethod != 'cod' &&
         selectedPaymentMethodType != PaymentMethodType.flutterwave) {
       context.read<PaymentBloc>().add(
             InitiatePaymentEvent(
-                paymentMethodType: selectedPaymentMethodType!,
-                amount: totalAmount,
-                additionalData: {
-                  'userId': Global.userData?.userId.toString() ?? '',
-                  'customerName': Global.userData?.name.toString() ?? '',
-                  'email': Global.userData?.email.toString() ?? '',
-                  'phone': Global.userData?.mobile.toString() ?? '',
-                  'deliveryAddress': formatAddressFromModel(selectedAddress!),
-                },
-                addMoneyToWallet: false,
-                context: context),
+              paymentMethodType: selectedPaymentMethodType!,
+              amount: totalAmount,
+              additionalData: {
+                'userId': Global.userData?.userId.toString() ?? '',
+                'customerName': Global.userData?.name.toString() ?? '',
+                'email': Global.userData?.email.toString() ?? '',
+                'phone': Global.userData?.mobile.toString() ?? '',
+                'deliveryAddress': formatAddressFromModel(selectedAddress!),
+              },
+              addMoneyToWallet: false,
+              context: context,
+            ),
           );
     } else {
       _initiatePayment();
@@ -1640,9 +1441,7 @@ class _CartPageState extends State<CartPage> {
                     'razorpay_signature': signature ?? '',
                     'transaction_id': paymentId ?? '',
                   }
-                : {
-                    'transaction_id': paymentId ?? '',
-                  },
+                : {'transaction_id': paymentId ?? ''},
             usedAmountValue: walletAmountUsedValue,
             orderNote: orderNote,
             attachments: attachments,
@@ -1661,7 +1460,6 @@ class _CartPageState extends State<CartPage> {
       );
       return;
     }
-
     context.read<CreateOrderBloc>().add(CreateOrderRequest(
           paymentType: selectedPaymentMethod!,
           addressId: selectedAddress!.id!,
@@ -1674,9 +1472,7 @@ class _CartPageState extends State<CartPage> {
                   'razorpay_signature': signature ?? '',
                   'transaction_id': paymentId ?? '',
                 }
-              : {
-                  'transaction_id': paymentId ?? '',
-                },
+              : {'transaction_id': paymentId ?? ''},
           usedAmountValue: walletAmountUsedValue,
           orderNote: orderNote,
           attachments: attachments,
@@ -1696,53 +1492,43 @@ class _CartPageState extends State<CartPage> {
                 if (totalAmount > 0.0)
                   if (selectedPaymentMethod != null &&
                       selectedPaymentMethodType != null) ...[
-                    // Selected payment method on the left
                     InkWell(
                       onTap: _navigateToPaymentOptions,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
                             children: [
-                              if (selectedPaymentMethod != null &&
-                                  selectedPaymentMethodType != null) ...[
-                                SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: PaymentConfig.getPaymentMethodWidget(
-                                      selectedPaymentMethod!,
-                                      size: 24),
-                                ),
-                                SizedBox(width: 8),
-                                Text(
-                                  (l10n?.payUsing ?? 'Pay Using').toUpperCase(),
-                                  style: TextStyle(
-                                      fontSize: 10.sp, letterSpacing: 1.1),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Icon(
-                                  Icons.arrow_drop_up,
-                                ),
-                              ]
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: PaymentConfig.getPaymentMethodWidget(
+                                    selectedPaymentMethod!,
+                                    size: 24),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                (l10n?.payUsing ?? 'Pay Using').toUpperCase(),
+                                style: TextStyle(
+                                    fontSize: 10.sp, letterSpacing: 1.1),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const Icon(Icons.arrow_drop_up),
                             ],
                           ),
                           Text(
                             PaymentConfig.getPaymentMethodName(
                                 selectedPaymentMethod!),
                             style: TextStyle(
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w500,
-                            ),
+                                fontSize: 12.sp, fontWeight: FontWeight.w500),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
-                    SizedBox(width: 12),
+                    const SizedBox(width: 12),
                   ],
-                SizedBox(height: 5),
-                // Pay button on the right
+                const SizedBox(height: 5),
                 Expanded(
                   child: SizedBox(
                     height: 50,
@@ -1774,9 +1560,6 @@ class _CartPageState extends State<CartPage> {
                                 return;
                               }
 
-                              // ────────────────────────────────────────────────
-                              // NEW: Attachment validation
-                              // ────────────────────────────────────────────────
                               final missingAttachmentProducts =
                                   _getProductsMissingRequiredAttachment(
                                 context,
@@ -1788,7 +1571,6 @@ class _CartPageState extends State<CartPage> {
                                     .map(
                                         (p) => "• ${p.product?.name ?? 'Item'}")
                                     .join("\n");
-
                                 ToastManager.show(
                                   context: context,
                                   message:
@@ -1799,7 +1581,6 @@ class _CartPageState extends State<CartPage> {
                                 return;
                               }
 
-                              // All validations passed → proceed
                               if (totalAmount <= 0 ||
                                   selectedPaymentMethod != null) {
                                 _processOrder(context);
@@ -1808,7 +1589,7 @@ class _CartPageState extends State<CartPage> {
                               }
                             },
                       child: isCartLoading
-                          ? SizedBox(
+                          ? const SizedBox(
                               height: 20,
                               width: 20,
                               child: CircularProgressIndicator(),
@@ -1819,7 +1600,7 @@ class _CartPageState extends State<CartPage> {
                                   ? (l10n?.placeOrder ?? 'Place Order')
                                   : (l10n?.selectPaymentMethod ??
                                       'Select payment method'),
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
@@ -1834,12 +1615,10 @@ class _CartPageState extends State<CartPage> {
               height: 50,
               width: double.infinity,
               child: CustomButton(
-                onPressed: () {
-                  _navigateToAddAddress();
-                },
+                onPressed: _navigateToAddAddress,
                 child: Text(
                   AppLocalizations.of(context)!.chooseAddressForDelivery,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
@@ -1859,41 +1638,28 @@ class _CartPageState extends State<CartPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(
-              Icons.shopping_cart_outlined,
-              size: 80,
-              color: Colors.grey.shade400,
-            ),
+            Icon(Icons.shopping_cart_outlined,
+                size: 80, color: Colors.grey.shade400),
             const SizedBox(height: 16),
             Text(
               l10n?.yourCartIsEmpty ?? 'Your cart is empty',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
               l10n?.looksLikeYouHaventAddedAnythingYet ??
                   'Looks like you haven\'t added anything yet',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
             ),
             const SizedBox(height: 20),
             SizedBox(
               height: 44,
               child: CustomButton(
-                onPressed: () {
-                  GoRouter.of(context).pop();
-                },
+                onPressed: () => GoRouter.of(context).pop(),
                 child: Text(
                   l10n?.browseProducts ?? 'Browse products',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -1910,7 +1676,7 @@ class _CartPageState extends State<CartPage> {
         'isFromAddressPage': true,
         'isEdit': false,
         'isFromCartPage': true,
-        'deliveryZoneId': deliveryZoneId
+        'deliveryZoneId': deliveryZoneId,
       },
     );
   }

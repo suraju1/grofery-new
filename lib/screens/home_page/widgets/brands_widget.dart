@@ -71,8 +71,8 @@ class _BrandsSectionState extends State<BrandsSection> {
                                       color: Theme.of(context)
                                           .colorScheme
                                           .tertiary,
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 14),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 15.sp),
                                 ),
                               ),
                             ),

@@ -98,7 +98,20 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         )
       ],
       child: BlocConsumer<DownloadInvoiceBloc, DownloadInvoiceState>(
-        listener: (context, state) {},
+        listener: (context, state) {
+          if (state is DownloadInvoiceSuccess) {
+            ToastManager.show(
+              context: context,
+              message: 'Invoice downloaded successfully. Saved at ${state.filePath}',
+            );
+          } else if (state is DownloadInvoiceFailure) {
+            ToastManager.show(
+              context: context,
+              message: state.error,
+              type: ToastType.error,
+            );
+          }
+        },
         builder: (context, state) {
           return Stack(
             children: [
@@ -154,7 +167,15 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                       isFromOrderDetail: true,
                                       downloadInvoice: () {
                                         if (orderData.invoice != null && orderData.invoice!.isNotEmpty) {
-                                          _launchPdf(orderData.invoice!);
+                                          context.read<DownloadInvoiceBloc>().add(
+                                                DownloadInvoice(invoiceUrl: orderData.invoice!),
+                                              );
+                                        } else {
+                                          ToastManager.show(
+                                            context: context,
+                                            message: 'Invoice URL is not available',
+                                            type: ToastType.error,
+                                          );
                                         }
                                       },
                                       promoCode: orderData.promoCode,

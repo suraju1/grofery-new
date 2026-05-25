@@ -215,7 +215,7 @@ class _MyAppState extends State<MyApp> {
         BlocProvider(create: (context) => ProductFAQBloc()),
         BlocProvider(create: (context) => RemoveItemFromCartBloc()),
         BlocProvider(create: (context) => ClearCartBloc()),
-        BlocProvider(create: (context) => UpdateItemQuantityBloc()),
+        BlocProvider(create: (context) => UpdateItemQuantityBloc()), 
         BlocProvider(create: (context) => SimilarProductBloc()),
         BlocProvider(create: (context) => CheckDeliveryZoneBloc()),
         BlocProvider(create: (context) => GetAddressListBloc()),

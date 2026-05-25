@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:grofery_user/config/settings_data_instance.dart';
 import '../../../cart_page/widgets/cart_product_item.dart';
 import '../../repo/order_repo.dart';
 
@@ -16,9 +17,16 @@ class CreateOrderBloc extends Bloc<CreateOrderEvent, CreateOrderState> {
   bool isLoading = false;
 
   Future<void> _onCreateOrderRequest(CreateOrderRequest event, Emitter<CreateOrderState> emit) async {
+    final systemSettings = SettingsData.instance.system;
+    if (systemSettings != null && systemSettings.isTodayHoliday) {
+      isLoading = false;
+      emit(CreateOrderFailure(error: systemSettings.vacationMessage));
+      return;
+    }
+
     emit(CreateOrderProgress());
     isLoading = true;
-    try{
+    try {
       final response = await repository.createOrder(
         paymentType: event.paymentType,
         promoCode: event.promoCode ?? '',

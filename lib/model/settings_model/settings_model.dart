@@ -90,6 +90,10 @@ class SystemSettings {
   final String referEarnNumberOfTimesBonus;
   final String currency;
   final String currencySymbol;
+  final bool vacationMode;
+  final List<String> vacationDates;
+  final String vacationMessage;
+  final bool isTodayHoliday;
 
   SystemSettings({
     required this.appName,
@@ -131,6 +135,10 @@ class SystemSettings {
     required this.referEarnNumberOfTimesBonus,
     required this.currency,
     required this.currencySymbol,
+    required this.vacationMode,
+    required this.vacationDates,
+    required this.vacationMessage,
+    required this.isTodayHoliday,
   });
 
   factory SystemSettings.fromJson(Map<String, dynamic> json) {
@@ -145,6 +153,17 @@ class SystemSettings {
       if (value is int) return value;
       if (value is String) return int.tryParse(value) ?? 0;
       return 0;
+    }
+
+    final List<String> vacationDates = [];
+    final rawVacationDates = json['vacationDates'];
+    if (rawVacationDates is List) {
+      for (final item in rawVacationDates) {
+        final stringValue = item?.toString() ?? '';
+        if (stringValue.isNotEmpty) {
+          vacationDates.add(stringValue);
+        }
+      }
     }
 
     return SystemSettings(
@@ -187,6 +206,10 @@ class SystemSettings {
       referEarnNumberOfTimesBonus: json['referEarnNumberOfTimesBonus']?.toString() ?? '',
       currency: json['currency']?.toString() ?? '',
       currencySymbol: json['currencySymbol']?.toString() ?? '',
+      vacationMode: toBool(json['vacationMode']),
+      vacationDates: vacationDates,
+      vacationMessage: json['vacationMessage']?.toString() ?? 'Today is a Holiday. Ordering is not available',
+      isTodayHoliday: toBool(json['isTodayHoliday']),
     );
   }
 }

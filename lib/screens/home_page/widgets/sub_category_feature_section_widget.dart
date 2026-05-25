@@ -115,8 +115,8 @@ class _SubCategoryFeatureSectionWidgetState
                             AppLocalizations.of(context)?.seeAll ?? 'See All',
                             style: TextStyle(
                                 color: Theme.of(context).colorScheme.tertiary,
-                                fontWeight: FontWeight.w500,
-                                fontSize: 14.sp),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15.sp),
                           ),
                         ),
                       ),
