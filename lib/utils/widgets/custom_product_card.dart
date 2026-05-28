@@ -1517,7 +1517,7 @@ class CustomProductCard extends StatelessWidget {
       if (context.mounted) {
         final error = CartValidation.validateProductAddToCart(
           context: context,
-          requestedQuantity: cartItem.quantity + 1,
+          requestedQuantity: cartItem.quantity + quantityStepSize,
           minQty: minQty,
           maxQty: totalAllowedQuantity,
           stock: totalStocks,
@@ -1532,7 +1532,7 @@ class CustomProductCard extends StatelessWidget {
           context.read<CartBloc>().add(
                 UpdateCartQty(
                     cartKey: cartItem.cartKey,
-                    quantity: cartItem.quantity + 1,
+                    quantity: cartItem.quantity + quantityStepSize,
                     cartItemId: cartItem.serverCartItemId,
                     context: context),
               );
@@ -1553,7 +1553,7 @@ class CustomProductCard extends StatelessWidget {
           context.read<CartBloc>().add(
                 UpdateCartQty(
                     cartKey: cartItem.cartKey,
-                    quantity: cartItem.quantity - 1,
+                    quantity: cartItem.quantity - quantityStepSize,
                     cartItemId: cartItem.serverCartItemId,
                     context: context),
               );

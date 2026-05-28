@@ -237,11 +237,12 @@ class _CartItemWidgetState extends State<CartItemWidget> {
             icon: Icon(TablerIcons.minus,
                 size: 16.sp, color: AppTheme.primaryColor),
             onPressed: () {
+              final stepSize = widget.item.product?.quantityStepSize ?? 1;
               final minQty = widget.item.product?.minimumOrderQuantity ?? 1;
               if (quantity <= minQty) {
                 widget.onRemoveItem(itemId);
               } else {
-                _handleUpdate(quantity - 1);
+                _handleUpdate(quantity - stepSize);
               }
             },
           ),
@@ -256,13 +257,14 @@ class _CartItemWidgetState extends State<CartItemWidget> {
             icon: Icon(TablerIcons.plus,
                 size: 16.sp, color: AppTheme.primaryColor),
             onPressed: () {
+              final stepSize = widget.item.product?.quantityStepSize ?? 1;
               final minQty = widget.item.product?.minimumOrderQuantity ?? 1;
               final maxQty = widget.item.product?.totalAllowedQuantity ?? 100;
               final stock = widget.item.variant?.stock ?? 100;
 
               final String? error = CartValidation.validateProductAddToCart(
                  context: context,
-                 requestedQuantity: quantity + 1,
+                 requestedQuantity: quantity + stepSize,
                  minQty: minQty,
                  maxQty: maxQty,
                  stock: stock,
@@ -274,7 +276,7 @@ class _CartItemWidgetState extends State<CartItemWidget> {
                  return;
               }
 
-              _handleUpdate(quantity + 1);
+              _handleUpdate(quantity + stepSize);
             },
           ),
         ],

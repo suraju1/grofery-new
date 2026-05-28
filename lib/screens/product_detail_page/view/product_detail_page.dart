@@ -1066,8 +1066,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                   await HapticFeedback
                                                       .lightImpact();
 
+                                                  final int stepSize = product.quantityStepSize > 0 ? product.quantityStepSize : 1;
                                                   final int targetQty =
-                                                      currentQty - 1;
+                                                      currentQty - stepSize;
 
                                                   if (targetQty <
                                                       product
@@ -1127,8 +1128,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                   await HapticFeedback
                                                       .lightImpact();
 
+                                                  final int stepSize = product.quantityStepSize > 0 ? product.quantityStepSize : 1;
                                                   final int targetQty =
-                                                      currentQty + 1;
+                                                      currentQty + stepSize;
 
                                                   if (context.mounted) {
                                                     final error = CartValidation
