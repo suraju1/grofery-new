@@ -29,6 +29,8 @@ import '../home_page/bloc/explore/explore_bloc.dart';
 import '../home_page/bloc/explore/explore_event.dart';
 
 import 'package:grofery_user/l10n/app_localizations.dart';
+import '../../bloc/user_cart_bloc/user_cart_bloc.dart';
+import '../../bloc/user_cart_bloc/user_cart_event.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -246,7 +248,7 @@ class _SplashScreenState extends State<SplashScreen> {
   void _dispatchInitialDataFetches() {
     // Settings data is already being fetched in initState.
     context.read<CategoryBloc>().add(FetchCategory(context: context));
-    // context.read<CartBloc>().add(LoadCart());
+    context.read<CartBloc>().add(LoadCart());
     // context.read<GetUserCartBloc>().add(FetchUserCart());
     context.read<BannerBloc>().add(FetchBanner(categorySlug: ""));
     context.read<BrandsBloc>().add(const FetchBrands(categorySlug: ""));

@@ -36,6 +36,7 @@ class UserProfileBloc extends Bloc<UserProfileEvent, UserProfileState> {
             name: apiData.name ?? current.name,
             profileImage: apiData.profileImage ?? current.profileImage,
             shopName: apiData.shopName ?? current.shopName,
+            gstNumber: apiData.gstNumber ?? current.gstNumber,
           );
           await Global.setUserData(updated);
         }
@@ -58,6 +59,7 @@ class UserProfileBloc extends Bloc<UserProfileEvent, UserProfileState> {
       final response = await repository.updateUserProfile(
         userName: event.userName,
         userImage: event.userImage,
+        gstNumber: event.gstNumber,
       );
 
       if (response.first.success == true) {

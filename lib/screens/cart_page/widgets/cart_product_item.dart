@@ -127,9 +127,9 @@ class _CartItemWidgetState extends State<CartItemWidget> {
       localQuantity = targetQty;
       isUpdating = true;
     });
-    
+
     widget.onQuantityChanged(widget.item.id.toString(), targetQty);
-    
+
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         setState(() {
@@ -153,7 +153,8 @@ class _CartItemWidgetState extends State<CartItemWidget> {
       for (var tier in variant.tieredPricing!) {
         if (quantity >= tier.minQty) {
           activeUnitPrice = tier.price / tier.minQty;
-          isTierApplied = tier.minQty > 1; // Only show bulk flag if it actually scales above 1
+          isTierApplied = tier.minQty >
+              1; // Only show bulk flag if it actually scales above 1
           activeTier = tier;
         }
       }
@@ -239,10 +240,14 @@ class _CartItemWidgetState extends State<CartItemWidget> {
             onPressed: () {
               final stepSize = widget.item.product?.quantityStepSize ?? 1;
               final minQty = widget.item.product?.minimumOrderQuantity ?? 1;
-              if (quantity <= minQty) {
+              final targetQty = quantity - stepSize;
+              
+              if (quantity <= minQty || targetQty < 1) {
                 widget.onRemoveItem(itemId);
+              } else if (targetQty < minQty) {
+                _handleUpdate(minQty);
               } else {
-                _handleUpdate(quantity - stepSize);
+                _handleUpdate(targetQty);
               }
             },
           ),
@@ -263,17 +268,18 @@ class _CartItemWidgetState extends State<CartItemWidget> {
               final stock = widget.item.variant?.stock ?? 100;
 
               final String? error = CartValidation.validateProductAddToCart(
-                 context: context,
-                 requestedQuantity: quantity + stepSize,
-                 minQty: minQty,
-                 maxQty: maxQty,
-                 stock: stock,
-                 isStoreOpen: true,
+                context: context,
+                requestedQuantity: quantity + stepSize,
+                minQty: minQty,
+                maxQty: maxQty,
+                stock: stock,
+                isStoreOpen: true,
               );
 
               if (error != null) {
-                 ToastManager.show(context: context, message: error, type: ToastType.error);
-                 return;
+                ToastManager.show(
+                    context: context, message: error, type: ToastType.error);
+                return;
               }
 
               _handleUpdate(quantity + stepSize);

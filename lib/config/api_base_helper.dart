@@ -151,6 +151,8 @@ class ApiBaseHelper {
     late dio_.Response responseJson;
     final dio_.Dio dio = dio_.Dio();
     try {
+      debugPrint('🌐 GET Request URL: $url');
+      debugPrint('🌐 GET Request Headers: $headers');
       final response =
       await dio.get(
           url,

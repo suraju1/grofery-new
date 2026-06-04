@@ -477,9 +477,13 @@ class MyAppRoute {
           path: AppRoutes.wishlistProduct,
           pageBuilder: (context, state) {
             final extra = state.extra as Map<String, dynamic>? ?? {};
+            final rawWishlistId = extra['wishlist-id'];
+            final wishlistId = rawWishlistId is int
+                ? rawWishlistId
+                : int.tryParse(rawWishlistId?.toString() ?? '') ?? 0;
             return platformPage(
               WishlistProductListingPage(
-                wishlistId: extra['wishlist-id'],
+                wishlistId: wishlistId,
               ),
             );
           },

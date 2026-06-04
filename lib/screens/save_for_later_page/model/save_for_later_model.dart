@@ -246,6 +246,8 @@ class SavedProductVariant {
   int? specialPrice;
   int? mrp;
   int? mrpStatus;
+  num? pricePerUnit;
+  String? measurementUnit;
   int? stock;
   String? sku;
   List<TieredPricing>? tieredPricing;
@@ -259,6 +261,8 @@ class SavedProductVariant {
       this.specialPrice,
       this.mrp,
       this.mrpStatus,
+      this.pricePerUnit,
+      this.measurementUnit,
       this.stock,
       this.sku,
       this.tieredPricing});
@@ -272,6 +276,8 @@ class SavedProductVariant {
     specialPrice = json['special_price'];
     mrp = json['mrp'];
     mrpStatus = json['mrp_status'];
+    pricePerUnit = num.tryParse(json['price_per_unit']?.toString() ?? '');
+    measurementUnit = json['measurement_unit']?.toString();
     stock = json['stock'];
     sku = json['sku'];
     final dynamic tieredData = json['tiered_pricing'] ??
@@ -299,6 +305,8 @@ class SavedProductVariant {
     data['special_price'] = specialPrice;
     data['mrp'] = mrp;
     data['mrp_status'] = mrpStatus;
+    data['price_per_unit'] = pricePerUnit;
+    data['measurement_unit'] = measurementUnit;
     data['stock'] = stock;
     data['sku'] = sku;
     if (tieredPricing != null) {

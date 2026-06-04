@@ -104,11 +104,12 @@ class SimilarProductWidget extends StatelessWidget {
                         );
                   },
                   isStoreOpen: product.storeStatus?.isOpen ?? true,
-                  isWishListed: product.favorite != null &&
-                      product.favorite!.isNotEmpty,
+                  isWishListed:
+                      product.favorite != null && product.favorite!.isNotEmpty,
                   productVariantId: product.variants.first.id,
                   storeId: product.variants.first.storeId,
-                  wishlistItemId: (product.favorite != null && product.favorite!.isNotEmpty)
+                  wishlistItemId:
+                      (product.favorite != null && product.favorite!.isNotEmpty)
                           ? product.favorite!.first.id ?? 0
                           : 0,
                   totalStocks: product.variants.first.stock,
@@ -121,6 +122,9 @@ class SimilarProductWidget extends StatelessWidget {
                   isSimilarProductLayout: true,
                   mrp: product.variants.first.mrp.toString(),
                   mrpStatus: product.variants.first.mrpStatus,
+                  pricePerUnit:
+                      product.variants.first.pricePerUnit.toString(),
+                  measurementUnit: product.variants.first.measurementUnit,
                 ),
               );
             },

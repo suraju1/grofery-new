@@ -237,7 +237,8 @@ class _ProductListingPageState extends State<ProductListingPage> {
             SizedBox(width: 8.w),
             BlocBuilder<ProductListingBloc, ProductListingState>(
               builder: (context, state) {
-                final bool isQuickDelivery = state is ProductListingLoaded && state.quickDeliveryOnly;
+                final bool isQuickDelivery =
+                    state is ProductListingLoaded && state.quickDeliveryOnly;
                 return _buildFilterChip(
                   onTap: () {
                     context.read<ProductListingBloc>().add(FilterByDeliveryTime(
@@ -653,7 +654,8 @@ class _ProductListingPageState extends State<ProductListingPage> {
                                     product.favorite!.isNotEmpty,
                                 productVariantId: variant.id,
                                 storeId: variant.storeId,
-                                wishlistItemId: (product.favorite != null && product.favorite!.isNotEmpty)
+                                wishlistItemId: (product.favorite != null &&
+                                        product.favorite!.isNotEmpty)
                                     ? product.favorite!.first.id ?? 0
                                     : 0,
                                 totalStocks: variant.stock,
@@ -667,6 +669,8 @@ class _ProductListingPageState extends State<ProductListingPage> {
                                 useHorizontalLayout: true,
                                 mrp: variant.mrp.toString(),
                                 mrpStatus: variant.mrpStatus,
+                                pricePerUnit: variant.pricePerUnit.toString(),
+                                measurementUnit: variant.measurementUnit,
                               ),
                             );
                           },

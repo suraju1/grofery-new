@@ -178,7 +178,8 @@ class _AppBarWidgetState extends State<AppBarWidget> {
                 final finalWishlistItemId =
                     currentWishlistItemId ?? wishlistItemId;
 
-                return AnimatedButton(
+                return OptimisticWishlistAppBarButton(
+                  initialIsWishlisted: finalIsWishListed,
                   onTap: () async {
                     if (Global.userData != null) {
                       final wishlistBloc = context.read<UserWishlistBloc>();
@@ -188,7 +189,7 @@ class _AppBarWidgetState extends State<AppBarWidget> {
                       if (finalIsWishListed) {
                         if (finalWishlistItemId != null && finalWishlistItemId != 0) {
                           // Prevent API call with -1
-                          if (finalWishlistItemId == -1) return;
+                          if (finalWishlistItemId == -1) return true;
 
                           wishlistBloc.add(RemoveItemFromWishlist(
                             itemId: finalWishlistItemId ?? 0,
@@ -209,7 +210,7 @@ class _AppBarWidgetState extends State<AppBarWidget> {
                             storeId: storeId,
                           ));
                         }
-                        return;
+                        return true;
                       }
 
                       // CASE 2: Product not wishlisted -> Try to add directly
@@ -262,28 +263,14 @@ class _AppBarWidgetState extends State<AppBarWidget> {
                             ),
                           );
                         }
-                        return;
+                        return true;
                       }
+                      return true;
                     } else {
                       await AuthGuard.ensureLoggedIn(context);
+                      return false;
                     }
                   },
-                  child: Container(
-                    padding: EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .surface
-                          .withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(100.r),
-                    ),
-                    child: Icon(
-                      finalIsWishListed
-                          ? AppConstant.wishListedIcon
-                          : AppConstant.notWishListedIcon,
-                      color: finalIsWishListed ? AppTheme.primaryColor : null,
-                    ),
-                  ),
                 );
               },
             );
@@ -893,6 +880,68 @@ class _DrawerOverlayState extends State<DrawerOverlay>
               Colors.transparent,
               Colors.transparent,
             ])),
+      ),
+    );
+  }
+}
+
+class OptimisticWishlistAppBarButton extends StatefulWidget {
+  final bool initialIsWishlisted;
+  final Future<bool> Function() onTap;
+
+  const OptimisticWishlistAppBarButton({
+    super.key,
+    required this.initialIsWishlisted,
+    required this.onTap,
+  });
+
+  @override
+  State<OptimisticWishlistAppBarButton> createState() => _OptimisticWishlistAppBarButtonState();
+}
+
+class _OptimisticWishlistAppBarButtonState extends State<OptimisticWishlistAppBarButton> {
+  bool? _localOverride;
+
+  @override
+  void didUpdateWidget(OptimisticWishlistAppBarButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialIsWishlisted != widget.initialIsWishlisted) {
+      _localOverride = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isWishlisted = _localOverride ?? widget.initialIsWishlisted;
+
+    return AnimatedButton(
+      onTap: () async {
+        setState(() {
+          _localOverride = !isWishlisted;
+        });
+
+        final shouldKeep = await widget.onTap();
+
+        if (!shouldKeep) {
+          if (mounted) {
+            setState(() {
+              _localOverride = null;
+            });
+          }
+        }
+      },
+      child: Container(
+        padding: EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(100.r),
+        ),
+        child: Icon(
+          isWishlisted
+              ? AppConstant.wishListedIcon
+              : AppConstant.notWishListedIcon,
+          color: isWishlisted ? AppTheme.primaryColor : null,
+        ),
       ),
     );
   }

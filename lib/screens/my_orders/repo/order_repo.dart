@@ -314,4 +314,48 @@ class OrderRepository {
       return {'success': false, 'message': e.toString()};
     }
   }
+
+  Future<Map<String, dynamic>> reorder({
+    required int orderId,
+    required int addressId,
+    required String paymentType,
+    required bool useWallet,
+    required bool rushDelivery,
+  }) async {
+    try {
+      final requestBody = {
+        'address_id': addressId,
+        'payment_type': paymentType,
+        'use_wallet': useWallet ? 1 : 0,
+        'rush_delivery': rushDelivery,
+      };
+      
+      final response = await AppConstant.apiBaseHelper.postAPICall(
+        '${ApiRoutes.createOrderApi}/$orderId/reorder',
+        requestBody,
+      );
+      
+      // Treat 200 or 201 as success
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return response.data;
+      }
+      return {
+        'success': false,
+        'message': 'Failed to reorder. Server returned status: ${response.statusCode}'
+      };
+    } on DioException catch (e) {
+      log('❌ Dio Error in reorder: ${e.message}');
+      String errorMessage = 'Something went wrong';
+      if (e.response?.data != null && e.response?.data is Map) {
+        errorMessage = e.response?.data['message'] ??
+            e.response?.data['error'] ??
+            e.message ??
+            'Something went wrong';
+      }
+      return {'success': false, 'message': errorMessage};
+    } catch (e) {
+      log('Error during reorder: $e');
+      return {'success': false, 'message': e.toString()};
+    }
+  }
 }

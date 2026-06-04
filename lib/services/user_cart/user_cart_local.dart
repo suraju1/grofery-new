@@ -1,156 +1,3 @@
-/*
-import 'dart:developer';
-
-import 'package:flutter/foundation.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:grofery_user/model/user_cart_model/user_cart.dart';
-import '../../model/user_cart_model/cart_sync_action.dart';
-
-class CartLocalRepository {
-  final Box<UserCart> box;
-
-  CartLocalRepository(this.box);
-
-  List<UserCart> getAllItems() {
-    log('[LOCAL] Fetching all cart items ${box.values.length}');
-    final items = box.values.toList();
-
-    items.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-
-    return items;
-  }
-
-  List<UserCart> getPendingSyncItems() {
-    final pending = <UserCart>[];
-    for (var key in box.keys) {
-      final item = box.get(key, defaultValue: null);
-      if (item != null && item.syncAction != CartSyncAction.none) {
-        pending.add(item);
-      }
-    }
-    debugPrint('[LOCAL] Pending sync items: ${pending.length}');
-    return pending;
-  }
-
-  void addItem(UserCart item) {
-    debugPrint(
-        '[LOCAL] ADD → ${item.productId}-${item.variantId} qty:${item.quantity}');
-    box.put(
-      item.cartKey,
-      item.copyWith(
-        syncAction: CartSyncAction.add,
-      ),
-    );
-  }
-
-  void updateQuantity(String cartKey, int quantity) {
-    final item = box.get(cartKey);
-    if (item == null) return;
-
-    box.put(
-      cartKey,
-      item.copyWith(quantity: quantity),
-    );
-    debugPrint('[LOCAL] QUANTITY UPDATED → $cartKey → $quantity');
-  }
-
-  void markForUpdate(String cartKey) {
-    printAllHiveData();
-    final item = box.get(cartKey);
-    if (item == null) {
-      debugPrint('[LOCAL] markForUpdate → Item not found: $cartKey');
-      return;
-    }
-
-    // Only mark for update if it already has a server ID (i.e., already added before)
-    if (item.serverCartItemId == null) {
-      debugPrint('[LOCAL] markForUpdate → Skipping (not yet added to server): $cartKey');
-      return;
-    }
-
-    box.put(
-      cartKey,
-      item.copyWith(syncAction: CartSyncAction.update),
-    );
-    debugPrint('[LOCAL] MARKED FOR UPDATE → $cartKey (qty: ${item.quantity})');
-  }
-
-  void markForDelete(String cartKey) {
-    debugPrint('🛒 LOCAL DELETE → $cartKey');
-    box.delete(cartKey);
-  }
-
-  void markAllForDelete() {
-    debugPrint('🧹 LOCAL CLEAR CART');
-    box.clear();
-  }
-
-  void markSynced(String cartKey, {int? serverCartItemId}) {
-
-    log('Server Cart Item Id $serverCartItemId');
-    final item = box.get(cartKey);
-    if (item == null) {
-      debugPrint('[LOCAL] markSynced → Item not found: $cartKey');
-      return;
-    }
-
-    final updatedItem = item.copyWith(
-      serverCartItemId: serverCartItemId,
-      syncAction: CartSyncAction.none,
-    );
-
-    box.put(cartKey, updatedItem);
-    final verify = box.get(cartKey);
-    debugPrint('[VERIFY SAVE] serverCartItemId after put: ${verify?.serverCartItemId}');
-  }
-
-  void removeLocal(String cartKey) {
-    debugPrint('[LOCAL] REMOVED → $cartKey');
-    box.delete(cartKey);
-  }
-
-  /// Creates a payload list for server sync in the format:
-  /// [
-  ///   {"store_id": vendorId, "product_variant_id": variantId, "quantity": quantity},
-  ///   ...
-  /// ]
-  List<Map<String, dynamic>> createSyncPayload() {
-    final items = box.values.toList();
-
-    final payload = items.map((item) {
-      return {
-        'store_id': int.tryParse(item.vendorId) ?? 0,
-        'product_variant_id': int.tryParse(item.variantId) ?? 0,
-        'quantity': item.quantity,
-      };
-    }).toList();
-
-    debugPrint('[LOCAL] Created sync payload with ${payload.length} items');
-
-    return payload;
-  }
-
-  UserCart? getItemByKey(String cartKey) {
-    return box.get(cartKey);
-  }
-
-  void printAllHiveData() {
-    debugPrint('=== HIVE CART DATA START ===');
-    if (box.isEmpty) {
-      debugPrint('Box is EMPTY');
-    } else {
-      for (final key in box.keys) {
-        final item = box.get(key);
-        debugPrint('Key: $key');
-        debugPrint('Value: ${item?.serverCartItemId}'); // or just $item if you have toString()
-        debugPrint('---');
-      }
-    }
-    debugPrint('Total items: ${box.length}');
-    debugPrint('=== HIVE CART DATA END ===');
-  }
-}*/
-
 import 'dart:developer';
 
 import 'package:flutter/foundation.dart';
@@ -164,12 +11,21 @@ class CartLocalRepository {
 
   CartLocalRepository(this.box);
 
+  Object _resolveBoxKey(String cartKey) {
+    if (box.containsKey(cartKey)) return cartKey;
+
+    for (final key in box.keys) {
+      final item = box.get(key);
+      if (item?.cartKey == cartKey) return key;
+    }
+
+    return cartKey;
+  }
+
   List<UserCart> getAllItems() {
     log('[LOCAL] Fetching all cart items ${box.values.length}');
     final items = box.values.toList();
-
     items.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-
     return items;
   }
 
@@ -216,7 +72,8 @@ class CartLocalRepository {
   }
 
   void updateQuantity(String cartKey, int quantity) {
-    final item = box.get(cartKey);
+    final boxKey = _resolveBoxKey(cartKey);
+    final item = box.get(boxKey);
     if (item == null) {
       debugPrint('[LOCAL] updateQuantity → Item not found: $cartKey');
       return;
@@ -225,15 +82,13 @@ class CartLocalRepository {
     debugPrint(
         '[LOCAL] BEFORE UPDATE → serverCartItemId: ${item.serverCartItemId}');
 
-    // Update quantity AND mark for update in ONE operation
-    // Only mark for update if it has serverCartItemId
     CartSyncAction syncAction;
     if (item.serverCartItemId != null) {
       syncAction = CartSyncAction.update;
     } else if (item.syncAction == CartSyncAction.none) {
       syncAction = CartSyncAction.add;
     } else {
-      syncAction = item.syncAction; // preserve CartSyncAction.add
+      syncAction = item.syncAction;
     }
 
     final newPrice =
@@ -246,10 +101,12 @@ class CartLocalRepository {
       serverCartItemId: item.serverCartItemId,
     );
 
-    box.put(cartKey, updatedItem);
+    box.put(item.cartKey, updatedItem);
+    if (boxKey != item.cartKey) {
+      box.delete(boxKey);
+    }
 
-    // Verify the save
-    final verify = box.get(cartKey);
+    final verify = box.get(item.cartKey);
     debugPrint(
         '[LOCAL] AFTER UPDATE → $cartKey → qty: $quantity, syncAction: $syncAction, serverCartItemId: ${verify?.serverCartItemId}');
   }
@@ -259,8 +116,8 @@ class CartLocalRepository {
     box.put(
       item.cartKey,
       item.copyWith(
-        syncAction: CartSyncAction.none, // Important!
-        isSynced: false, // optional flag
+        syncAction: CartSyncAction.none,
+        isSynced: false,
         price: _calculateEffectivePrice(
             item.quantity, item.tieredPricing, item.price),
       ),
@@ -268,7 +125,8 @@ class CartLocalRepository {
   }
 
   void updateQuantityGuest(String cartKey, int quantity) {
-    final item = box.get(cartKey);
+    final boxKey = _resolveBoxKey(cartKey);
+    final item = box.get(boxKey);
     if (item == null) return;
 
     final newPrice =
@@ -279,25 +137,25 @@ class CartLocalRepository {
     );
     updatedItem.price = newPrice;
 
-    box.put(
-      cartKey,
-      updatedItem,
-    );
+    box.put(item.cartKey, updatedItem);
+    if (boxKey != item.cartKey) {
+      box.delete(boxKey);
+    }
   }
 
   void removeItemGuest(String cartKey) {
-    box.delete(cartKey);
+    box.delete(_resolveBoxKey(cartKey));
   }
 
   void markForUpdate(String cartKey) {
     printAllHiveData();
-    final item = box.get(cartKey);
+    final boxKey = _resolveBoxKey(cartKey);
+    final item = box.get(boxKey);
     if (item == null) {
       debugPrint('[LOCAL] markForUpdate → Item not found: $cartKey');
       return;
     }
 
-    // Only mark for update if it already has a server ID (i.e., already added before)
     if (item.serverCartItemId == null) {
       debugPrint(
           '[LOCAL] markForUpdate → Skipping (not yet added to server): $cartKey');
@@ -305,15 +163,19 @@ class CartLocalRepository {
     }
 
     box.put(
-      cartKey,
+      item.cartKey,
       item.copyWith(syncAction: CartSyncAction.update),
     );
+    if (boxKey != item.cartKey) {
+      box.delete(boxKey);
+    }
     debugPrint(
         '[LOCAL] MARKED FOR UPDATE → $cartKey (qty: ${item.quantity}, serverCartItemId: ${item.serverCartItemId})');
   }
 
   void markForDelete(String cartKey) {
-    final item = box.get(cartKey);
+    final boxKey = _resolveBoxKey(cartKey);
+    final item = box.get(boxKey);
     if (item == null) {
       debugPrint('[LOCAL] markForDelete → Item not found: $cartKey');
       return;
@@ -323,27 +185,28 @@ class CartLocalRepository {
         item.syncAction == CartSyncAction.add ||
         item.syncAction == CartSyncAction.update) {
       box.put(
-        cartKey,
+        item.cartKey,
         item.copyWith(syncAction: CartSyncAction.delete),
       );
+      if (boxKey != item.cartKey) {
+        box.delete(boxKey);
+      }
       debugPrint(
           '🛒 LOCAL MARKED FOR DELETE → $cartKey (pending state or server ID present)');
     } else {
-      // Item was never synced to server, safe to delete immediately
-      box.delete(cartKey);
+      box.delete(boxKey);
       debugPrint('🛒 LOCAL DELETE (no server sync needed) → $cartKey');
     }
   }
 
   void deleteLocally(String cartKey) {
-    final item = box.get(cartKey);
+    final boxKey = _resolveBoxKey(cartKey);
+    final item = box.get(boxKey);
     if (item == null) {
-      debugPrint('[LOCAL] markForDelete → Item not found: $cartKey');
+      debugPrint('[LOCAL] deleteLocally → Item not found: $cartKey');
       return;
     }
-
-    // Item was never synced to server, safe to delete immediately
-    box.delete(cartKey);
+    box.delete(boxKey);
     debugPrint('🛒 LOCAL DELETE (no server sync needed) → $cartKey');
   }
 
@@ -354,21 +217,38 @@ class CartLocalRepository {
     debugPrint('🧹 LOCAL CLEAR CART → after: ${box.length} items');
   }
 
+  void clearSyncedItems() {
+    debugPrint('🧹 LOCAL CLEAR SYNCED ITEMS → before: ${box.length} items');
+    final keysToDelete = <dynamic>[];
+    for (var key in box.keys) {
+      final item = box.get(key);
+      if (item != null && item.syncAction == CartSyncAction.none) {
+        keysToDelete.add(key);
+      }
+    }
+    for (var key in keysToDelete) {
+      box.delete(key);
+    }
+    box.flush();
+    debugPrint('🧹 LOCAL CLEAR SYNCED ITEMS → after: ${box.length} items');
+  }
+
   void markAllForDelete() {
     debugPrint('🧹 LOCAL MARK ALL FOR DELETE');
-
     final allItems = box.values.toList();
 
     for (final item in allItems) {
+      final boxKey = _resolveBoxKey(item.cartKey);
       if (item.serverCartItemId != null) {
-        // Mark for server deletion
         box.put(
           item.cartKey,
           item.copyWith(syncAction: CartSyncAction.delete),
         );
+        if (boxKey != item.cartKey) {
+          box.delete(boxKey);
+        }
       } else {
-        // Delete immediately if never synced to server
-        box.delete(item.cartKey);
+        box.delete(boxKey);
       }
     }
 
@@ -380,7 +260,8 @@ class CartLocalRepository {
 
   void markSynced(String cartKey, {int? serverCartItemId}) {
     log('Server Cart Item Id $serverCartItemId');
-    final item = box.get(cartKey);
+    final boxKey = _resolveBoxKey(cartKey);
+    final item = box.get(boxKey);
     if (item == null) {
       debugPrint('[LOCAL] markSynced → Item not found: $cartKey');
       return;
@@ -399,25 +280,22 @@ class CartLocalRepository {
       syncAction: newAction,
     );
 
-    box.put(cartKey, updatedItem);
-    final verify = box.get(cartKey);
+    box.put(item.cartKey, updatedItem);
+    if (boxKey != item.cartKey) {
+      box.delete(boxKey);
+    }
+    final verify = box.get(item.cartKey);
     debugPrint(
         '[VERIFY SAVE] serverCartItemId after put: ${verify?.serverCartItemId}');
   }
 
   void removeLocal(String cartKey) {
     debugPrint('[LOCAL] REMOVED → $cartKey');
-    box.delete(cartKey);
+    box.delete(_resolveBoxKey(cartKey));
   }
 
-  /// Creates a payload list for server sync in the format:
-  /// [
-  ///   {"store_id": vendorId, "product_variant_id": variantId, "quantity": quantity},
-  ///   ...
-  /// ]
   List<Map<String, dynamic>> createSyncPayload() {
     final items = box.values.toList();
-
     final payload = items.map((item) {
       return {
         'store_id': int.tryParse(item.vendorId) ?? 0,
@@ -425,14 +303,12 @@ class CartLocalRepository {
         'quantity': item.quantity,
       };
     }).toList();
-
     debugPrint('[LOCAL] Created sync payload with ${payload.length} items');
-
     return payload;
   }
 
   UserCart? getItemByKey(String cartKey) {
-    return box.get(cartKey);
+    return box.get(_resolveBoxKey(cartKey));
   }
 
   void printAllHiveData() {
@@ -451,21 +327,17 @@ class CartLocalRepository {
     debugPrint('=== HIVE CART DATA END ===');
   }
 
-  /// Syncs server cart items to local storage
-  /// This should be called after fetching cart from server
   void syncServerCartToLocal(List<dynamic> serverCartItems) {
     try {
       debugPrint('🔄 SYNCING SERVER CART TO LOCAL');
       debugPrint('📦 Server items count: ${serverCartItems.length}');
       debugPrint('📦 Local items count BEFORE sync: ${box.length}');
 
-      // Ensure box is ready
       if (!box.isOpen) {
         debugPrint('❌ Hive box is not open! Cannot sync.');
         return;
       }
 
-      // Create a map of server items by their unique key (product_variant_id + store_id)
       final serverItemsMap = <String, dynamic>{};
       for (final serverItem in serverCartItems) {
         final variantId = serverItem['product_variant_id']?.toString() ?? '';
@@ -475,7 +347,7 @@ class CartLocalRepository {
         if (variantId.isNotEmpty &&
             storeId.isNotEmpty &&
             productId.isNotEmpty) {
-          final cartKey = '${productId}_$variantId';
+          final cartKey = '${productId}_${variantId}_$storeId';
           serverItemsMap[cartKey] = serverItem;
           debugPrint('🔑 Server item mapped: $cartKey');
         } else {
@@ -486,17 +358,14 @@ class CartLocalRepository {
 
       debugPrint('📊 Server items mapped: ${serverItemsMap.length}');
 
-      // Get all local items
       final localItems = box.values.toList();
       debugPrint('📊 Local items found: ${localItems.length}');
 
-      // Track changes
       int updated = 0;
       int added = 0;
       int removed = 0;
       int skipped = 0;
 
-      // Update or add items from server
       for (final entry in serverItemsMap.entries) {
         final cartKey = entry.key;
         final serverItem = entry.value;
@@ -504,14 +373,13 @@ class CartLocalRepository {
         final serverCartItemId = serverItem['id'] as int?;
         final serverQuantity = serverItem['quantity'] as int? ?? 1;
 
-        final localItem = box.get(cartKey);
+        final boxKey = _resolveBoxKey(cartKey);
+        final localItem = box.get(boxKey);
 
         if (localItem != null) {
-          // Item exists locally
           debugPrint(
               '📍 Found local item: $cartKey (serverCartItemId: ${localItem.serverCartItemId}, qty: ${localItem.quantity}, syncAction: ${localItem.syncAction})');
 
-          // Skip if item has pending changes
           if (localItem.syncAction != CartSyncAction.none) {
             debugPrint(
                 '⏭️ SKIPPED: $cartKey (has pending sync action: ${localItem.syncAction})');
@@ -519,7 +387,6 @@ class CartLocalRepository {
             continue;
           }
 
-          // Update if needed
           if (localItem.serverCartItemId != serverCartItemId ||
               localItem.quantity != serverQuantity) {
             box.put(
@@ -530,14 +397,20 @@ class CartLocalRepository {
                 syncAction: CartSyncAction.none,
               ),
             );
+            if (boxKey != cartKey) {
+              box.delete(boxKey);
+            }
             updated++;
             debugPrint(
                 '✏️ UPDATED: $cartKey → qty: $serverQuantity, serverId: $serverCartItemId');
           } else {
+            if (boxKey != cartKey) {
+              box.put(cartKey, localItem);
+              box.delete(boxKey);
+            }
             debugPrint('✓ NO CHANGE: $cartKey (already in sync)');
           }
         } else {
-          // Item doesn't exist locally - add it from server
           debugPrint('🆕 Creating new local item: $cartKey');
           final newItem = _createUserCartFromServer(serverItem);
           if (newItem != null) {
@@ -551,31 +424,23 @@ class CartLocalRepository {
         }
       }
 
-      // Remove local items that don't exist on server
       for (final localItem in localItems) {
         if (!serverItemsMap.containsKey(localItem.cartKey)) {
           if (localItem.syncAction != CartSyncAction.none) {
-            if (localItem.syncAction == CartSyncAction.add ||
-                localItem.syncAction == CartSyncAction.delete) {
-              box.delete(localItem.cartKey);
-              removed++;
-              debugPrint(
-                  '🗑️ REMOVED pending ${localItem.syncAction} (not on server): ${localItem.cartKey}');
-            } else {
-              debugPrint(
-                  '⏭️ KEEPING: ${localItem.cartKey} (has pending action: ${localItem.syncAction})');
-              skipped++;
-            }
+            debugPrint(
+                '⏭️ KEEPING: ${localItem.cartKey} (has pending action: ${localItem.syncAction})');
+            skipped++;
           } else if (localItem.serverCartItemId != null) {
-            box.delete(localItem.cartKey);
-            removed++;
+            // Removed TEMP FIX to ensure items deleted on server are deleted locally
             debugPrint(
-                '🗑️ REMOVED: ${localItem.cartKey} (not on server, serverCartItemId: ${localItem.serverCartItemId})');
+                '🗑️ SERVER ITEM MISSING, REMOVING LOCAL ITEM → ${localItem.cartKey}');
+            box.delete(_resolveBoxKey(localItem.cartKey));
+            removed++;
           } else {
-            box.delete(localItem.cartKey);
-            removed++;
+            // ✅ Naya unsynced item → KEEP karo, delete mat karo
             debugPrint(
-                '🗑️ REMOVED unsynced invalid item (no serverCartItemId, no pending action): ${localItem.cartKey}');
+                '⏭️ KEEPING new unsynced item: ${localItem.cartKey} (not yet sent to server)');
+            skipped++;
           }
         }
       }
@@ -584,7 +449,6 @@ class CartLocalRepository {
           '✅ SYNC COMPLETE → Added: $added, Updated: $updated, Removed: $removed, Skipped: $skipped');
       debugPrint('📊 Total local items AFTER sync: ${box.length}');
 
-      // Print all items for debugging
       printAllHiveData();
     } catch (e, stackTrace) {
       debugPrint('❌ CRITICAL ERROR in syncServerCartToLocal: $e');
@@ -592,8 +456,6 @@ class CartLocalRepository {
     }
   }
 
-  /// Helper method to create UserCart from server data
-  /// Override this method based on your UserCart model structure
   UserCart? _createUserCartFromServer(dynamic serverItem) {
     try {
       List<TieredPricing> tiers = [];
@@ -604,6 +466,12 @@ class CartLocalRepository {
         tiers.sort((a, b) => a.minQty.compareTo(b.minQty));
       }
 
+      final specialPrice =
+          (serverItem['special_price'] as num?)?.toDouble() ?? 0.0;
+      final originalPrice =
+          (serverItem['price'] as num?)?.toDouble() ?? specialPrice;
+      final stock = int.tryParse(serverItem['stock']?.toString() ?? '0') ?? 0;
+
       return UserCart(
         productId: serverItem['product_id']?.toString() ?? '',
         variantId: serverItem['product_variant_id']?.toString() ?? '',
@@ -611,14 +479,15 @@ class CartLocalRepository {
         vendorId: serverItem['store_id']?.toString() ?? '',
         name: serverItem['product_name']?.toString() ?? '',
         image: serverItem['image']?.toString() ?? '',
-        price: (serverItem['special_price'] as num).toDouble(),
-        originalPrice: (serverItem['price'] as num).toDouble(),
+        price: specialPrice,
+        originalPrice: originalPrice,
         quantity: serverItem['quantity'] as int? ?? 1,
         minQty: 1,
         maxQty: 25,
-        isOutOfStock: int.parse(serverItem['stock'].toString()) <= 0,
+        isOutOfStock: stock <= 0,
         isSynced: true,
-        serverCartItemId: serverItem['cart_item_id'] as int?,
+        serverCartItemId:
+            serverItem['id'] as int?, // ✅ FIX: 'cart_item_id' → 'id'
         syncAction: CartSyncAction.none,
         updatedAt: DateTime.now(),
         tieredPricing: tiers.isNotEmpty ? tiers : null,

@@ -223,6 +223,8 @@ class Variant {
   int? specialPrice;
   int? mrp;
   int? mrpStatus;
+  num? pricePerUnit;
+  String? measurementUnit;
   int? storeId;
   String? storeSlug;
   String? storeName;
@@ -237,6 +239,8 @@ class Variant {
       this.specialPrice,
       this.mrp,
       this.mrpStatus,
+      this.pricePerUnit,
+      this.measurementUnit,
       this.storeId,
       this.storeSlug,
       this.storeName,
@@ -251,6 +255,8 @@ class Variant {
     specialPrice = json['special_price'];
     mrp = json['mrp'];
     mrpStatus = json['mrp_status'];
+    pricePerUnit = num.tryParse(json['price_per_unit']?.toString() ?? '');
+    measurementUnit = json['measurement_unit']?.toString();
     storeId = json['store_id'];
     storeSlug = json['store_slug'];
     storeName = json['store_name'];
@@ -279,6 +285,8 @@ class Variant {
     data['special_price'] = specialPrice;
     data['mrp'] = mrp;
     data['mrp_status'] = mrpStatus;
+    data['price_per_unit'] = pricePerUnit;
+    data['measurement_unit'] = measurementUnit;
     data['store_id'] = storeId;
     data['store_slug'] = storeSlug;
     data['store_name'] = storeName;

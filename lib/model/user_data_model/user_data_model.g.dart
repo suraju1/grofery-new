@@ -28,13 +28,14 @@ class UserDataModelAdapter extends TypeAdapter<UserDataModel> {
       referralCode: fields[8] as String,
       language: fields[9] as String,
       shopName: fields[10] == null ? '' : fields[10] as String,
+      gstNumber: fields[11] == null ? '' : fields[11] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, UserDataModel obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.token)
       ..writeByte(1)
@@ -56,7 +57,9 @@ class UserDataModelAdapter extends TypeAdapter<UserDataModel> {
       ..writeByte(9)
       ..write(obj.language)
       ..writeByte(10)
-      ..write(obj.shopName);
+      ..write(obj.shopName)
+      ..writeByte(11)
+      ..write(obj.gstNumber);
   }
 
   @override

@@ -76,6 +76,12 @@ class _DashboardState extends State<Dashboard> {
         _handleNavigation(message);
       }
     });
+
+    Future.microtask(() {
+      if (mounted) {
+        context.read<CartBloc>().add(LoadCart());
+      }
+    });
   }
 
   Future<void> _onNotificationTap(NotificationResponse? response) async {

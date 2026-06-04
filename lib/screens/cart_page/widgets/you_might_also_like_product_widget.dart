@@ -28,8 +28,9 @@ class YouMightAlsoLikeProductWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (productData == null || productData!.isEmpty)
+    if (productData == null || productData!.isEmpty) {
       return const SizedBox.shrink();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,7 +43,7 @@ class YouMightAlsoLikeProductWidget extends StatelessWidget {
           ),
         ),
         SizedBox(
-          height: 285.h,
+          height: 255.h,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.symmetric(horizontal: 16.w),
@@ -55,6 +56,7 @@ class YouMightAlsoLikeProductWidget extends StatelessWidget {
                 width: 175.w,
                 margin: EdgeInsets.only(right: 12.w),
                 child: CustomProductCard(
+                  heroTagPrefix: 'ymal_',
                   productId: product.id,
                   productImage: product.mainImage,
                   productName: product.title,

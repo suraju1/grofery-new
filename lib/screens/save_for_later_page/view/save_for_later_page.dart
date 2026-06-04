@@ -220,6 +220,8 @@ class _SaveForLaterPageState extends State<SaveForLaterPage> {
       tieredPricing: product.variant!.tieredPricing,
       mrp: product.variant!.mrp?.toString(),
       mrpStatus: product.variant!.mrpStatus,
+      pricePerUnit: product.variant!.pricePerUnit?.toString(),
+      measurementUnit: product.variant!.measurementUnit,
     );
   }
 

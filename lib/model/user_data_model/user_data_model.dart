@@ -37,6 +37,9 @@ class UserDataModel extends HiveObject {
   @HiveField(10, defaultValue: '')
   final String shopName;
 
+  @HiveField(11, defaultValue: '')
+  final String gstNumber;
+
   UserDataModel({
     required this.token,
     required this.userId,
@@ -49,6 +52,7 @@ class UserDataModel extends HiveObject {
     required this.referralCode,
     required this.language,
     required this.shopName,
+    required this.gstNumber,
   });
 
   UserDataModel copyWith({
@@ -63,6 +67,7 @@ class UserDataModel extends HiveObject {
     String? referralCode,
     String? language,
     String? shopName,
+    String? gstNumber,
   }) {
     return UserDataModel(
       token: token ?? this.token,
@@ -76,6 +81,7 @@ class UserDataModel extends HiveObject {
       referralCode: referralCode ?? this.referralCode,
       language: language ?? this.language,
       shopName: shopName ?? this.shopName,
+      gstNumber: gstNumber ?? this.gstNumber,
     );
   }
 }

@@ -44,7 +44,7 @@ class ProductFeatureSectionWidget extends StatelessWidget {
     final section = featureSectionData!;
 
     return Container(
-      padding: EdgeInsets.only(top: 2.h, bottom: 0),
+      padding: EdgeInsets.only(top: 18.h, bottom: 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -87,7 +87,7 @@ class ProductFeatureSectionWidget extends StatelessWidget {
               ],
             ),
           ),
-          SizedBox(height: 6.h),
+          SizedBox(height: 14.h),
           SizedBox(
             height: 245.h,
             child: ListView.builder(
@@ -102,8 +102,9 @@ class ProductFeatureSectionWidget extends StatelessWidget {
                 final variant = product.variants.first;
                 return Container(
                   width: 175.w,
-                  margin: EdgeInsets.only(right: 12.w),
+                  margin: EdgeInsets.only(right: 20.w),
                   child: CustomProductCard(
+                    heroTagPrefix: '${featureSectionSlug}_',
                     productId: product.id,
                     productImage: product.mainImage,
                     productName: product.title,
@@ -163,6 +164,8 @@ class ProductFeatureSectionWidget extends StatelessWidget {
                     indicator: product.indicator,
                     mrp: variant.mrp.toString(),
                     mrpStatus: variant.mrpStatus,
+                    pricePerUnit: variant.pricePerUnit.toString(),
+                    measurementUnit: variant.measurementUnit,
                   ),
                 );
               },

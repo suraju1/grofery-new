@@ -64,7 +64,8 @@ class AuthRepository {
       required String iso2,
       required String password,
       required String confirmPassword,
-      String? shopName}) async {
+      String? shopName,
+      String? gstNumber}) async {
     try {
       String? fcmToken = await getFCMToken();
       Map<String, dynamic> data = {
@@ -76,6 +77,7 @@ class AuthRepository {
         'iso_2': iso2,
         'password_confirmation': confirmPassword,
         if (shopName != null && shopName.isNotEmpty) 'shop_name': shopName,
+        if (gstNumber != null && gstNumber.isNotEmpty) 'gst_number': gstNumber,
         'fcm_token': fcmToken,
         'device_type': getDeviceType()
       };

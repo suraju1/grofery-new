@@ -99,6 +99,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           profileImage: userData.profileImage ?? '',
           referralCode: userData.referralCode ?? '',
           shopName: userData.shopName ?? '',
+          gstNumber: userData.gstNumber ?? '',
           language: 'en',
         )));
 
@@ -126,6 +127,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         iso2: event.iso2,
         password: event.password,
         confirmPassword: event.confirmPassword,
+        shopName: event.shopName,
+        gstNumber: event.gstNumber,
       );
 
       if (response.first.success == true) {
@@ -141,6 +144,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           profileImage: userData.profileImage ?? '',
           referralCode: userData.referralCode ?? '',
           shopName: userData.shopName ?? '',
+          gstNumber: userData.gstNumber ?? '',
           language: 'en',
         )));
         emit(AuthSuccess(
@@ -402,6 +406,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           profileImage: user.profileImage ?? '',
           referralCode: user.referralCode ?? '',
           shopName: user.shopName ?? '',
+          gstNumber: user.gstNumber ?? '',
           language: 'en',
         )));
         emit(
@@ -499,6 +504,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           profileImage: user.profileImage ?? '',
           referralCode: user.referralCode ?? '',
           shopName: user.shopName ?? '',
+          gstNumber: user.gstNumber ?? '',
           language: 'en',
         )));
         emit(

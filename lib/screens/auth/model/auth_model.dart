@@ -58,6 +58,7 @@ class Data {
   int? rewardPoints;
   String? profileImage;
   String? shopName;
+  String? gstNumber;
   String? emailVerifiedAt;
   String? createdAt;
   String? updatedAt;
@@ -75,6 +76,7 @@ class Data {
       this.rewardPoints,
       this.profileImage,
       this.shopName,
+      this.gstNumber,
       this.emailVerifiedAt,
       this.createdAt,
       this.updatedAt});
@@ -92,6 +94,7 @@ class Data {
     rewardPoints = parseInt(json['reward_points']);
     profileImage = parseString(json['profile_image']);
     shopName = parseString(json['shop_name']);
+    gstNumber = parseString(json['gst_number']);
     emailVerifiedAt = parseString(json['email_verified_at']);
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
@@ -111,6 +114,7 @@ class Data {
     data['reward_points'] = rewardPoints;
     data['profile_image'] = profileImage;
     data['shop_name'] = shopName;
+    data['gst_number'] = gstNumber;
     data['email_verified_at'] = emailVerifiedAt;
     data['created_at'] = createdAt;
     data['updated_at'] = updatedAt;

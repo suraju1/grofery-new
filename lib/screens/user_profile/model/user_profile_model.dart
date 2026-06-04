@@ -30,6 +30,7 @@ class UserData {
   String? country;
   String? iso2;
   String? shopName;
+  String? gstNumber;
   dynamic walletBalance;
   String? referralCode;
   String? friendsCode;
@@ -47,6 +48,7 @@ class UserData {
         this.country,
         this.iso2,
         this.shopName,
+        this.gstNumber,
         this.walletBalance,
         this.referralCode,
         this.friendsCode,
@@ -64,6 +66,7 @@ class UserData {
     country = json['country'];
     iso2 = json['iso_2'];
     shopName = json['shop_name'];
+    gstNumber = json['gst_number'];
     walletBalance = json['wallet_balance'];
     referralCode = json['referral_code'];
     friendsCode = json['friends_code'];
@@ -83,6 +86,7 @@ class UserData {
     data['country'] = country;
     data['iso_2'] = iso2;
     data['shop_name'] = shopName;
+    data['gst_number'] = gstNumber;
     data['wallet_balance'] = walletBalance;
     data['referral_code'] = referralCode;
     data['friends_code'] = friendsCode;

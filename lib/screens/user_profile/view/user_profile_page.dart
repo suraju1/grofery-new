@@ -22,6 +22,7 @@ class UserProfilePage extends StatefulWidget {
 class _UserProfilePageState extends State<UserProfilePage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _gstNumberController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   File? _selectedImage;
   bool _isEditing = false;
@@ -35,6 +36,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   @override
   void dispose() {
     _nameController.dispose();
+    _gstNumberController.dispose();
     super.dispose();
   }
 
@@ -90,6 +92,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
               UpdateUserProfile(
                 userName: _nameController.text.trim(),
                 userImage: _selectedImage,
+                gstNumber: _gstNumberController.text.trim(),
               ),
             );
         setState(() {
@@ -220,6 +223,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
             if (!_isEditing && _nameController.text.isEmpty) {
               _nameController.text = userData.name ?? '';
             }
+            if (!_isEditing && _gstNumberController.text.isEmpty) {
+              _gstNumberController.text = userData.gstNumber ?? '';
+            }
 
             return SingleChildScrollView(
               child: Column(
@@ -346,6 +352,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                         return AppLocalizations.of(context)!
                                             .nameMustBeAtLeast2Characters;
                                       }
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: 16),
+                                  CustomTextFormField(
+                                    controller: _gstNumberController,
+                                    prefixIcon: Icons.receipt_long,
+                                    labelText: "GST Number",
+                                    validator: (value) {
                                       return null;
                                     },
                                   ),
@@ -481,6 +496,12 @@ class _UserProfilePageState extends State<UserProfilePage> {
                               AppLocalizations.of(context)!.country,
                               userData.country ??
                                   AppLocalizations.of(context)!.notProvided),
+                          _buildInfoItem(
+                              Icons.receipt_long,
+                              'GST Number',
+                              (userData.gstNumber != null && userData.gstNumber!.isNotEmpty) 
+                                ? userData.gstNumber! 
+                                : AppLocalizations.of(context)!.notProvided),
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             child: Divider(

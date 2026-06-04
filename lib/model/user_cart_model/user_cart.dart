@@ -94,8 +94,8 @@ class UserCart extends HiveObject {
     this.appliedTierPrice,
   });
 
-  /// 🧠 UNIQUE KEY = productId + variantId
-  String get cartKey => '${productId}_$variantId';
+  /// 🧠 UNIQUE KEY = productId + variantId + vendorId
+  String get cartKey => '${productId}_${variantId}_$vendorId';
 
   UserCart copyWith({
     int? quantity,

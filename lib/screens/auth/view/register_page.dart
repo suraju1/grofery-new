@@ -34,6 +34,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _shopNameController = TextEditingController();
+  final _gstNumberController = TextEditingController();
 
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
@@ -209,6 +210,7 @@ class _RegisterPageState extends State<RegisterPage> {
           completePhoneNumber: _completePhoneNumber,
           confirmPassword: _confirmPasswordController.text,
           shopName: _shopNameController.text.trim(),
+          gstNumber: _gstNumberController.text.trim(),
         ));
   }
 
@@ -325,6 +327,25 @@ class _RegisterPageState extends State<RegisterPage> {
                           return null;
                         }
                         return null;
+                      },
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                /// GST Number (Optional)
+                Builder(
+                  builder: (context) {
+                    return CustomTextFormField(
+                      controller: _gstNumberController,
+                      labelText: "GST Number (Optional)",
+                      hintText: "Enter GST Number",
+                      prefixIcon: Icons.receipt_long,
+                      keyboardType: TextInputType.text,
+                      textInputAction: TextInputAction.next,
+                      validator: (value) {
+                        return null; // Optional field
                       },
                     );
                   },
@@ -791,6 +812,7 @@ class _RegisterPageState extends State<RegisterPage> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _shopNameController.dispose();
+    _gstNumberController.dispose();
     super.dispose();
   }
 }

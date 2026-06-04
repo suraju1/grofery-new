@@ -11,12 +11,12 @@ class FetchUserProfile extends UserProfileEvent {}
 class UpdateUserProfile extends UserProfileEvent {
   final String userName;
   final File? userImage;
+  final String? gstNumber;
 
-  UpdateUserProfile({required this.userName, this.userImage});
+  UpdateUserProfile({required this.userName, this.userImage, this.gstNumber});
 
   @override
-  // TODO: implement props
-  List<Object?> get props => [userName, userImage];
+  List<Object?> get props => [userName, userImage, gstNumber];
 }
 
 class DeleteUser extends UserProfileEvent {}

@@ -7,7 +7,7 @@ class TargetGiftRepository {
   Future<Map<String, dynamic>> fetchTargetGift() async {
     try {
       final response = await AppConstant.apiBaseHelper.getAPICall(ApiRoutes.targetGiftApi, {});
-      debugPrint("Target Gift Response: ${response.data}");
+      print('\x1B[35m🎯 TARGET CARD API RESPONSE: ${response.data}\x1B[0m');
       return response.data;
     } catch (e) {
       throw ApiException('Failed to fetch Target Gift');

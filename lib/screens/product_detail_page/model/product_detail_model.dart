@@ -48,8 +48,11 @@ class ProductDetailModel {
 class ProductData {
   late int id;
   late int categoryId;
-  late int brandId;
-  late int sellerId;
+
+  // FIX 1: brandId and sellerId can be null from API — use nullable int
+  int? brandId;
+  int? sellerId;
+
   late String title;
   late String slug;
   late String type;
@@ -66,7 +69,12 @@ class ProductData {
   bool quickDeliveryAvailable = false;
   late String mainImage;
   late String imageFit;
-  late String itemTotalInCart;
+
+  // FIX 2: Changed from String to int — item_count_in_cart is a number
+  // NOTE: Do NOT use this as source of truth for cart state.
+  // Use your local CartProvider/state instead. This is only for initial render.
+  late int itemCountInCart;
+
   late List<String> additionalImages;
   late int minimumOrderQuantity;
   late int quantityStepSize;
@@ -92,8 +100,8 @@ class ProductData {
   ProductData({
     int? id,
     int? categoryId,
-    int? brandId,
-    int? sellerId,
+    this.brandId,
+    this.sellerId,
     String? title,
     String? slug,
     String? type,
@@ -110,7 +118,7 @@ class ProductData {
     bool? quickDeliveryAvailable,
     String? mainImage,
     String? imageFit,
-    String? itemTotalInCart,
+    int? itemCountInCart,
     List<String>? additionalImages,
     int? minimumOrderQuantity,
     int? quantityStepSize,
@@ -133,11 +141,8 @@ class ProductData {
     List<ProductVariants>? variants,
     List<ProductAttributes>? attributes,
   }) {
-    // Initialize all late fields in constructor body
     this.id = id ?? 0;
     this.categoryId = categoryId ?? 0;
-    this.brandId = brandId ?? 0;
-    this.sellerId = sellerId ?? 0;
     this.title = title ?? '';
     this.slug = slug ?? '';
     this.type = type ?? '';
@@ -147,14 +152,13 @@ class ProductData {
     this.brand = brand ?? '';
     this.seller = seller ?? '';
     this.indicator = indicator ?? '';
-    this.favorite;
     this.estimatedDeliveryTime = estimatedDeliveryTime ?? '';
     this.ratings = ratings ?? 0.0;
     this.ratingCount = ratingCount ?? 0;
     this.quickDeliveryAvailable = quickDeliveryAvailable ?? false;
     this.mainImage = mainImage ?? '';
     this.imageFit = imageFit ?? '';
-    this.itemTotalInCart = itemTotalInCart ?? '';
+    this.itemCountInCart = itemCountInCart ?? 0;
     this.additionalImages = additionalImages ?? [];
     this.minimumOrderQuantity = minimumOrderQuantity ?? 0;
     this.quantityStepSize = quantityStepSize ?? 1;
@@ -181,8 +185,15 @@ class ProductData {
     try {
       id = json['id'] ?? 0;
       categoryId = json['category_id'] ?? 0;
-      brandId = json['brand_id'] ?? 0;
-      sellerId = json['seller_id'] ?? 0;
+
+      // FIX 1: nullable parse — API sends null for brand_id / seller_id
+      brandId = json['brand_id'] != null
+          ? int.tryParse(json['brand_id'].toString())
+          : null;
+      sellerId = json['seller_id'] != null
+          ? int.tryParse(json['seller_id'].toString())
+          : null;
+
       title = json['title'] ?? '';
       slug = json['slug'] ?? '';
       type = json['type'] ?? '';
@@ -192,6 +203,7 @@ class ProductData {
       brand = json['brand'] ?? '';
       seller = json['seller'] ?? '';
       indicator = json['indicator'] ?? '';
+
       if (json['favorite'] != null) {
         favorite = <FavoriteItem>[];
         json['favorite'].forEach((v) {
@@ -200,10 +212,13 @@ class ProductData {
       } else {
         favorite = null;
       }
+
       estimatedDeliveryTime = json['estimated_delivery_time']?.toString() ?? '';
       ratings = double.tryParse(json['ratings']?.toString() ?? '0') ?? 0.0;
+
+      // FIX 3: Removed duplicate ratingCount parse
       ratingCount = int.tryParse(json['rating_count']?.toString() ?? '0') ?? 0;
-      ratingCount = int.tryParse(json['rating_count']?.toString() ?? '0') ?? 0;
+
       quickDeliveryAvailable = json['quick_delivery_available'] == true ||
           json['quick_delivery_available'] == 1 ||
           json['quick_delivery_available'] == '1';
@@ -223,9 +238,11 @@ class ProductData {
 
       mainImage = fixUrl(json['main_image']) ?? '';
       imageFit = json['image_fit'] ?? '';
-      itemTotalInCart = json['item_count_in_cart'].toString();
 
-      // Handle potentially null lists with safe defaults
+      // FIX 2: Parse as int, not String
+      itemCountInCart =
+          int.tryParse(json['item_count_in_cart']?.toString() ?? '0') ?? 0;
+
       additionalImages = json['additional_images'] != null
           ? List<String>.from(json['additional_images'])
               .map((e) => fixUrl(e)!)
@@ -237,7 +254,6 @@ class ProductData {
       totalAllowedQuantity = json['total_allowed_quantity'] ?? 0;
       isReturnable = json['is_returnable'] ?? 0;
 
-      // Handle tags - can be String or List
       if (json['tags'] != null) {
         if (json['tags'] is String) {
           tags = json['tags']
@@ -264,15 +280,15 @@ class ProductData {
         _ => <CustomField>[],
       };
 
-      warrantyPeriod = json['warranty_period'] ?? '';
-      guaranteePeriod = json['guarantee_period'] ?? '';
+      warrantyPeriod = json['warranty_period']?.toString() ?? '';
+      guaranteePeriod = json['guarantee_period']?.toString() ?? '';
       madeIn = json['made_in'] ?? '';
-      isInclusiveTax = json['is_inclusive_tax'] ?? '';
+      isInclusiveTax = json['is_inclusive_tax']?.toString() ?? '';
       videoType = json['video_type'] ?? '';
       videoLink = json['video_link'] ?? '';
       status = json['status'] ?? '';
-      featured = json['featured'] ?? '';
-      metadata = json['metadata'] ?? '';
+      featured = json['featured']?.toString() ?? '';
+      metadata = json['metadata']?.toString() ?? '';
       createdAt = json['created_at'] ?? '';
       updatedAt = json['updated_at'] ?? '';
 
@@ -286,7 +302,6 @@ class ProductData {
               .toList()
           : [];
 
-      // Check for product-level tiered pricing as a fallback
       final dynamic productTieredPricing = json['tiered_pricing'] ??
           json['tieredPricing'] ??
           json['tiered_prices'];
@@ -296,8 +311,6 @@ class ProductData {
         final List<TieredPricing> productTiers = productTieredPricing
             .map((v) => TieredPricing.fromJson(v as Map<String, dynamic>))
             .toList();
-
-        // If variants don't have tiered pricing, give them the product-level ones
         for (var v in variants) {
           if (v.tieredPricing.isEmpty) {
             v.tieredPricing = List.from(productTiers);
@@ -312,7 +325,6 @@ class ProductData {
           : [];
     } catch (e, stackTrace) {
       developer.log('Error parsing ProductData: $e', stackTrace: stackTrace);
-      // Set all properties to safe defaults in case of error
       _initializeDefaults();
     }
   }
@@ -320,8 +332,8 @@ class ProductData {
   void _initializeDefaults() {
     id = 0;
     categoryId = 0;
-    brandId = 0;
-    sellerId = 0;
+    brandId = null;
+    sellerId = null;
     title = '';
     slug = '';
     type = '';
@@ -338,6 +350,7 @@ class ProductData {
     quickDeliveryAvailable = false;
     mainImage = '';
     imageFit = '';
+    itemCountInCart = 0;
     additionalImages = [];
     minimumOrderQuantity = 0;
     quantityStepSize = 1;
@@ -385,6 +398,7 @@ class ProductData {
     data['quick_delivery_available'] = quickDeliveryAvailable;
     data['main_image'] = mainImage;
     data['image_fit'] = imageFit;
+    data['item_count_in_cart'] = itemCountInCart;
     data['additional_images'] = additionalImages;
     data['minimum_order_quantity'] = minimumOrderQuantity;
     data['quantity_step_size'] = quantityStepSize;
@@ -497,6 +511,28 @@ class CurrentSlot {
   }
 }
 
+// FIX 4: Added CartItem class to capture cart state from API response
+class CartItem {
+  late bool exists;
+  int? cartItemId;
+
+  CartItem({bool? exists, this.cartItemId}) {
+    this.exists = exists ?? false;
+  }
+
+  CartItem.fromJson(Map<String, dynamic> json) {
+    exists = json['exists'] ?? false;
+    cartItemId = json['cart_item_id'] != null
+        ? int.tryParse(json['cart_item_id'].toString())
+        : null;
+  }
+
+  Map<String, dynamic> toJson() => {
+        'exists': exists,
+        'cart_item_id': cartItemId,
+      };
+}
+
 class ProductVariants {
   late int id;
   late String title;
@@ -513,6 +549,8 @@ class ProductVariants {
   late double specialPrice;
   late double mrp;
   late int mrpStatus;
+  late double pricePerUnit;
+  late String measurementUnit;
   late int storeId;
   late String storeSlug;
   late String storeName;
@@ -520,6 +558,10 @@ class ProductVariants {
   late String sku;
   late List<TieredPricing> tieredPricing;
   late Map<String, dynamic> attributes;
+
+  // FIX 4: Added cartItem field — needed to show cart count on home screen
+  CartItem? cartItem;
+
   ProductVariants({
     int? id,
     String? title,
@@ -536,6 +578,8 @@ class ProductVariants {
     double? specialPrice,
     double? mrp,
     int? mrpStatus,
+    double? pricePerUnit,
+    String? measurementUnit,
     int? storeId,
     String? storeSlug,
     String? storeName,
@@ -543,6 +587,7 @@ class ProductVariants {
     String? sku,
     List<TieredPricing>? tieredPricing,
     Map<String, dynamic>? attributes,
+    this.cartItem,
   }) {
     this.id = id ?? 0;
     this.title = title ?? '';
@@ -559,6 +604,8 @@ class ProductVariants {
     this.specialPrice = specialPrice ?? 0.0;
     this.mrp = mrp ?? 0.0;
     this.mrpStatus = mrpStatus ?? 0;
+    this.pricePerUnit = pricePerUnit ?? 0.0;
+    this.measurementUnit = measurementUnit ?? '';
     this.storeId = storeId ?? 0;
     this.storeSlug = storeSlug?.toString() ?? '';
     this.storeName = storeName ?? '';
@@ -578,20 +625,27 @@ class ProductVariants {
     breadth = json['breadth'] ?? 0;
     length = json['length'] ?? 0;
     availability = json['availability'] ?? false;
-    barcode = json['barcode'] ?? '';
+    barcode = json['barcode']?.toString() ?? '';
     isDefault = json['is_default'] ?? false;
     price = double.tryParse(json['price']?.toString() ?? '0') ?? 0.0;
     specialPrice =
         double.tryParse(json['special_price']?.toString() ?? '0') ?? 0.0;
     mrp = double.tryParse(json['mrp']?.toString() ?? '0') ?? 0.0;
     mrpStatus = int.tryParse(json['mrp_status']?.toString() ?? '0') ?? 0;
+    pricePerUnit =
+        double.tryParse(json['price_per_unit']?.toString() ?? '0') ?? 0.0;
+    measurementUnit = json['measurement_unit']?.toString() ?? '';
     storeId = json['store_id'] ?? 0;
     storeSlug = json['store_slug'] ?? '';
     storeName = json['store_name'] ?? '';
     stock = json['stock'] ?? 0;
-    sku = json['sku'] ?? '';
+    sku = json['sku']?.toString() ?? '';
 
-    // Tiered Pricing Parsing
+    // FIX 4: Parse cart_item from API response
+    cartItem = json['cart_item'] != null
+        ? CartItem.fromJson(json['cart_item'] as Map<String, dynamic>)
+        : CartItem(exists: false, cartItemId: null);
+
     final dynamic tieredData = json['tiered_pricing'] ??
         json['tieredPricing'] ??
         json['tiered_prices'] ??
@@ -603,18 +657,13 @@ class ProductVariants {
           tieredPricing.add(TieredPricing.fromJson(v));
         }
       }
-      // Sort by minQty ascending for easier logic later
       tieredPricing.sort((a, b) => a.minQty.compareTo(b.minQty));
     } else {
       tieredPricing = [];
     }
 
-    // Dynamic attributes
     if (json['attributes'] is Map) {
       attributes = Map<String, dynamic>.from(json['attributes']);
-    } else if (json['attributes'] is List) {
-      // Convert list → map or keep empty
-      attributes = {};
     } else {
       attributes = {};
     }
@@ -637,6 +686,8 @@ class ProductVariants {
     data['special_price'] = specialPrice;
     data['mrp'] = mrp;
     data['mrp_status'] = mrpStatus;
+    data['price_per_unit'] = pricePerUnit;
+    data['measurement_unit'] = measurementUnit;
     data['store_id'] = storeId;
     data['store_slug'] = storeSlug;
     data['store_name'] = storeName;
@@ -644,30 +695,50 @@ class ProductVariants {
     data['sku'] = sku;
     data['tiered_pricing'] = tieredPricing.map((v) => v.toJson()).toList();
     data['attributes'] = attributes;
+    if (cartItem != null) {
+      data['cart_item'] = cartItem!.toJson();
+    }
     return data;
   }
 
-  /// Returns the effective price for a given quantity based on tiered pricing.
-  double getEffectivePrice(int quantity) {
-    if (tieredPricing.isEmpty) {
-      return (specialPrice > 0 ? specialPrice : price).toDouble();
-    }
+  // FIX 5: isInStock helper — use this before showing "Add to Cart" button
+  bool get isInStock => stock > 0 && availability;
 
-    // Find the highest tier that is <= quantity
+  // FIX 6: effectivePrice — properly handles price=0 case (e.g. makana from store 5)
+  // Returns the display price per single unit, NOT tiered total
+  double get effectivePrice {
+    if (specialPrice > 0) return specialPrice;
+    if (price > 0) return price;
+    return 0.0;
+  }
+
+  // FIX 2 (corrected): getEffectivePrice for a given quantity
+  // Old code was returning tier.price (total for minQty) without dividing —
+  // now returns per-unit price correctly
+  double getEffectivePrice(int quantity) {
+    if (tieredPricing.isEmpty) return effectivePrice;
+
+    // Find highest applicable tier (quantity >= tier.minQty)
     TieredPricing? applicableTier;
     for (var tier in tieredPricing) {
       if (quantity >= tier.minQty) {
         applicableTier = tier;
       } else {
-        break; // Tiers are sorted by minQty
+        break;
       }
     }
 
     if (applicableTier != null) {
-      return (applicableTier.price / applicableTier.minQty);
+      // tier.price is the TOTAL price for minQty items — divide to get per-unit
+      return applicableTier.price / applicableTier.minQty;
     }
 
-    return (specialPrice > 0 ? specialPrice : price);
+    return effectivePrice;
+  }
+
+  // Total price for the given quantity (use this for cart total calculation)
+  double getTotalPrice(int quantity) {
+    return getEffectivePrice(quantity) * quantity;
   }
 }
 

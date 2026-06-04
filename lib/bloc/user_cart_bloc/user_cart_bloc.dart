@@ -37,12 +37,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     final bool isLoggedIn = Global.userData != null && Global.token!.isNotEmpty;
 
     if (isLoggedIn) {
-      // Normal behavior: mark for sync
-      localRepo.addItem(
-        event.item,
-        // isTiered: event.isTiered,
-        // appliedPrice: event.appliedPrice,
-      ); // this sets syncAction.add
+      localRepo.addItem(event.item);
       _debouncedSync(
         context: event.context,
         addressId: event.addressId,
@@ -52,9 +47,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
         isFromCartPage: event.isFromCartPage,
       );
     } else {
-      // Guest mode: add locally but DO NOT mark for sync
-      localRepo.addItemGuest(event.item); // New method → see below
-      // Do NOT call _debouncedSync
+      localRepo.addItemGuest(event.item);
     }
 
     emit(CartLoaded(localRepo.getAllItems()));
@@ -65,13 +58,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     final bool isLoggedIn = Global.userData != null;
 
     if (isLoggedIn) {
-      // Normal logged-in flow
-      localRepo.updateQuantity(
-        event.cartKey,
-        event.quantity,
-        // isTiered: event.isTiered,
-        // appliedPrice: event.appliedPrice,
-      );
+      localRepo.updateQuantity(event.cartKey, event.quantity);
       _debouncedSync(
         context: event.context,
         addressId: event.addressId,
@@ -81,30 +68,18 @@ class CartBloc extends Bloc<CartEvent, CartState> {
         isFromCartPage: event.isFromCartPage,
       );
     } else {
-      // Guest mode: update locally only
       localRepo.updateQuantityGuest(event.cartKey, event.quantity);
-      // No _debouncedSync
     }
 
     emit(CartLoaded(localRepo.getAllItems()));
-
-    /*// Just update quantity - it will automatically set the correct syncAction      context.read<UserCartLocalRepository>().updateQuantity(
-        cartKey: event.cartKey,
-        quantity: event.quantity,
-      );
-
-    emit(CartLoaded(localRepo.getAllItems()));
-    _debouncedSync(event.context);*/
   }
 
   void _onRemoveItem(RemoveFromCart event, Emitter<CartState> emit) {
     debugPrint('🗑 REMOVE → ${event.cartKey}');
-
     final bool isLoggedIn = Global.userData != null && Global.token!.isNotEmpty;
 
     if (isLoggedIn) {
-      // Normal behavior: mark for sync
-      localRepo.markForDelete(event.cartKey); // this sets syncAction.add
+      localRepo.markForDelete(event.cartKey);
       _debouncedSync(
         context: event.context,
         addressId: event.addressId,
@@ -114,25 +89,16 @@ class CartBloc extends Bloc<CartEvent, CartState> {
         isFromCartPage: event.isFromCartPage,
       );
     } else {
-      // Guest mode: add locally but DO NOT mark for sync
-      localRepo.removeItemGuest(event.cartKey); // New method → see below
-      // Do NOT call _debouncedSync
+      localRepo.removeItemGuest(event.cartKey);
     }
 
     emit(CartLoaded(localRepo.getAllItems()));
-
-    /*localRepo.markForDelete(event.cartKey);
-    emit(CartLoaded(localRepo.getAllItems()));
-    _debouncedSync(event.context);*/
   }
 
   void _onRemoveLocally(RemoveLocally event, Emitter<CartState> emit) {
-    debugPrint('🗑 REMOVE → ${event.cartKey}');
+    debugPrint('🗑 REMOVE LOCALLY → ${event.cartKey}');
     localRepo.deleteLocally(event.cartKey);
     emit(CartLoaded(localRepo.getAllItems()));
-    _debouncedSync(
-      context: event.context,
-    );
   }
 
   void _onClearCart(ClearCart event, Emitter<CartState> emit) {
@@ -177,6 +143,9 @@ class CartBloc extends Bloc<CartEvent, CartState> {
 
     debugPrint('🌐 SYNC START → ${pendingItems.length} items');
 
+    bool hadAddFailure = false;
+    String? lastErrorMessage;
+
     for (final item in pendingItems) {
       try {
         debugPrint(
@@ -199,7 +168,6 @@ class CartBloc extends Bloc<CartEvent, CartState> {
                   .toList();
 
               if (applicableTiers.isNotEmpty) {
-                // Sort descending to pick the HIGHEST applicable tier
                 applicableTiers.sort((a, b) => b.minQty.compareTo(a.minQty));
                 final bestTier = applicableTiers.first;
                 body['tiered_pricing'] = [
@@ -212,51 +180,81 @@ class CartBloc extends Bloc<CartEvent, CartState> {
 
             print("📤 FINAL REQUEST BODY (ADD) → $body");
 
-            final res = await remoteRepo.addItemToCart(
-              body: body,
-            );
-            if (res['success'] == true && res['data'] != null) {
-              final itemsList = res['data']['items'] as List<dynamic>?;
+            final res = await remoteRepo.addItemToCart(body: body);
 
-              if (itemsList != null) {
-                final addedServerItem = itemsList.firstWhere(
+            if (res['success'] == true && res['data'] != null) {
+              final dynamic data = res['data'];
+              int? serverCartItemId;
+
+              if (data is Map) {
+                if (data['items'] is List) {
+                  // Shape 1: data is CartData map containing "items" list
+                  final itemsList = data['items'] as List;
+                  final addedServerItem = itemsList.firstWhere(
+                    (serverItem) =>
+                        serverItem['product_id']?.toString() ==
+                            item.productId &&
+                        serverItem['product_variant_id']?.toString() ==
+                            item.variantId &&
+                        serverItem['store_id']?.toString() == item.vendorId,
+                    orElse: () => null,
+                  );
+                  if (addedServerItem != null) {
+                    serverCartItemId =
+                        int.tryParse(addedServerItem['id']?.toString() ?? '');
+                  }
+                } else if (data['product_variant_id'] != null) {
+                  // Shape 2: data is the single added cart item itself
+                  if (data['product_variant_id']?.toString() ==
+                      item.variantId) {
+                    serverCartItemId =
+                        int.tryParse(data['id']?.toString() ?? '');
+                  }
+                }
+              } else if (data is List) {
+                // Shape 3: data is a list of cart items directly
+                final addedServerItem = data.firstWhere(
                   (serverItem) =>
-                      serverItem['product_variant_id'].toString() ==
+                      serverItem['product_id']?.toString() == item.productId &&
+                      serverItem['product_variant_id']?.toString() ==
                           item.variantId &&
-                      serverItem['store_id'].toString() == item.vendorId,
+                      serverItem['store_id']?.toString() == item.vendorId,
                   orElse: () => null,
                 );
-
                 if (addedServerItem != null) {
-                  final serverCartItemId = addedServerItem['id'] as int;
-
-                  localRepo.markSynced(
-                    item.cartKey,
-                    serverCartItemId: serverCartItemId,
-                  );
-
-                  debugPrint(
-                      '✅ ADD synced locally with serverCartItemId: $serverCartItemId');
-                } else {
-                  debugPrint(
-                      '⚠️ Could not find matching item in server response');
+                  serverCartItemId =
+                      int.tryParse(addedServerItem['id']?.toString() ?? '');
                 }
+              }
+
+              if (serverCartItemId != null) {
+                localRepo.markSynced(
+                  item.cartKey,
+                  serverCartItemId: serverCartItemId,
+                );
+                debugPrint(
+                    '✅ ADD synced locally with serverCartItemId: $serverCartItemId');
+              } else {
+                debugPrint(
+                    '⚠️ Could not find matching item in server response: $data');
+                // Self-healing fallback: The call succeeded on the server, so mark as synced.
+                // The correct serverCartItemId will be fetched on next background getCart fetch.
+                localRepo.markSynced(item.cartKey);
+                debugPrint(
+                    '✅ ADD marked synced as fallback (without serverCartItemId)');
               }
             } else {
               final errorMessage =
                   res['message'] as String? ?? 'Failed to add item to cart';
 
+              debugPrint('❌ ADD API failed → $errorMessage');
               localRepo.deleteLocally(item.cartKey);
-              // ← THIS LINE MUST BE EXACTLY LIKE THIS
-              emit(CartLoaded(localRepo.getAllItems(),
-                  errorMessage: errorMessage));
-              return;
+              hadAddFailure = true;
+              lastErrorMessage = errorMessage;
             }
-
             break;
 
           case CartSyncAction.update:
-            // ALWAYS get the absolute latest item from Hive
             final freshItem = localRepo.getItemByKey(item.cartKey);
             log('OFIEFBN');
             if (freshItem == null) {
@@ -276,7 +274,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
             debugPrint(
                 '🌐 UPDATE API → ${item.cartKey} (qty: ${freshItem.quantity}, serverCartItemId: ${freshItem.serverCartItemId}, hasTiers: ${freshItem.tieredPricing?.isNotEmpty})');
 
-            final Map<String, dynamic> body = {
+            final Map<String, dynamic> updateBody = {
               'quantity': freshItem.quantity,
             };
 
@@ -287,10 +285,9 @@ class CartBloc extends Bloc<CartEvent, CartState> {
                   .toList();
 
               if (applicableTiers.isNotEmpty) {
-                // Sort descending to pick the HIGHEST applicable tier
                 applicableTiers.sort((a, b) => b.minQty.compareTo(a.minQty));
                 final bestTier = applicableTiers.first;
-                body['tiered_pricing'] = [
+                updateBody['tiered_pricing'] = [
                   {'price': bestTier.price, 'quantity': bestTier.minQty}
                 ];
                 debugPrint(
@@ -298,12 +295,12 @@ class CartBloc extends Bloc<CartEvent, CartState> {
               }
             }
 
-            print("📤 FINAL REQUEST BODY (UPDATE) → $body");
+            print("📤 FINAL REQUEST BODY (UPDATE) → $updateBody");
 
             try {
               await remoteRepo.updateItemQuantity(
                 cartItemId: freshItem.serverCartItemId!,
-                body: body,
+                body: updateBody,
               );
 
               localRepo.markSynced(item.cartKey);
@@ -326,11 +323,9 @@ class CartBloc extends Bloc<CartEvent, CartState> {
                 debugPrint('✅ DELETE API successful → ${item.cartKey}');
               } catch (e) {
                 debugPrint('❌ DELETE API failed → $e');
-                // Still remove locally even if API fails (optional: you can retry instead)
               }
             }
 
-            // Remove from local storage after server sync
             localRepo.removeLocal(item.cartKey);
             debugPrint('✅ Removed locally → ${item.cartKey}');
             break;
@@ -341,27 +336,57 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       } catch (e, stackTrace) {
         debugPrint('❌ SYNC FAILED → ${item.cartKey} → $e');
         debugPrint('Stack trace: ${stackTrace.toString()}');
-        // Continue with other items instead of returning
         continue;
       }
     }
 
     debugPrint('✅ SYNC COMPLETE');
-    emit(CartLoaded(localRepo.getAllItems()));
 
+    if (hadAddFailure && lastErrorMessage != null) {
+      emit(CartLoaded(localRepo.getAllItems(), errorMessage: lastErrorMessage));
+    } else {
+      emit(CartLoaded(localRepo.getAllItems()));
+    }
+
+    // if (event.context.mounted) {
+    //   event.context.read<GetUserCartBloc>().add(
+    //         FetchUserCart(
+    //           addressId: event.addressId,
+    //           promoCode: event.promoCode,
+    //           rushDelivery: event.rushDelivery,
+    //           useWallet: event.useWallet,
+    //           isRefresh: true,
+    //         ),
+    //       );
+    // }
+
+    if (hadAddFailure) {
+      debugPrint(
+          '⚠️ Skipping GetUserCartBloc fetch due to ADD failure — local state is source of truth');
+      return;
+    }
+
+    // ✅ FIX: Sirf Cart Page pe hi server se fetch karo
+    // Product listing screen pe GetUserCartBloc.FetchUserCart() NAHI chalega
+    // Kyunki woh local optimistic state ko overwrite kar deta tha
+    // aur item 1-2 seconds me disappear ho jata tha
     if (event.isFromCartPage == true) {
       if (event.context.mounted) {
-        event.context.read<GetUserCartBloc>().add(FetchUserCart(
-              addressId: event.addressId,
-              rushDelivery: event.rushDelivery,
-              useWallet: event.useWallet,
-              promoCode: event.promoCode,
-            ));
+        event.context.read<GetUserCartBloc>().add(
+              FetchUserCart(
+                addressId: event.addressId,
+                rushDelivery: event.rushDelivery,
+                useWallet: event.useWallet,
+                promoCode: event.promoCode,
+                isRefresh: true,
+              ),
+            );
       }
     } else {
-      if (event.context.mounted) {
-        event.context.read<GetUserCartBloc>().add(FetchUserCart());
-      }
+      // 🚫 REMOVED: FetchUserCart() call jo item disappear karta tha
+      // Local Hive state already correct hai markSynced() ke baad
+      debugPrint(
+          '✅ Skipping server fetch on product listing — local state is source of truth');
     }
   }
 

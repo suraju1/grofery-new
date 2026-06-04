@@ -97,7 +97,6 @@ class _HomePageState extends State<HomePage>
   @override
   bool get wantKeepAlive => true;
 
-  // Flag to ensure popup only shows once per session
   static bool _hasShownGstPopup = false;
 
   @override
@@ -110,7 +109,6 @@ class _HomePageState extends State<HomePage>
     _tabController.addListener(_onTabChanged);
     nestedScrollController.addListener(_scrollListener);
 
-    // Initialize location identifier to prevent redundant refresh on first build
     final box = Hive.box<dynamic>('userLocationBox');
     final storedLocation = box.get('user_location');
     if (storedLocation != null) {
@@ -271,7 +269,6 @@ class _HomePageState extends State<HomePage>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                /// Top Icon
                 Container(
                   height: 70.h,
                   width: 70.w,
@@ -285,10 +282,7 @@ class _HomePageState extends State<HomePage>
                     size: 34.sp,
                   ),
                 ),
-
                 SizedBox(height: 18.h),
-
-                /// Title
                 Text(
                   "Welcome to Grofery!",
                   textAlign: TextAlign.center,
@@ -299,10 +293,7 @@ class _HomePageState extends State<HomePage>
                     color: Colors.black87,
                   ),
                 ),
-
                 SizedBox(height: 10.h),
-
-                /// Subtitle
                 Text(
                   "Fresh groceries, fast delivery & amazing offers are waiting for you.",
                   textAlign: TextAlign.center,
@@ -313,10 +304,7 @@ class _HomePageState extends State<HomePage>
                     fontFamily: AppTheme.fontFamily,
                   ),
                 ),
-
                 SizedBox(height: 24.h),
-
-                /// Button
                 SizedBox(
                   width: double.infinity,
                   height: 48.h,
@@ -357,7 +345,6 @@ class _HomePageState extends State<HomePage>
         _applyHomeGeneralSettingsToAppBar();
       }
       if (!_isImageEmpty && backgroundImagePath.isNotEmpty) {
-        // Precache into memory using the same provider
         final provider = CachedNetworkImageProvider(backgroundImagePath);
         precacheImage(provider, context);
       }
@@ -454,26 +441,17 @@ class _HomePageState extends State<HomePage>
           return;
         }
 
-        // 1. First, switch to "All" tab
         _tabController.animateTo(0);
-
-        // 2. Apply "All" tab settings IMMEDIATELY
         _applyHomeGeneralSettingsToAppBar();
-
-        // 3. Clear feature section products to prevent showing old data
         context
             .read<FeatureSectionProductBloc>()
             .add(ClearFeatureSectionProducts());
-
-        // 4. Make API calls with empty slug (for "All" tab)
         apiCalls('');
 
-        // 5. Force TabBarView rebuild to reset scroll
         setState(() {
           _tabBarViewKey = 'reset_${DateTime.now().millisecondsSinceEpoch}';
         });
 
-        // 6. Scroll NestedScrollView to top
         if (nestedScrollController.hasClients) {
           nestedScrollController.animateTo(
             0,
@@ -482,7 +460,6 @@ class _HomePageState extends State<HomePage>
           );
         }
 
-        // Reset flag after a short delay
         Future.delayed(const Duration(milliseconds: 500), () {
           if (mounted) {
             _isRedirecting = false;
@@ -500,7 +477,6 @@ class _HomePageState extends State<HomePage>
         !_isRecreatingTabController) {
       _isRecreatingTabController = true;
 
-      // Defer controller recreation to next frame to avoid using disposed controller during build
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) {
           _isRecreatingTabController = false;
@@ -522,12 +498,10 @@ class _HomePageState extends State<HomePage>
           _tabController.addListener(_onTabChanged);
           _isRecreatingTabController = false;
 
-          // Trigger initial API calls for the Home tab if we're at index 0
           if (_tabController.index == 0) {
             apiCalls('');
           }
 
-          // Trigger rebuild after controller is recreated
           if (mounted) {
             setState(() {});
           }
@@ -539,8 +513,11 @@ class _HomePageState extends State<HomePage>
     }
   }
 
+  // ✅ FIX: FetchUserCart() dono if/else blocks se REMOVE kiya
+  // Pehle har tab switch pe FetchUserCart() call hota tha jo
+  // server se fresh data laata tha aur newly added items
+  // overwrite ho jaate the — item 1-2 sec me disappear ho jaata tha
   void apiCalls(String slug) async {
-    // Don't use controller if it's being recreated
     if (!_canUseTabController) {
       return;
     }
@@ -555,10 +532,8 @@ class _HomePageState extends State<HomePage>
       context.read<BrandsBloc>().add(FetchBrands(categorySlug: ''));
       context.read<BannerBloc>().add(FetchBanner(categorySlug: ''));
       context.read<ExploreBloc>().add(const FetchExplores());
-      context.read<GetUserCartBloc>().add(FetchUserCart());
+      // ✅ FetchUserCart() REMOVED — local Hive state is source of truth
       context.read<GetAddressListBloc>().add(FetchUserAddressList());
-
-      // Fetch recommended products alongside others
       context.read<RecommendedProductsBloc>().add(FetchRecommendedProducts());
       context.read<TargetGiftBloc>().add(FetchTargetGift());
     } else {
@@ -570,9 +545,10 @@ class _HomePageState extends State<HomePage>
       context
           .read<FeatureSectionProductBloc>()
           .add(FetchFeatureSectionProducts(slug: slug));
-      context.read<GetUserCartBloc>().add(FetchUserCart());
+      // ✅ FetchUserCart() REMOVED — local Hive state is source of truth
       context.read<GetAddressListBloc>().add(FetchUserAddressList());
     }
+
     await Future.delayed(Duration(seconds: 1), () {
       if (mounted) {
         context.read<SettingsBloc>().add(FetchSettingsData(context: context));
@@ -598,7 +574,6 @@ class _HomePageState extends State<HomePage>
         .read<NearByStoreBloc>()
         .add(FetchNearByStores(perPage: 15, searchQuery: ''));
 
-    // Refresh all other sections based on the current tab
     if (_tabController.index == 0) {
       apiCalls('');
     } else if (_categories.isNotEmpty &&
@@ -729,9 +704,6 @@ class _HomePageState extends State<HomePage>
     final Color? fontColor = settings.fontColor.isNotEmpty
         ? _getColorFromHex(settings.fontColor)
         : null;
-    // if (fontColor != null) {
-    //   _collapsedTextColor = fontColor;
-    // }
 
     updateAppBarBackground(
       image: image,
@@ -751,19 +723,13 @@ class _HomePageState extends State<HomePage>
             height: 50,
             child: Icon(HeroiconsOutline.squares2x2, size: 28),
           ),
-          SizedBox(
-            height: 0,
-          ),
+          SizedBox(height: 0),
           Text(
             AppLocalizations.of(context)!.all,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 12,
-            ),
+            style: const TextStyle(fontSize: 12),
           ),
-          SizedBox(
-            height: 3,
-          ),
+          SizedBox(height: 3),
         ],
       ),
     );
@@ -786,10 +752,7 @@ class _HomePageState extends State<HomePage>
             fit: BoxFit.contain,
           );
         } else {
-          iconWidget = const Icon(
-            HeroiconsOutline.squares2x2,
-            size: 28,
-          );
+          iconWidget = const Icon(HeroiconsOutline.squares2x2, size: 28);
         }
 
         return Tab(
@@ -797,11 +760,7 @@ class _HomePageState extends State<HomePage>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(
-                width: 40,
-                height: 50,
-                child: iconWidget,
-              ),
+              SizedBox(width: 40, height: 50, child: iconWidget),
               SizedBox(height: 0),
               Text(
                 settings.title.isNotEmpty
@@ -810,9 +769,7 @@ class _HomePageState extends State<HomePage>
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 12),
               ),
-              SizedBox(
-                height: 3,
-              ),
+              SizedBox(height: 3),
             ],
           ),
         );
@@ -896,11 +853,8 @@ class _HomePageState extends State<HomePage>
                                         ),
                                       ],
                                     ),
-                                    child: const Icon(
-                                      Icons.close,
-                                      size: 20,
-                                      color: Colors.grey,
-                                    ),
+                                    child: const Icon(Icons.close,
+                                        size: 20, color: Colors.grey),
                                   ),
                                 ),
                               ),
@@ -930,8 +884,7 @@ class _HomePageState extends State<HomePage>
                                       fontSize: 15,
                                       color: Colors.white,
                                       fontWeight: FontWeight.w500),
-                                  overflow: TextOverflow
-                                      .ellipsis, // Add overflow handling
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               SizedBox(width: 2),
@@ -961,7 +914,6 @@ class _HomePageState extends State<HomePage>
                 ),
               ],
             ),
-            // Dynamic Placeholder to prevent search bar overlap
             AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
@@ -983,11 +935,7 @@ class _HomePageState extends State<HomePage>
             padding:
                 const EdgeInsets.symmetric(horizontal: 15.0, vertical: 10.0),
             child: ShimmerWidget.rectangular(
-              isBorder: true,
-              height: 18,
-              width: 200,
-              borderRadius: 15,
-            ),
+                isBorder: true, height: 18, width: 200, borderRadius: 15),
           ),
           SizedBox(
             height: 210.h,
@@ -1001,18 +949,16 @@ class _HomePageState extends State<HomePage>
                   child: Column(
                     children: [
                       ShimmerWidget.rectangular(
-                        isBorder: true,
-                        height: 105,
-                        width: 100,
-                        borderRadius: 15,
-                      ),
+                          isBorder: true,
+                          height: 105,
+                          width: 100,
+                          borderRadius: 15),
                       const SizedBox(height: 10.0),
                       ShimmerWidget.rectangular(
-                        isBorder: true,
-                        height: 15,
-                        width: 100,
-                        borderRadius: 15,
-                      ),
+                          isBorder: true,
+                          height: 15,
+                          width: 100,
+                          borderRadius: 15),
                     ],
                   ),
                 );
@@ -1053,12 +999,11 @@ class _HomePageState extends State<HomePage>
             children: [
               FloatingActionButton(
                 heroTag: 'whatsapp_fab',
-                backgroundColor: Colors.green.shade600, // WhatsApp Brand Color
+                backgroundColor: Colors.green.shade600,
                 onPressed: () async {
                   final supportNumber =
                       SettingsData.instance.system?.sellerSupportNumber ??
                           "+910000000000";
-                  // Clean any extra spaces or symbols
                   final cleanNumber =
                       supportNumber.replaceAll(RegExp(r'[^0-9+]'), '');
                   final whatsappUrl =
@@ -1075,15 +1020,14 @@ class _HomePageState extends State<HomePage>
               ),
               FloatingActionButton(
                 heroTag: 'categories_fab',
-                backgroundColor:
-                    Theme.of(context).colorScheme.primary, // App primary color
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 onPressed: () {
                   SubCategoryFeatureSectionWidget.show(context);
                 },
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Transform.scale(
-                    scale: 1.65, // 🔥 Zoom level (increase/decrease as needed)
+                    scale: 1.65,
                     child: Image.asset(
                       'assets/images/3ea1a06d-9448-4523-9bca-ec805b80f46a.png',
                       height: 56,
@@ -1126,6 +1070,8 @@ class _HomePageState extends State<HomePage>
                       context
                           .read<CategoryBloc>()
                           .add(FetchCategory(context: context));
+                      // ✅ Explicit refresh pe server se cart fetch karo
+                      context.read<GetUserCartBloc>().add(RefreshUserCart());
                     },
                     child: BlocBuilder<BannerBloc, BannerState>(
                       builder: (context, bannerState) {
@@ -1183,10 +1129,9 @@ class _HomePageState extends State<HomePage>
                                                           ],
                                                         ),
                                                         child: const Icon(
-                                                          Icons.close,
-                                                          size: 20,
-                                                          color: Colors.grey,
-                                                        ),
+                                                            Icons.close,
+                                                            size: 20,
+                                                            color: Colors.grey),
                                                       ),
                                                     ),
                                                   ),
@@ -1197,19 +1142,6 @@ class _HomePageState extends State<HomePage>
                                               ],
                                             ),
                                           );
-
-                                          /*setState(() {
-                                            isRetry = true;
-                                          });
-                                          if (_tabController.index > 0) {
-                                            final selectedCategory = _categories[_tabController
-                                                .index - 1];
-                                            apiCalls(selectedCategory.slug ?? '');
-                                          } else {
-                                            apiCalls('');
-                                          }
-                                          context.read<CategoryBloc>().add(
-                                              FetchCategory(context: context));*/
                                         },
                                       );
                                     }
@@ -1219,6 +1151,10 @@ class _HomePageState extends State<HomePage>
                                         apiCalls('');
                                         context.read<CategoryBloc>().add(
                                             FetchCategory(context: context));
+                                        // ✅ Pull-to-refresh pe server cart sync
+                                        context
+                                            .read<GetUserCartBloc>()
+                                            .add(RefreshUserCart());
                                         await Future.delayed(
                                             const Duration(milliseconds: 500));
                                       },
@@ -1312,8 +1248,7 @@ class _HomePageState extends State<HomePage>
                                             ),
                                           ),
                                           SliverToBoxAdapter(
-                                            child: SizedBox(height: 15.h),
-                                          ),
+                                              child: SizedBox(height: 15.h)),
                                           SliverToBoxAdapter(
                                             child: BlocBuilder<
                                                 RecommendedProductsBloc,
@@ -1414,7 +1349,6 @@ class _HomePageState extends State<HomePage>
                                                     physics:
                                                         const NeverScrollableScrollPhysics(),
                                                     children: [
-                                                      // Global check
                                                       if (state
                                                           .featureSectionProductData
                                                           .any((s) => (s
@@ -1448,76 +1382,6 @@ class _HomePageState extends State<HomePage>
                                                       ]
                                                     ],
                                                   );
-
-                                                  /*return ListView.builder(
-                                                  padding: EdgeInsets.only(
-                                                      top: 5.h),
-                                                  shrinkWrap: true,
-                                                  physics: const NeverScrollableScrollPhysics(),
-                                                  itemCount: state.hasReachedMax
-                                                      ? state
-                                                      .featureSectionProductData
-                                                      .length : state
-                                                      .featureSectionProductData
-                                                      .length + 2,
-                                                  itemBuilder: (context, index) {
-                                                    final bool hasAnyProducts = state
-                                                        .featureSectionProductData
-                                                        .any((section) {
-                                                      final productList = section
-                                                          .products ?? [];
-                                                      return productList.isNotEmpty;
-                                                    });
-                                                    if (!hasAnyProducts) {
-                                                      return SizedBox.shrink();
-                                                    }
-                                                    if (index >= state
-                                                        .featureSectionProductData
-                                                        .length) {
-                                                      return const Padding(
-                                                        padding: EdgeInsets.all(
-                                                            16.0),
-                                                        child: Center(
-                                                          child: CustomCircularProgressIndicator(),
-                                                        ),
-                                                      );
-                                                    }
-
-                                                    if (index == 1) {
-                                                      return Column(
-                                                        children: [
-                                                          middleBannersWidget(),
-                                                        ],
-                                                      );
-                                                    }
-
-                                                    return hasAnyProducts
-                                                        ? ProductFeatureSectionWidget(
-                                                      featureSectionData: state
-                                                          .featureSectionProductData[index],
-                                                      featureSectionTitle: '',
-                                                      backgroundImage: state
-                                                          .featureSectionProductData[index]
-                                                          .mobileBackgroundImage ?? '',
-                                                      backgroundImageTablet: state
-                                                          .featureSectionProductData[index]
-                                                          .tabletBackgroundImage ?? '',
-                                                      featureSectionSlug: state
-                                                          .featureSectionProductData[index]
-                                                          .slug ?? '',
-                                                      featureSectionStyle: state
-                                                          .featureSectionProductData[index]
-                                                          .style!,
-                                                      backgroundColor: state
-                                                          .featureSectionProductData[index]
-                                                          .backgroundColor,
-                                                      backgroundType: state
-                                                          .featureSectionProductData[index]
-                                                          .backgroundType,
-                                                    )
-                                                        : SizedBox.shrink();
-                                                  },
-                                                );*/
                                                 } else if (state
                                                     is FeatureSectionProductLoading) {
                                                   return productFeaturedSectionEmptyState();
@@ -1527,10 +1391,7 @@ class _HomePageState extends State<HomePage>
                                             ),
                                           ),
                                           SliverToBoxAdapter(
-                                            child: SizedBox(
-                                              height: 180.h,
-                                            ),
-                                          ),
+                                              child: SizedBox(height: 180.h)),
                                         ],
                                       ),
                                     );
@@ -1568,24 +1429,20 @@ class _HomePageState extends State<HomePage>
 
                   if (_tabController.length != totalTabs) {
                     _initializeTabController(newCategories.length);
-
                     if (oldLength == 0) {
                       apiCalls('');
                     }
                   }
 
-                  // Critical: Handle invalid tab index when category is removed
                   if (_tabController.index >= totalTabs) {
                     _ensureValidTabIndex();
                   } else if (categoriesChanged &&
                       _tabController.index > 0 &&
                       !_isRedirecting) {
-                    // Verify current category still exists by slug
                     final currentIndex = _tabController.index - 1;
                     if (currentIndex >= 0 &&
                         currentIndex <
                             oldLength - (oldLength - newCategories.length)) {
-                      // Check if we need to redirect
                       if (currentIndex >= newCategories.length) {
                         _ensureValidTabIndex();
                       } else {
@@ -1610,21 +1467,14 @@ class _HomePageState extends State<HomePage>
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               SizedBox(
-                                width: 40,
-                                height: 50,
-                                child: _buildTabIcon(category, isSelected),
-                              ),
-                              SizedBox(
-                                height: 0,
-                              ),
-                              Text(
-                                category.title ?? '',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                              SizedBox(
-                                height: 3,
-                              ),
+                                  width: 40,
+                                  height: 50,
+                                  child: _buildTabIcon(category, isSelected)),
+                              SizedBox(height: 0),
+                              Text(category.title ?? '',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontSize: 12)),
+                              SizedBox(height: 3),
                             ],
                           ),
                         );
@@ -1632,7 +1482,6 @@ class _HomePageState extends State<HomePage>
                     );
                   }).toList());
 
-                  // Build TabBarView children for categories
                   tabBarViewChildren
                       .addAll(_categories.asMap().entries.map((entry) {
                     final category = entry.value;
@@ -1648,6 +1497,8 @@ class _HomePageState extends State<HomePage>
                         context
                             .read<CategoryBloc>()
                             .add(FetchCategory(context: context));
+                        // ✅ Category tab refresh pe bhi server cart sync
+                        context.read<GetUserCartBloc>().add(RefreshUserCart());
                       },
                       child: BlocBuilder<BannerBloc, BannerState>(
                         builder: (context, bannerState) {
@@ -1689,17 +1540,15 @@ class _HomePageState extends State<HomePage>
                                             AlwaysScrollableScrollPhysics(),
                                         slivers: [
                                           SliverToBoxAdapter(
-                                            child: BlocBuilder<
-                                                BannerBloc, // Changed from ExploreBloc to BannerBloc
+                                            child: BlocBuilder<BannerBloc,
                                                 BannerState>(
                                               builder: (BuildContext context,
                                                   BannerState state) {
                                                 if (state is BannerLoaded) {
                                                   if (state
-                                                      .topBannerData.isEmpty) {
+                                                      .topBannerData.isEmpty)
                                                     return const SizedBox
                                                         .shrink();
-                                                  }
                                                   return Column(
                                                     children: [
                                                       _buildTopPromoBanner(
@@ -1733,8 +1582,7 @@ class _HomePageState extends State<HomePage>
                                               child:
                                                   SubCategoryFeatureSectionWidget()),
                                           SliverToBoxAdapter(
-                                            child: BlocBuilder<
-                                                ExploreBloc, // This was already ExploreBloc, keeping it as is
+                                            child: BlocBuilder<ExploreBloc,
                                                 ExploreState>(
                                               builder: (context, exploreState) {
                                                 if (exploreState
@@ -1765,13 +1613,14 @@ class _HomePageState extends State<HomePage>
                                             ),
                                           ),
                                           SliverToBoxAdapter(
-                                              child: BrandsSection(
-                                            brandsSectionTitle:
-                                                AppLocalizations.of(context)
-                                                        ?.topBrands ??
-                                                    'Top Brands',
-                                            categorySlug: category.slug ?? '',
-                                          )),
+                                            child: BrandsSection(
+                                              brandsSectionTitle:
+                                                  AppLocalizations.of(context)
+                                                          ?.topBrands ??
+                                                      'Top Brands',
+                                              categorySlug: category.slug ?? '',
+                                            ),
+                                          ),
                                           SliverToBoxAdapter(
                                             child: BlocBuilder<
                                                 FeatureSectionProductBloc,
@@ -1779,60 +1628,12 @@ class _HomePageState extends State<HomePage>
                                               builder: (context, state) {
                                                 if (state
                                                     is FeatureSectionProductLoaded) {
-                                                  /*return ListView.builder(
-                                                    padding: EdgeInsets.zero,
-                                                    physics: NeverScrollableScrollPhysics(),
-                                                    shrinkWrap: true,
-                                                    itemCount: state.featureSectionProductData.length + 1 + (state.hasReachedMax ? 0 : 1),
-                                                    itemBuilder: (context, index) {
-                                                      final items = state.featureSectionProductData;
-
-                                                      // Loading at the very end
-                                                      if (index == items.length + 1) {
-                                                        return const Padding(
-                                                          padding: EdgeInsets.all(16.0),
-                                                          child: Center(child: CustomCircularProgressIndicator()),
-                                                        );
-                                                      }
-
-                                                      if (index == 1) {
-                                                        return middleBannersWidget();
-                                                      }
-
-                                                      // Map logical item index → real data index
-                                                      final dataIndex = index > 1 ? index - 1 : index;
-
-                                                      if (dataIndex >= items.length) {
-                                                        return const SizedBox.shrink();
-                                                      }
-
-                                                      final section = items[dataIndex];
-                                                      final products = section.products ?? [];
-
-                                                      if (products.isEmpty) {
-                                                        return const SizedBox.shrink();
-                                                      }
-
-                                                      return ProductFeatureSectionWidget(
-                                                        featureSectionData: section,
-                                                        featureSectionTitle: '',
-                                                        backgroundImage: section.mobileBackgroundImage ?? '',
-                                                        backgroundImageTablet: section.tabletBackgroundImage ?? '',
-                                                        featureSectionSlug: section.slug ?? '',
-                                                        featureSectionStyle: section.style!,
-                                                        backgroundColor: section.backgroundColor,
-                                                        backgroundType: section.backgroundType,
-                                                      );
-                                                    },
-                                                  );*/
-
                                                   return ListView(
                                                     padding: EdgeInsets.zero,
                                                     shrinkWrap: true,
                                                     physics:
                                                         const NeverScrollableScrollPhysics(),
                                                     children: [
-                                                      // Global check
                                                       if (state
                                                           .featureSectionProductData
                                                           .any((s) => (s
@@ -1875,10 +1676,7 @@ class _HomePageState extends State<HomePage>
                                             ),
                                           ),
                                           SliverToBoxAdapter(
-                                            child: SizedBox(
-                                              height: 180.h,
-                                            ),
-                                          ),
+                                              child: SizedBox(height: 180.h)),
                                         ],
                                       );
                                     },
@@ -1934,11 +1732,8 @@ class _HomePageState extends State<HomePage>
                                 .colorScheme
                                 .surfaceContainer
                                 .withValues(alpha: 0.2),
-                            backgroundColor: Color.lerp(
-                              Colors.transparent,
-                              Color(0xFFBDDCFB),
-                              1 - _appBarOpacity,
-                            ),
+                            backgroundColor: Color.lerp(Colors.transparent,
+                                Color(0xFFBDDCFB), 1 - _appBarOpacity),
                             automaticallyImplyLeading: false,
                             flexibleSpace: Container(
                               decoration: BoxDecoration(
@@ -1948,14 +1743,10 @@ class _HomePageState extends State<HomePage>
                                         begin: Alignment.topCenter,
                                         end: Alignment.bottomCenter,
                                         colors: [
-                                          Color(
-                                              0xFF064F24), // darker shade of your primary color
-                                          Color(
-                                              0xFF08762E), // mid-dark green, close to base
-                                          Color(
-                                              0xFF0A8036), // your exact primary theme color
-                                          Color(
-                                              0xFF12A94D), // slightly lighter premium green
+                                          Color(0xFF064F24),
+                                          Color(0xFF08762E),
+                                          Color(0xFF0A8036),
+                                          Color(0xFF12A94D),
                                         ],
                                       ),
                                 color: isDarkMode(context)
@@ -1966,7 +1757,6 @@ class _HomePageState extends State<HomePage>
                                 background: Stack(
                                   fit: StackFit.expand,
                                   children: [
-                                    // _buildFlexibleSpaceBackground(),
                                     SafeArea(
                                       bottom: false,
                                       child: Align(
@@ -1992,18 +1782,12 @@ class _HomePageState extends State<HomePage>
                                           offset =
                                               nestedScrollController.offset;
                                         }
-
-                                        // 195 (expanded) - 55 (bottom) = 140 is roughly the collapse distance
                                         double shrinkFactor =
                                             (offset / 100.0).clamp(0.0, 1.0);
-
-                                        // Animate height from 50 to 42
                                         double currentHeight =
                                             50.0 - (8.0 * shrinkFactor);
-                                        // Animate horizontal padding from 12 to 18 (shrinks width slightly)
                                         double currentHPadding =
                                             12.0 + (6.0 * shrinkFactor);
-
                                         return Container(
                                           padding: const EdgeInsets.only(
                                               bottom: 5.0),
@@ -2075,9 +1859,7 @@ class _HomePageState extends State<HomePage>
             if (isRetry)
               Positioned.fill(
                 top: 120,
-                child: const Center(
-                  child: CustomCircularProgressIndicator(),
-                ),
+                child: const Center(child: CustomCircularProgressIndicator()),
               ),
           ],
         ),
@@ -2103,10 +1885,8 @@ class _HomePageState extends State<HomePage>
 
   Widget _buildTopPromoBanner(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 10.w).copyWith(
-        top: 20.0,
-        bottom: 5.0,
-      ),
+      padding: EdgeInsets.symmetric(horizontal: 10.w)
+          .copyWith(top: 20.0, bottom: 5.0),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(15.r),
         child: Image.asset(
@@ -2174,7 +1954,7 @@ class _HomePageState extends State<HomePage>
 
   EdgeInsets _getPadding(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final horizontalPadding = screenWidth * 0.04; // 4% of screen width
+    final horizontalPadding = screenWidth * 0.04;
     return EdgeInsets.symmetric(horizontal: horizontalPadding);
   }
 
@@ -2199,16 +1979,9 @@ class _HomePageState extends State<HomePage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: _getPadding(context).copyWith(
-              top: 12.0,
-              bottom: 12.0,
-            ),
+            padding: _getPadding(context).copyWith(top: 12.0, bottom: 12.0),
             child: ShimmerWidget.rectangular(
-              isBorder: true,
-              height: 18,
-              width: 200,
-              borderRadius: 15,
-            ),
+                isBorder: true, height: 18, width: 200, borderRadius: 15),
           ),
           GridView.builder(
             shrinkWrap: true,
@@ -2234,11 +2007,9 @@ class _HomePageState extends State<HomePage>
     if (!nestedScrollController.hasClients) return;
 
     if (animated) {
-      nestedScrollController.animateTo(
-        0.0,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeOutCubic,
-      );
+      nestedScrollController.animateTo(0.0,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeOutCubic);
     } else {
       nestedScrollController.jumpTo(0.0);
     }

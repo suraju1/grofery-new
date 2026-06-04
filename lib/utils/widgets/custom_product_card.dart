@@ -60,7 +60,10 @@ class CustomProductCard extends StatelessWidget {
   final List<TieredPricing>? tieredPricing;
   final String? mrp;
   final int? mrpStatus;
+  final String? pricePerUnit;
+  final String? measurementUnit;
   final bool quickDeliveryAvailable;
+  final String? heroTagPrefix;
 
   const CustomProductCard({
     super.key,
@@ -95,17 +98,22 @@ class CustomProductCard extends StatelessWidget {
     this.tieredPricing,
     this.mrp,
     this.mrpStatus,
+    this.pricePerUnit,
+    this.measurementUnit,
     this.quickDeliveryAvailable = false,
+    this.heroTagPrefix,
   });
 
+  // FIX 1: Removed duplicate boxFit getter — kept only one
   BoxFit get boxFit {
     return BoxFit.contain;
   }
 
   @override
   Widget build(BuildContext context) {
+    // FIX 2: heroTag properly assigned (was cut off in original)
     final String heroTag =
-        'card-image-$productId-$productSlug-${identityHashCode(this)}';
+        '${heroTagPrefix ?? ''}product_${productId}_${productVariantId}_${storeId}';
 
     if (isSimilarProductLayout) {
       return _buildSimilarProductLayout(context, heroTag);
@@ -114,6 +122,7 @@ class CustomProductCard extends StatelessWidget {
     if (useHorizontalLayout) {
       return _buildHorizontalLayout(context, heroTag);
     }
+
     return OpenContainer(
       clipBehavior: Clip.antiAlias,
       transitionDuration: const Duration(milliseconds: 500),
@@ -154,8 +163,10 @@ class CustomProductCard extends StatelessWidget {
                           productImage: productImage,
                           discountPercentage:
                               PriceUtils.calculateDiscountPercentage(
-                                      double.tryParse(productPrice) ?? 0.0,
-                                      double.tryParse(specialPrice) ?? 0.0)
+                                      (mrpStatus == 1 && _displayMrp > 0)
+                                          ? _displayMrp
+                                          : (double.tryParse(productPrice) ?? 0.0),
+                                      _displaySpecialPrice)
                                   .toString(),
                           heroTag: heroTag,
                           context: context),
@@ -166,16 +177,13 @@ class CustomProductCard extends StatelessWidget {
                               builder: (context, state) {
                             final cartItem = _getCartItem(state);
                             final int currentQty = cartItem?.quantity ?? 0;
+                            final double displaySpecialPrice =
+                                _displaySpecialPrice;
+                            final double displayMrp = _displayMrp;
+                            final double? displayPricePerUnit =
+                                _displayPricePerUnit;
                             final double effectivePrice =
-                                _calculateEffectivePrice(
-                                    currentQty > 0 ? currentQty : 1);
-                            final double original =
-                                double.tryParse(productPrice) ?? 0.0;
-                            final displayQty = currentQty > 0
-                                ? currentQty
-                                : (minQty > 0 ? minQty : 1);
-                            final totalPrice = effectivePrice * displayQty;
-                            final totalOriginalPrice = original * displayQty;
+                                displayPricePerUnit ?? 0.0;
 
                             return SingleChildScrollView(
                               physics: const NeverScrollableScrollPhysics(),
@@ -189,20 +197,18 @@ class CustomProductCard extends StatelessWidget {
                                       context: context),
                                   SizedBox(height: 2.h),
                                   productPriceWidget(
-                                      price: (mrpStatus == 1 &&
-                                              (double.tryParse(mrp ?? '0') ??
-                                                      0) >
-                                                  0)
-                                          ? totalOriginalPrice.toString()
+                                      price: (mrpStatus == 1 && displayMrp > 0)
+                                          ? displayMrp.toString()
                                           : '',
-                                      specialPrice: totalPrice.toString(),
+                                      specialPrice:
+                                          displaySpecialPrice.toString(),
                                       locale: AppConstant.defaultLocalCurrency,
                                       context: context),
-                                  if (minQty > 1)
+                                  if (displayPricePerUnit != null)
                                     Padding(
                                       padding: EdgeInsets.only(top: 2.h),
                                       child: Text(
-                                        "at ₹${formatPrice(effectivePrice)}/pc",
+                                        "${AppConstant.currency}${formatPrice(effectivePrice)}/$_displayMeasurementUnit",
                                         style: TextStyle(
                                           fontSize: 9.sp,
                                           color: Colors.grey.shade600,
@@ -267,7 +273,7 @@ class CustomProductCard extends StatelessWidget {
         Icon(
           TablerIcons.bolt,
           size: 14.sp,
-          color: const Color(0xFFFFB300), // Bright yellow/orange
+          color: const Color(0xFFFFB300),
         ),
         SizedBox(width: 2.w),
         Text(
@@ -470,7 +476,7 @@ class CustomProductCard extends StatelessWidget {
                                   onVariantSelectorRequested != null) {
                                 onVariantSelectorRequested!();
                               } else {
-                                if (cartItem.quantity > quantityStepSize) {
+                                if ((cartItem.quantity - quantityStepSize) >= (minQty > 0 ? minQty : 1)) {
                                   if (context.mounted) {
                                     context.read<CartBloc>().add(
                                           UpdateCartQty(
@@ -507,7 +513,6 @@ class CustomProductCard extends StatelessWidget {
                                     await HapticFeedback.lightImpact();
 
                                     if (context.mounted) {
-                                      // Toggle logic: If already in cart (rare case where button is still visible), remove it
                                       if (isInCart) {
                                         context.read<CartBloc>().add(
                                               RemoveFromCart(
@@ -517,10 +522,12 @@ class CustomProductCard extends StatelessWidget {
                                         return;
                                       }
 
+                                      final int initialQty = (minQty > 0 && minQty > quantityStepSize) ? minQty : quantityStepSize;
+
                                       final error = CartValidation
                                           .validateProductAddToCart(
                                         context: context,
-                                        requestedQuantity: quantityStepSize,
+                                        requestedQuantity: initialQty,
                                         minQty: minQty,
                                         maxQty: totalAllowedQuantity,
                                         stock: totalStocks,
@@ -544,7 +551,7 @@ class CustomProductCard extends StatelessWidget {
                                             type: ToastType.error);
                                         return;
                                       } else {
-                                        onAddToCart(quantityStepSize);
+                                        onAddToCart(initialQty);
                                       }
                                     }
                                   }
@@ -584,12 +591,14 @@ class CustomProductCard extends StatelessWidget {
             hasBlocData ? isWishListedFromBloc : isWishListed;
         final finalWishlistItemId = currentWishlistItemId ?? wishlistItemId;
 
-        return AnimatedButton(
+        return OptimisticWishlistButton(
+          initialIsWishlisted: finalIsWishListed,
+          size: size,
+          iconSize: iconSize,
           onTap: () async {
             if (Global.userData != null) {
               final wishlistBloc = context.read<UserWishlistBloc>();
 
-              // CASE 1: Product is already wishlisted -> Remove it directly
               if (finalIsWishListed) {
                 if (finalWishlistItemId != null && finalWishlistItemId != 0) {
                   wishlistBloc.add(RemoveItemFromWishlist(
@@ -598,13 +607,10 @@ class CustomProductCard extends StatelessWidget {
                     productVariantId: productVariantId,
                     storeId: storeId,
                   ));
-
-                  // Sync with local wishlist product listing if needed
                   context
                       .read<WishlistProductBloc>()
                       .add(RemoveProductLocally(itemId: finalWishlistItemId));
                 } else {
-                  // We know it's wishlisted but don't have the ID, BLoC will try to find it
                   wishlistBloc.add(RemoveItemFromWishlist(
                     itemId: 0,
                     productId: productId,
@@ -612,10 +618,9 @@ class CustomProductCard extends StatelessWidget {
                     storeId: storeId,
                   ));
                 }
-                return;
+                return true;
               }
 
-              // CASE 2: Product not wishlisted -> Try to add directly if any wishlist exists
               if (!finalIsWishListed) {
                 if (wishlistState is UserWishlistLoaded) {
                   if (wishlistState.wishlistData.isNotEmpty) {
@@ -629,7 +634,6 @@ class CustomProductCard extends StatelessWidget {
                       ),
                     );
                   } else {
-                    // CASE 3: No wishlist yet -> Create default one and add product
                     final userName = Global.userData?.name ?? 'My Wishlist';
                     wishlistBloc.add(
                       CreateNewWishlist(
@@ -641,10 +645,7 @@ class CustomProductCard extends StatelessWidget {
                     );
                   }
                 } else if (wishlistState is UserWishlistInitial) {
-                  // If not even loaded once, trigger load and also optimistically add
                   wishlistBloc.add(GetUserWishlistRequest());
-                  
-                  // Fallback to creation if load fails or we want to proceed anyway
                   final userName = Global.userData?.name ?? 'My Wishlist';
                   wishlistBloc.add(
                     CreateNewWishlist(
@@ -655,8 +656,6 @@ class CustomProductCard extends StatelessWidget {
                     ),
                   );
                 } else if (wishlistState is UserWishlistLoading) {
-                  // Already loading, just wait or try to add with default name
-                  // The BLoC will handle the 'already exists' if we try to create
                   final userName = Global.userData?.name ?? 'My Wishlist';
                   wishlistBloc.add(
                     CreateNewWishlist(
@@ -667,33 +666,14 @@ class CustomProductCard extends StatelessWidget {
                     ),
                   );
                 }
-                return;
+                return true;
               }
+              return true;
             } else {
               await AuthGuard.ensureLoggedIn(context);
+              return false;
             }
           },
-          child: Container(
-            height: size.r,
-            width: size.r,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.95),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            alignment: Alignment.center,
-            child: Icon(
-              finalIsWishListed ? Icons.favorite : Icons.favorite_border,
-              color: finalIsWishListed ? Colors.red : Colors.black87,
-              size: iconSize.r,
-            ),
-          ),
         );
       },
     );
@@ -744,15 +724,36 @@ class CustomProductCard extends StatelessWidget {
         : basePrice;
   }
 
+  double get _displaySpecialPrice {
+    final double parsedSpecialPrice = double.tryParse(specialPrice) ?? 0.0;
+    if (parsedSpecialPrice > 0) return parsedSpecialPrice;
+    return double.tryParse(productPrice) ?? 0.0;
+  }
+
+  double get _displayMrp => double.tryParse(mrp ?? '') ?? 0.0;
+
+  double? get _displayPricePerUnit {
+    final double? parsedPricePerUnit = double.tryParse(pricePerUnit ?? '');
+    if (parsedPricePerUnit == null || parsedPricePerUnit <= 0) return null;
+    return parsedPricePerUnit;
+  }
+
+  String get _displayMeasurementUnit {
+    final String unit = measurementUnit?.trim() ?? '';
+    return unit.isNotEmpty ? unit : 'pc';
+  }
+
   Widget _buildBulkTierPricing(BuildContext context, int currentQty) {
-    if (tieredPricing == null || tieredPricing!.isEmpty)
+    if (tieredPricing == null || tieredPricing!.isEmpty) {
       return const SizedBox.shrink();
+    }
     return _buildInternalBulkOffers(context, currentQty);
   }
 
   Widget _buildInternalBulkOffers(BuildContext context, int currentQty) {
-    if (tieredPricing == null || tieredPricing!.isEmpty)
+    if (tieredPricing == null || tieredPricing!.isEmpty) {
       return const SizedBox.shrink();
+    }
 
     return _TieredPricingExpandableList(
       tieredPricing: tieredPricing!,
@@ -774,8 +775,10 @@ class CustomProductCard extends StatelessWidget {
 
   Widget _buildSimilarProductLayout(BuildContext context, String heroTag) {
     String discountPercentage = PriceUtils.calculateDiscountPercentage(
-            double.tryParse(productPrice) ?? 0.0,
-            double.tryParse(specialPrice) ?? 0.0)
+            (mrpStatus == 1 && _displayMrp > 0)
+                ? _displayMrp
+                : (double.tryParse(productPrice) ?? 0.0),
+            _displaySpecialPrice)
         .toString();
 
     return Container(
@@ -796,7 +799,6 @@ class CustomProductCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Navigation area (Image + Info)
           Material(
             color: Colors.transparent,
             child: InkWell(
@@ -820,7 +822,6 @@ class CustomProductCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // 1. Image on top
                   SizedBox(
                     height: 100.h,
                     child: Stack(
@@ -876,8 +877,6 @@ class CustomProductCard extends StatelessWidget {
                       ],
                     ),
                   ),
-
-                  // 2. Info below
                   Padding(
                     padding:
                         EdgeInsets.symmetric(horizontal: 10.w, vertical: 2.h),
@@ -897,22 +896,16 @@ class CustomProductCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         SizedBox(height: 3.h),
-                        // Price Row
                         BlocBuilder<CartBloc, CartState>(
                             builder: (context, state) {
                           final cartItem = _getCartItem(state);
                           final int currentQty = cartItem?.quantity ?? 0;
+                          final double totalPrice = _displaySpecialPrice;
+                          final double totalOriginalPrice = _displayMrp;
+                          final double? displayPricePerUnit =
+                              _displayPricePerUnit;
                           final double effectivePrice =
-                              _calculateEffectivePrice(currentQty > 0
-                                  ? currentQty
-                                  : (minQty > 0 ? minQty : 1));
-                          final double original =
-                              double.tryParse(productPrice) ?? 0.0;
-                          final displayQty = currentQty > 0
-                              ? currentQty
-                              : (minQty > 0 ? minQty : 1);
-                          final totalPrice = effectivePrice * displayQty;
-                          final totalOriginalPrice = original * displayQty;
+                              displayPricePerUnit ?? 0.0;
 
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -932,11 +925,9 @@ class CustomProductCard extends StatelessWidget {
                                   SizedBox(width: 4.w),
                                   if (mrpStatus == 1) ...[
                                     Builder(builder: (context) {
-                                      final double parsedMrp =
-                                          double.tryParse(mrp ?? '') ?? 0.0;
-                                      final double originalPrice = parsedMrp;
-                                      if (originalPrice <= 0)
+                                      if (totalOriginalPrice <= 0) {
                                         return const SizedBox.shrink();
+                                      }
                                       return Text(
                                         "₹${formatPrice(totalOriginalPrice)}",
                                         style: TextStyle(
@@ -951,11 +942,11 @@ class CustomProductCard extends StatelessWidget {
                                   ],
                                 ],
                               ),
-                              if (minQty > 1)
+                              if (displayPricePerUnit != null)
                                 Padding(
                                   padding: EdgeInsets.only(top: 1.h),
                                   child: Text(
-                                    "at ₹${formatPrice(effectivePrice)}/pc",
+                                    "${AppConstant.currency}${formatPrice(effectivePrice)}/$_displayMeasurementUnit",
                                     style: TextStyle(
                                       fontSize: 9.sp,
                                       color: Colors.grey.shade600,
@@ -1010,7 +1001,6 @@ class CustomProductCard extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          // Action area (Independent of navigation InkWell)
           _buildSimilarAddButton(context),
         ],
       ),
@@ -1088,8 +1078,10 @@ class CustomProductCard extends StatelessWidget {
 
   Widget _buildHorizontalLayout(BuildContext context, String heroTag) {
     String discountPercentage = PriceUtils.calculateDiscountPercentage(
-            double.tryParse(productPrice) ?? 0.0,
-            double.tryParse(specialPrice) ?? 0.0)
+            (mrpStatus == 1 && _displayMrp > 0)
+                ? _displayMrp
+                : (double.tryParse(productPrice) ?? 0.0),
+            _displaySpecialPrice)
         .toString();
 
     return Container(
@@ -1128,7 +1120,6 @@ class CustomProductCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Top Half
                   Padding(
                     padding: EdgeInsets.only(
                         left: 8.w, right: 10.w, top: 8.h, bottom: 4.h),
@@ -1167,8 +1158,8 @@ class CustomProductCard extends StatelessWidget {
                                 children: [
                                   Container(
                                     padding: EdgeInsets.all(2.w),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF1E8A37),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF1E8A37),
                                       shape: BoxShape.circle,
                                     ),
                                     child: Icon(Icons.star_rounded,
@@ -1209,7 +1200,6 @@ class CustomProductCard extends StatelessWidget {
                           ),
                         ),
                         SizedBox(width: 12.w),
-                        // Right Side Image
                         Stack(
                           clipBehavior: Clip.none,
                           children: [
@@ -1232,14 +1222,12 @@ class CustomProductCard extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            // Wishlist heart
                             PositionedDirectional(
                               bottom: 4.w,
                               end: 4.w,
                               child: _buildWishlistButton(context,
                                   size: 24, iconSize: 14),
                             ),
-                            // Veg indicator on image
                             if (indicator != null &&
                                 (indicator == 'veg' || indicator == 'non_veg'))
                               PositionedDirectional(
@@ -1275,24 +1263,19 @@ class CustomProductCard extends StatelessWidget {
                     ),
                   ),
                   Divider(height: 1, thickness: 1, color: Colors.grey.shade100),
-                  // Bottom Half Pricing & Action
                   Padding(
-                    padding:
-                        EdgeInsets.only(left: 8.w, right: 10.w, top: 6.h, bottom: 4.h),
+                    padding: EdgeInsets.only(
+                        left: 8.w, right: 10.w, top: 6.h, bottom: 4.h),
                     child: BlocBuilder<CartBloc, CartState>(
                       builder: (context, state) {
                         final cartItem = _getCartItem(state);
                         final int currentQty = cartItem?.quantity ?? 0;
-                        final double effectivePrice = _calculateEffectivePrice(
-                            currentQty > 0 ? currentQty : 1);
-                        final double parsedMrp =
-                            double.tryParse(mrp ?? '') ?? 0.0;
-                        final double original = parsedMrp;
-                        final displayQty = currentQty > 0
-                            ? currentQty
-                            : (minQty > 0 ? minQty : 1);
-                        final totalPrice = effectivePrice * displayQty;
-                        final totalOriginalPrice = original * displayQty;
+                        final double totalPrice = _displaySpecialPrice;
+                        final double totalOriginalPrice = _displayMrp;
+                        final double? displayPricePerUnit =
+                            _displayPricePerUnit;
+                        final double effectivePrice =
+                            displayPricePerUnit ?? 0.0;
 
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1332,14 +1315,15 @@ class CustomProductCard extends StatelessWidget {
                                       ],
                                     ),
                                     SizedBox(height: 4.h),
-                                    Text(
-                                      "at ₹${formatPrice(effectivePrice)}/pc",
-                                      style: TextStyle(
-                                        fontSize: 12.sp,
-                                        color: Colors.grey.shade500,
-                                        fontWeight: FontWeight.w500,
+                                    if (displayPricePerUnit != null)
+                                      Text(
+                                        "${AppConstant.currency}${formatPrice(effectivePrice)}/$_displayMeasurementUnit",
+                                        style: TextStyle(
+                                          fontSize: 12.sp,
+                                          color: Colors.grey.shade500,
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
-                                    ),
                                   ],
                                 ),
                                 _buildAddToCartButton(context),
@@ -1353,7 +1337,6 @@ class CustomProductCard extends StatelessWidget {
                   ),
                 ],
               ),
-              // 18% OFF Badge Top Right
               if (discountPercentage.isNotEmpty && discountPercentage != '0')
                 PositionedDirectional(
                   top: 0,
@@ -1464,7 +1447,6 @@ class CustomProductCard extends StatelessWidget {
 
     if (context.mounted) {
       if (isInCart && state is CartLoaded) {
-        // Toggle logic: Remove if already in cart
         final cartItem = state.items.firstWhere(
           (item) =>
               (int.tryParse(item.productId) ?? 0) == productId &&
@@ -1629,7 +1611,7 @@ class CustomProductCard extends StatelessWidget {
   Widget productNameWidget(
       {required String productName, required BuildContext context}) {
     return SizedBox(
-      height: 32.h, // Fixed height for 2 lines to ensure alignment
+      height: 32.h,
       child: Text(
         productName,
         style: TextStyle(
@@ -1713,9 +1695,7 @@ class CustomProductCard extends StatelessWidget {
           onRatingUpdate: (rating) {},
           ignoreGestures: true,
         ),
-        SizedBox(
-          width: 5.w,
-        ),
+        SizedBox(width: 5.w),
         Expanded(
           child: Text(
             '($ratingCount)',
@@ -1731,6 +1711,9 @@ class CustomProductCard extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// _AddButtonInner
+// ---------------------------------------------------------------------------
 class _AddButtonInner extends StatelessWidget {
   final VoidCallback? onTap;
   final double opacity;
@@ -1792,6 +1775,9 @@ class _AddButtonInner extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// _QuantityStepperInner
+// ---------------------------------------------------------------------------
 class _QuantityStepperInner extends StatelessWidget {
   final int quantity;
   final VoidCallback onIncrement;
@@ -1874,6 +1860,9 @@ class _QuantityStepperInner extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// _TieredPricingExpandableList
+// ---------------------------------------------------------------------------
 class _TieredPricingExpandableList extends StatefulWidget {
   final List<TieredPricing> tieredPricing;
   final int currentQty;
@@ -1908,6 +1897,7 @@ class _TieredPricingExpandableListState
 
   @override
   Widget build(BuildContext context) {
+    // FIX 3: Removed duplicate loop block — kept only one clean implementation
     TieredPricing? activeTier;
     for (var tier in widget.tieredPricing) {
       if (widget.currentQty >= tier.minQty) {
@@ -1917,7 +1907,6 @@ class _TieredPricingExpandableListState
       }
     }
 
-    // Always show all tiers as requested by the user
     final tiersToShow = widget.tieredPricing;
 
     return Container(
@@ -1934,19 +1923,16 @@ class _TieredPricingExpandableListState
               children: List.generate(tiersToShow.length, (index) {
                 final tier = tiersToShow[index];
                 final bool isSelectedTier = activeTier == tier;
-                // isExactMatch is used to determine if we should "Toggle Off" or just "Reset to Tier Min"
                 final bool isExactMatch = widget.currentQty == tier.minQty;
 
-                // Calculation: (MrpPerUnit * currentQty) - (TierUnitPrice * currentQty)
-                final double unitBasePrice = widget.basePrice / widget.packSize;
-                final double unitMrp = (widget.mrp > 0 ? widget.mrp : widget.basePrice) / widget.packSize;
+                final double unitMrp =
+                    (widget.mrp > 0 ? widget.mrp : widget.basePrice) /
+                        widget.packSize;
                 final double tierUnitPrice = tier.price / tier.minQty;
 
-                // Use current quantity if this is the active tier, otherwise use tier min
                 final int effectiveQty =
                     isSelectedTier ? widget.currentQty : tier.minQty;
-                final double savings =
-                    (unitMrp - tierUnitPrice) * effectiveQty;
+                final double savings = (unitMrp - tierUnitPrice) * effectiveQty;
 
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
@@ -2083,6 +2069,80 @@ class _TieredPricingExpandableListState
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class OptimisticWishlistButton extends StatefulWidget {
+  final bool initialIsWishlisted;
+  final double size;
+  final double iconSize;
+  final Future<bool> Function() onTap;
+
+  const OptimisticWishlistButton({
+    super.key,
+    required this.initialIsWishlisted,
+    required this.size,
+    required this.iconSize,
+    required this.onTap,
+  });
+
+  @override
+  State<OptimisticWishlistButton> createState() => _OptimisticWishlistButtonState();
+}
+
+class _OptimisticWishlistButtonState extends State<OptimisticWishlistButton> {
+  bool? _localOverride;
+
+  @override
+  void didUpdateWidget(OptimisticWishlistButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialIsWishlisted != widget.initialIsWishlisted) {
+      _localOverride = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isWishlisted = _localOverride ?? widget.initialIsWishlisted;
+
+    return AnimatedButton(
+      onTap: () async {
+        setState(() {
+          _localOverride = !isWishlisted;
+        });
+        
+        final shouldKeep = await widget.onTap();
+        
+        if (!shouldKeep) {
+          if (mounted) {
+            setState(() {
+              _localOverride = null;
+            });
+          }
+        }
+      },
+      child: Container(
+        height: widget.size.r,
+        width: widget.size.r,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.95),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        alignment: Alignment.center,
+        child: Icon(
+          isWishlisted ? Icons.favorite : Icons.favorite_border,
+          color: isWishlisted ? Colors.red : Colors.black87,
+          size: widget.iconSize.r,
+        ),
       ),
     );
   }

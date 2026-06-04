@@ -84,7 +84,8 @@ class _CartPageState extends State<CartPage> {
 
   // FIX: Use a single loading flag managed only via setState in listeners/callbacks.
   // Never mutate this directly inside build().
-  bool isCartLoading = true;
+  bool isCartLoading =
+      true; //////////////////////////////////////////ha change kela aahe true hota pahile
   bool isClearingCart = false;
   bool isWholePageProgress = false;
   DeliveryType selectedDeliveryType = DeliveryType.regular;
@@ -110,12 +111,16 @@ class _CartPageState extends State<CartPage> {
   double itemSavings = 0.0;
   double currentDeliveryCharge = 0.0;
   double rushCharge = 99.0;
+  bool hasRetriedFetch = false;
 
   @override
   void initState() {
     super.initState();
     _userWantsWallet = false;
-    context.read<GetUserCartBloc>().add(FetchUserCart());
+    //context.read<GetUserCartBloc>().add(FetchUserCart());///////////////////// he old line ahe
+    Future.microtask(() {
+      context.read<GetUserCartBloc>().add(FetchUserCart());
+    });
     context.read<SettingsBloc>().add(FetchSettingsData(context: context));
     context.read<SimilarProductBloc>().add(FetchSimilarProduct(
         excludeProductSlug: context.read<GetUserCartBloc>().productSlug));
@@ -260,6 +265,14 @@ class _CartPageState extends State<CartPage> {
       rushCharge = rCharge;
       walletAmountUsedValue = finalWalletUsed;
       isCartLoading = false;
+      
+      // Sync promoCode with backend's response so it doesn't get lost on page reload
+      promoCode = billSummaryData?.promoCode;
+      if (promoCode != null && promoCode!.isNotEmpty) {
+        _promoController.text = promoCode!;
+      } else {
+        _promoController.clear();
+      }
     });
   }
 
@@ -372,18 +385,36 @@ class _CartPageState extends State<CartPage> {
                     listener: (context, state) {
                       developer.log('Get User Cart Bloc  $state');
                       if (state is GetUserCartLoaded) {
+                        if (state.cartData.isNotEmpty &&
+                            state.cartData.first.data?.items?.isNotEmpty ==
+                                true) {
+                          hasRetriedFetch = false;
+                        }
                         // _calculateTotals calls setState internally and sets stateData.
                         _calculateTotals(state.cartData);
                         context.read<CartUIBloc>().add(SetWalletLoading(false));
                       } else if (state is GetUserCartLoading) {
-                        setState(() {
-                          isCartLoading = true;
-                        });
+                        if (stateData.isEmpty) {
+                          setState(() {
+                            isCartLoading = true;
+                          });
+                        }
                         context.read<CartUIBloc>().add(SetWalletLoading(false));
-                      } else if (state is GetUserCartFailed) {
+                      }
+                      // else if (state is GetUserCartFailed) {
+                      //   setState(() {
+                      //     isCartLoading = false;
+                      //   });
+                      else if (state is GetUserCartFailed) {
+                        debugPrint("❌ GetUserCartFailed");
+
                         setState(() {
                           isCartLoading = false;
+                          // Instead of clearing stateData unconditionally, we leave it as is
+                          // to prevent flickering if it was already populated,
+                          // or let the fallback logic in _buildCartContent handle it.
                         });
+
                         context.read<CartUIBloc>().add(SetWalletLoading(false));
                       }
                     },
@@ -391,9 +422,7 @@ class _CartPageState extends State<CartPage> {
                   BlocListener<RemoveItemFromCartBloc, RemoveItemFromCartState>(
                     listener: (context, state) {
                       if (state is RemoveItemFromCartLoading) {
-                        setState(() {
-                          isCartLoading = true;
-                        });
+                        // Do not show full screen loader
                       } else if (state is RemoveItemFromCartSuccess) {
                         context.read<GetUserCartBloc>().add(FetchUserCart(
                               addressId: selectedAddress?.id,
@@ -401,11 +430,18 @@ class _CartPageState extends State<CartPage> {
                                   selectedDeliveryType == DeliveryType.rush,
                               useWallet: _userWantsWallet,
                               promoCode: promoCode,
+                              isRefresh: true,
                             ));
                       } else if (state is RemoveItemFromCartFailed) {
-                        setState(() {
-                          isCartLoading = false;
-                        });
+                        // Do not show full screen loader
+                        context.read<GetUserCartBloc>().add(FetchUserCart(
+                              addressId: selectedAddress?.id,
+                              rushDelivery:
+                                  selectedDeliveryType == DeliveryType.rush,
+                              useWallet: _userWantsWallet,
+                              promoCode: promoCode,
+                              isRefresh: true,
+                            ));
                       }
                     },
                   ),
@@ -554,9 +590,7 @@ class _CartPageState extends State<CartPage> {
                   BlocListener<UpdateItemQuantityBloc, UpdateItemQuantityState>(
                     listener: (context, state) {
                       if (state is UpdateItemQuantityLoading) {
-                        setState(() {
-                          isCartLoading = true;
-                        });
+                        // Do not show full screen loader
                       } else if (state is UpdateItemQuantitySuccess) {
                         context.read<GetUserCartBloc>().add(FetchUserCart(
                               addressId: selectedAddress?.id,
@@ -564,11 +598,22 @@ class _CartPageState extends State<CartPage> {
                                   selectedDeliveryType == DeliveryType.rush,
                               useWallet: _userWantsWallet,
                               promoCode: promoCode,
+                              isRefresh: true,
                             ));
                       } else if (state is UpdateItemQuantityFailed) {
-                        setState(() {
-                          isCartLoading = false;
-                        });
+                        ToastManager.show(
+                            context: context,
+                            message: state.error,
+                            type: ToastType.error);
+                        // Refresh cart to revert local optimistic update
+                        context.read<GetUserCartBloc>().add(FetchUserCart(
+                              addressId: selectedAddress?.id,
+                              rushDelivery:
+                                  selectedDeliveryType == DeliveryType.rush,
+                              useWallet: _userWantsWallet,
+                              promoCode: promoCode,
+                              isRefresh: true,
+                            ));
                       }
                     },
                   ),
@@ -707,11 +752,128 @@ class _CartPageState extends State<CartPage> {
     }
 
     // Empty / still syncing — never flash empty UI before API responds
-    if (stateData.isEmpty || stateData.first.data?.items == null) {
-      final cartBlocState = context.read<GetUserCartBloc>().state;
-      if (cartBlocState is GetUserCartLoading ||
-          cartBlocState is UserCartInitialLoading ||
-          isCartLoading) {
+    if (isCartLoading) {
+      return SizedBox(
+        height: MediaQuery.of(context).size.height * 0.7,
+        child: const Center(
+          child: CustomCircularProgressIndicator(),
+        ),
+      );
+    }
+
+    // if (stateData.isEmpty ||
+    //     stateData.first.data?.items == null ||
+    //     stateData.first.data!.items!.isEmpty) {                   ha purn bloc change kela aahe if////} paryant
+    //   return _buildEmptyCartState();
+    // }
+
+    // final localCartState = context.read<CartBloc>().state;
+
+    // if (stateData.isEmpty ||
+    //     stateData.first.data?.items == null ||
+    //     stateData.first.data!.items!.isEmpty) {
+    //   debugPrint("❌ SERVER CART EMPTY");
+
+    //   // if (localCartState is CartLoaded && localCartState.items.isNotEmpty) {
+    //   //   debugPrint("🛒 LOCAL CART HAS ITEMS => ${localCartState.items.length}");
+
+    //   //   setState(() {
+    //   //     isCartLoading = true;
+    //   //   });
+
+    //   //   Future.microtask(() {
+    //   //     context.read<GetUserCartBloc>().add(
+    //   //           FetchUserCart(
+    //   //             addressId: selectedAddress?.id,
+    //   //             rushDelivery: selectedDeliveryType == DeliveryType.rush,
+    //   //             useWallet: _userWantsWallet,
+    //   //             promoCode: promoCode,
+    //   //           ),
+    //   //         );
+    //   //   });
+
+    //   //   return SizedBox(
+    //   //     height: MediaQuery.of(context).size.height * 0.7,
+    //   //     child: const Center(
+    //   //       child: CustomCircularProgressIndicator(),
+    //   //     ),
+    //   //   );
+    //   // }
+    //   if (localCartState is CartLoaded && localCartState.items.isNotEmpty) {
+    //     debugPrint("🛒 LOCAL CART HAS ITEMS => ${localCartState.items.length}");
+
+    //     if (!hasRetriedFetch) {
+    //       hasRetriedFetch = true;
+
+    //       WidgetsBinding.instance.addPostFrameCallback((_) {
+    //         if (!mounted) return;
+
+    //         context.read<GetUserCartBloc>().add(
+    //               FetchUserCart(
+    //                 addressId: selectedAddress?.id,
+    //                 rushDelivery: selectedDeliveryType == DeliveryType.rush,
+    //                 useWallet: _userWantsWallet,
+    //                 promoCode: promoCode,
+    //               ),
+    //             );
+    //       });
+    //     }
+
+    //     return SizedBox(
+    //       height: MediaQuery.of(context).size.height * 0.7,
+    //       child: const Center(
+    //         child: CustomCircularProgressIndicator(),
+    //       ),
+    //     );
+    //   }
+
+    //   return _buildEmptyCartState();
+    // }
+    // if (stateData.isEmpty ||
+    //     stateData.first.data?.items == null ||
+    //     stateData.first.data!.items!.isEmpty) {
+    //   debugPrint("❌ CART DATA EMPTY");
+
+    //   return SizedBox(
+    //     height: MediaQuery.of(context).size.height * 0.7,
+    //     child: const Center(
+    //       child: CustomCircularProgressIndicator(),
+    //     ),
+    //   );
+    // }
+    final localCartState = context.read<CartBloc>().state;
+
+    if (stateData.isEmpty ||
+        stateData.first.data == null ||
+        stateData.first.data!.items == null ||
+        stateData.first.data!.items!.isEmpty) {
+      debugPrint("❌ CART EMPTY");
+
+      if (localCartState is CartLoaded && localCartState.items.isNotEmpty) {
+        debugPrint(
+            "🛒 LOCAL CART HAS ITEMS => ${localCartState.items.length}. Waiting for sync...");
+
+        if (!hasRetriedFetch) {
+          hasRetriedFetch = true;
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            // Delay allows background sync to complete before fetching
+            Future.delayed(const Duration(milliseconds: 1500), () {
+              if (!mounted) return;
+              context.read<GetUserCartBloc>().add(
+                    FetchUserCart(
+                      addressId: selectedAddress?.id,
+                      rushDelivery: selectedDeliveryType == DeliveryType.rush,
+                      useWallet: _userWantsWallet,
+                      promoCode: promoCode,
+                      isRefresh: true,
+                    ),
+                  );
+            });
+          });
+        }
+
         return SizedBox(
           height: MediaQuery.of(context).size.height * 0.7,
           child: const Center(
@@ -719,9 +881,14 @@ class _CartPageState extends State<CartPage> {
           ),
         );
       }
+
       return _buildEmptyCartState();
     }
 
+    if (stateData.first.data?.items == null ||
+        stateData.first.data!.items!.isEmpty) {
+      return _buildEmptyCartState();
+    }
     // --- Cart has items — build the full content from local stateData ---
     final cartData = stateData;
     final billSummaryData = cartData.first.data!.paymentSummary;
@@ -1302,9 +1469,6 @@ class _CartPageState extends State<CartPage> {
   }
 
   void _handleQuantityChanged(String itemId, int newQuantity) {
-    setState(() {
-      isCartLoading = true;
-    });
     context.read<UpdateItemQuantityBloc>().add(UpdateItemQuantityRequest(
           cartItemId: int.parse(itemId),
           quantity: newQuantity,
@@ -1312,9 +1476,6 @@ class _CartPageState extends State<CartPage> {
   }
 
   void _handleRemoveItem(String itemId) {
-    setState(() {
-      isCartLoading = true;
-    });
     context
         .read<RemoveItemFromCartBloc>()
         .add(RemoveItemFromCartRequest(cartItemId: int.parse(itemId)));

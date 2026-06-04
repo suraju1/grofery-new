@@ -172,6 +172,13 @@ class ShoppingListWidget extends StatelessWidget {
                         mrpStatus: productData.variants
                             .firstWhere((v) => v.isDefault)
                             .mrpStatus,
+                        pricePerUnit: productData.variants
+                            .firstWhere((v) => v.isDefault)
+                            .pricePerUnit
+                            .toString(),
+                        measurementUnit: productData.variants
+                            .firstWhere((v) => v.isDefault)
+                            .measurementUnit,
                       ),
                     ),
                   );

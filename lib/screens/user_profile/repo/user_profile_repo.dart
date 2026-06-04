@@ -30,10 +30,12 @@ class UserProfileRepository {
   Future<List<UserProfileModel>> updateUserProfile({
     required String userName,
     File? userImage,
+    String? gstNumber,
   })async {
     try{
       Map<String, dynamic> fields = {
         'name': userName,
+        if (gstNumber != null && gstNumber.isNotEmpty) 'gst_number': gstNumber,
       };
 
       // Only add profile_image if a new image is provided

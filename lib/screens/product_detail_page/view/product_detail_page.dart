@@ -283,12 +283,13 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                           ),
                                         ),
                                       ),
-                                      _buildQuickDeliveryBadge(product.quickDeliveryAvailable),
+                                      _buildQuickDeliveryBadge(
+                                          product.quickDeliveryAvailable),
                                     ],
                                   ),
 
                                   // Inline version — no Positioned needed
-                                  if (int.parse(product.itemTotalInCart) > 0)
+                                  if (product.itemCountInCart > 0)
                                     Align(
                                       alignment: AlignmentGeometry.topLeft,
                                       child: Padding(
@@ -303,7 +304,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                 BorderRadius.circular(5.r),
                                           ),
                                           child: Text(
-                                            '🛍️ ${product.itemTotalInCart} ${AppLocalizations.of(context)!.inCart}',
+                                            '🛍️ ${product.itemCountInCart} ${AppLocalizations.of(context)!.inCart}',
                                             style: TextStyle(
                                               color: AppTheme.primaryColor,
                                               fontSize: 12.sp,
@@ -371,8 +372,10 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                           currentQty);
                                               final displayQty = currentQty > 0
                                                   ? currentQty
-                                                  : (product.minimumOrderQuantity > 0
-                                                      ? product.minimumOrderQuantity
+                                                  : (product.minimumOrderQuantity >
+                                                          0
+                                                      ? product
+                                                          .minimumOrderQuantity
                                                       : 1);
                                               final totalPrice =
                                                   effectivePrice * displayQty;
@@ -409,15 +412,16 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                       1)
                                                     Padding(
                                                       padding: EdgeInsets.only(
-                                                          top: 2.h, bottom: 4.h),
+                                                          top: 2.h,
+                                                          bottom: 4.h),
                                                       child: Text(
                                                         "${PriceUtils.formatPrice(effectivePrice.toDouble())} per pc",
                                                         style: TextStyle(
                                                           fontSize: 14.sp,
                                                           fontWeight:
                                                               FontWeight.w600,
-                                                          color: Colors.grey
-                                                              .shade700,
+                                                          color: Colors
+                                                              .grey.shade700,
                                                         ),
                                                       ),
                                                     ),
@@ -934,71 +938,71 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                  BlocBuilder<CartBloc, CartState>(
-                    builder: (context, cartState) {
-                      final cartItem = _getCartItem(cartState, product.id,
-                          activeVariant.id, activeVariant.storeId);
-                      final currentQty = cartItem?.quantity ?? 0;
-                      final effectivePrice =
-                          activeVariant.getEffectivePrice(currentQty);
-                      final displayQty = currentQty > 0
-                          ? currentQty
-                          : (product.minimumOrderQuantity > 0
-                              ? product.minimumOrderQuantity
-                              : 1);
-                      final totalPrice = effectivePrice * displayQty;
+                      BlocBuilder<CartBloc, CartState>(
+                        builder: (context, cartState) {
+                          final cartItem = _getCartItem(cartState, product.id,
+                              activeVariant.id, activeVariant.storeId);
+                          final currentQty = cartItem?.quantity ?? 0;
+                          final effectivePrice =
+                              activeVariant.getEffectivePrice(currentQty);
+                          final displayQty = currentQty > 0
+                              ? currentQty
+                              : (product.minimumOrderQuantity > 0
+                                  ? product.minimumOrderQuantity
+                                  : 1);
+                          final totalPrice = effectivePrice * displayQty;
 
-                      final double totalOriginalPrice =
-                          (activeVariant.mrpStatus == 1 &&
-                                  activeVariant.mrp > 0)
-                              ? (activeVariant.mrp * displayQty)
-                              : 0.0;
+                          final double totalOriginalPrice =
+                              (activeVariant.mrpStatus == 1 &&
+                                      activeVariant.mrp > 0)
+                                  ? (activeVariant.mrp * displayQty)
+                                  : 0.0;
 
-                      return Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          PriceRowWidget(
-                            originalPrice: totalOriginalPrice,
-                            salePrice: totalPrice.toDouble(),
-                            fontSize: 12.sp,
-                            originalFontSize: 10.sp,
-                            discountFontSize: 8.sp,
-                            fontWeight: FontWeight.w700,
-                            originalPriceColor: Colors.grey.shade600,
-                          ),
-                          if (product.minimumOrderQuantity > 1)
-                            Text(
-                              "${PriceUtils.formatPrice(effectivePrice.toDouble())} per pc",
-                              style: TextStyle(
-                                fontSize: 10.sp,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey.shade600,
+                          return Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              PriceRowWidget(
+                                originalPrice: totalOriginalPrice,
+                                salePrice: totalPrice.toDouble(),
+                                fontSize: 12.sp,
+                                originalFontSize: 10.sp,
+                                discountFontSize: 8.sp,
+                                fontWeight: FontWeight.w700,
+                                originalPriceColor: Colors.grey.shade600,
                               ),
-                            ),
-                          Text(
-                            l10n.inclusiveOfAllTax,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          if (product.minimumOrderQuantity > 1)
-                            Padding(
-                              padding: EdgeInsets.only(top: 2),
-                              child: Text(
-                                "Min Order: ${product.minimumOrderQuantity} ${product.minimumOrderQuantity > 1 ? 'pcs' : 'pc'}",
+                              if (product.minimumOrderQuantity > 1)
+                                Text(
+                                  "${PriceUtils.formatPrice(effectivePrice.toDouble())} per pc",
+                                  style: TextStyle(
+                                    fontSize: 10.sp,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              Text(
+                                l10n.inclusiveOfAllTax,
                                 style: TextStyle(
                                   fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.primaryColor,
+                                  color: Colors.grey.shade600,
                                 ),
                               ),
-                            ),
-                        ],
-                      );
-                    },
-                  ),
+                              if (product.minimumOrderQuantity > 1)
+                                Padding(
+                                  padding: EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    "Min Order: ${product.minimumOrderQuantity} ${product.minimumOrderQuantity > 1 ? 'pcs' : 'pc'}",
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.primaryColor,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                      ),
                     ],
                   ),
                   SizedBox(
@@ -1066,7 +1070,12 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                   await HapticFeedback
                                                       .lightImpact();
 
-                                                  final int stepSize = product.quantityStepSize > 0 ? product.quantityStepSize : 1;
+                                                  final int stepSize =
+                                                      product.quantityStepSize >
+                                                              0
+                                                          ? product
+                                                              .quantityStepSize
+                                                          : 1;
                                                   final int targetQty =
                                                       currentQty - stepSize;
 
@@ -1128,7 +1137,12 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                   await HapticFeedback
                                                       .lightImpact();
 
-                                                  final int stepSize = product.quantityStepSize > 0 ? product.quantityStepSize : 1;
+                                                  final int stepSize =
+                                                      product.quantityStepSize >
+                                                              0
+                                                          ? product
+                                                              .quantityStepSize
+                                                          : 1;
                                                   final int targetQty =
                                                       currentQty + stepSize;
 

@@ -549,8 +549,7 @@ class _NearbyStoreDetailsState extends State<_NearbyStoreDetailsView> {
               )
           : null,
       isStoreOpen: product.storeStatus?.isOpen ?? true,
-      isWishListed: product.favorite != null &&
-          product.favorite!.isNotEmpty,
+      isWishListed: product.favorite != null && product.favorite!.isNotEmpty,
       productVariantId: variant.id,
       storeId: variant.storeId,
       wishlistItemId: (product.favorite != null && product.favorite!.isNotEmpty)
@@ -564,6 +563,8 @@ class _NearbyStoreDetailsState extends State<_NearbyStoreDetailsView> {
       tieredPricing: variant.tieredPricing,
       mrp: variant.mrp.toString(),
       mrpStatus: variant.mrpStatus,
+      pricePerUnit: variant.pricePerUnit.toString(),
+      measurementUnit: variant.measurementUnit,
     );
   }
 

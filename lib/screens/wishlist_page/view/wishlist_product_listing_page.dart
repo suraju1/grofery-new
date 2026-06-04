@@ -239,6 +239,8 @@ class _WishlistProductListingPageState
       tieredPricing: v.tieredPricing,
       mrp: v.mrp?.toString(),
       mrpStatus: v.mrpStatus,
+      pricePerUnit: v.pricePerUnit?.toString(),
+      measurementUnit: v.measurementUnit,
     );
 
     /*return WishlistProductCard(

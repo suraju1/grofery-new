@@ -36,9 +36,11 @@ class GetCartModel {
   GetCartModel.fromJson(Map<String, dynamic> json) {
     success = json['success'];
     message = json['message'];
-    data = json['data'] != null && json['data'].isNotEmpty
-        ? CartData.fromJson(json['data'] as Map<String, dynamic>)
-        : null;
+    if (json['data'] != null && json['data'] is Map) {
+      data = CartData.fromJson(json['data'] as Map<String, dynamic>);
+    } else {
+      data = null;
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -83,35 +85,53 @@ class CartData {
         this.updatedAt});
 
   CartData.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
+    id = json['id'] != null ? int.tryParse(json['id'].toString()) : null;
     uuid = json['uuid'];
-    userId = json['user_id'];
-    itemsCount = json['items_count'];
-    totalQuantity = json['total_quantity'];
-    if (json['items'] != null) {
+    userId = json['user_id'] != null ? int.tryParse(json['user_id'].toString()) : null;
+    itemsCount = json['items_count'] != null ? int.tryParse(json['items_count'].toString()) : null;
+    totalQuantity = json['total_quantity'] != null ? int.tryParse(json['total_quantity'].toString()) : null;
+    if (json['items'] != null && json['items'] is List) {
       items = <CartItems>[];
-      json['items'].forEach((v) {
-        items!.add(CartItems.fromJson(v));
-      });
+      for (var v in json['items'] as List) {
+        if (v is Map<String, dynamic>) {
+          items!.add(CartItems.fromJson(v));
+        }
+      }
     }
     paymentSummary = json['payment_summary'] != null && json['payment_summary'] is Map
         ? PaymentSummary.fromJson(json['payment_summary'])
         : null;
-    if (json['removed_items'] != null) {
+    if (json['removed_items'] != null && json['removed_items'] is List) {
       removedItems = <RemovedItems>[];
-      json['removed_items'].forEach((v) {
-        removedItems!.add(RemovedItems.fromJson(v));
-      });
+      for (var v in json['removed_items'] as List) {
+        if (v is Map<String, dynamic>) {
+          removedItems!.add(RemovedItems.fromJson(v));
+        }
+      }
     }
     removedCount = json['removed_count'];
-    deliveryZone = json['delivery_zone'] != null
+    deliveryZone = json['delivery_zone'] != null && json['delivery_zone'] is Map
         ? DeliveryZone.fromJson(json['delivery_zone'])
         : null;
-    if (json['time_slots'] != null) {
+    final dynamic rawCartTimeSlots = json['time_slots'];
+    if (rawCartTimeSlots != null) {
       timeSlots = <TimeSlot>[];
-      json['time_slots'].forEach((v) {
-        timeSlots!.add(TimeSlot.fromJson(v));
-      });
+      if (rawCartTimeSlots is Map<String, dynamic>) {
+        if (rawCartTimeSlots['normal'] is List) {
+          for (var v in rawCartTimeSlots['normal'] as List) {
+            if (v is Map<String, dynamic>) timeSlots!.add(TimeSlot.fromJson(v));
+          }
+        }
+        if (rawCartTimeSlots['quick'] is List) {
+          for (var v in rawCartTimeSlots['quick'] as List) {
+            if (v is Map<String, dynamic>) timeSlots!.add(TimeSlot.fromJson(v));
+          }
+        }
+      } else if (rawCartTimeSlots is List) {
+        for (var v in rawCartTimeSlots) {
+          if (v is Map<String, dynamic>) timeSlots!.add(TimeSlot.fromJson(v));
+        }
+      }
     }
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
@@ -176,18 +196,18 @@ class CartItems {
         this.updatedAt});
 
   CartItems.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    cartId = json['cart_id'];
-    productId = json['product_id'];
-    productVariantId = json['product_variant_id'];
-    storeId = json['store_id'];
-    quantity = json['quantity'];
-    saveForLater = json['save_for_later'];
+    id = json['id'] != null ? int.tryParse(json['id'].toString()) : null;
+    cartId = json['cart_id'] != null ? int.tryParse(json['cart_id'].toString()) : null;
+    productId = json['product_id'] != null ? int.tryParse(json['product_id'].toString()) : null;
+    productVariantId = json['product_variant_id'] != null ? int.tryParse(json['product_variant_id'].toString()) : null;
+    storeId = json['store_id'] != null ? int.tryParse(json['store_id'].toString()) : null;
+    quantity = json['quantity'] != null ? int.tryParse(json['quantity'].toString()) : null;
+    saveForLater = json['save_for_later'] != null ? (json['save_for_later'].toString() == 'true' || json['save_for_later'].toString() == '1') : null;
     product =
-    json['product'] != null ? Product.fromJson(json['product']) : null;
+    (json['product'] != null && json['product'] is Map) ? Product.fromJson(json['product']) : null;
     variant =
-    json['variant'] != null ? Variant.fromJson(json['variant']) : null;
-    store = json['store'] != null ? Store.fromJson(json['store']) : null;
+    (json['variant'] != null && json['variant'] is Map) ? Variant.fromJson(json['variant']) : null;
+    store = (json['store'] != null && json['store'] is Map) ? Store.fromJson(json['store']) : null;
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
   }
@@ -247,21 +267,21 @@ class Product {
         this.ratingCount});
 
   Product.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
+    id = json['id'] != null ? int.tryParse(json['id'].toString()) : null;
     name = json['name'];
     slug = json['slug'];
-    minimumOrderQuantity = json['minimum_order_quantity'];
-    quantityStepSize = json['quantity_step_size'];
-    totalAllowedQuantity = json['total_allowed_quantity'];
-    isAttachmentRequired = json['is_attachment_required'];
+    minimumOrderQuantity = json['minimum_order_quantity'] != null ? int.tryParse(json['minimum_order_quantity'].toString()) : null;
+    quantityStepSize = json['quantity_step_size'] != null ? int.tryParse(json['quantity_step_size'].toString()) : null;
+    totalAllowedQuantity = json['total_allowed_quantity'] != null ? int.tryParse(json['total_allowed_quantity'].toString()) : null;
+    isAttachmentRequired = json['is_attachment_required'] != null ? (json['is_attachment_required'].toString() == 'true' || json['is_attachment_required'].toString() == '1') : null;
     image = json['image'];
-    estimatedDeliveryTime = json['estimated_delivery_time'];
+    estimatedDeliveryTime = json['estimated_delivery_time'] != null ? int.tryParse(json['estimated_delivery_time'].toString()) : null;
     imageFit = json['image_fit'];
-    storeStatus = json['store_status'] != null
+    storeStatus = (json['store_status'] != null && json['store_status'] is Map)
         ? StoreStatus.fromJson(json['store_status'])
         : null;
-    ratings = json['ratings'];
-    ratingCount = json['rating_count'];
+    ratings = json['ratings'] != null ? int.tryParse(json['ratings'].toString()) : null;
+    ratingCount = json['rating_count'] != null ? int.tryParse(json['rating_count'].toString()) : null;
   }
 
   Map<String, dynamic> toJson() {
@@ -309,7 +329,7 @@ class Variant {
   });
 
   Variant.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
+    id = json['id'] != null ? int.tryParse(json['id'].toString()) : null;
     title = json['title'];
     slug = json['slug'];
     image = json['image'];
@@ -318,7 +338,7 @@ class Variant {
     price = json['price'] != null ? num.tryParse(json['price'].toString()) : null;
     specialPrice = json['special_price'] != null ? num.tryParse(json['special_price'].toString()) : null;
     
-    stock = json['stock'];
+    stock = json['stock'] != null ? int.tryParse(json['stock'].toString()) : null;
     sku = json['sku'];
 
     final dynamic tieredData = json['tiered_pricing'] ?? json['tieredPricing'] ?? json['tiered_prices'] ?? json['bulk_pricing'];
@@ -359,7 +379,7 @@ class StoreStatus {
   StoreStatus({this.isOpen, this.status});
 
   StoreStatus.fromJson(Map<String, dynamic> json) {
-    isOpen = json['is_open'];
+    isOpen = json['is_open'] != null ? (json['is_open'].toString() == 'true' || json['is_open'].toString() == '1') : null;
     status = json['status'];
   }
 
@@ -387,11 +407,11 @@ class Store {
   });
 
   Store.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
+    id = json['id'] != null ? int.tryParse(json['id'].toString()) : null;
     name = json['name'];
     slug = json['slug'];
-    totalProducts = json['total_products'];
-    status = json['status'] != null ? Status.fromJson(json['status']) : null;
+    totalProducts = json['total_products'] != null ? int.tryParse(json['total_products'].toString()) : null;
+    status = (json['status'] != null && json['status'] is Map) ? Status.fromJson(json['status']) : null;
   }
 
   Map<String, dynamic> toJson() {
@@ -414,7 +434,7 @@ class Status {
   Status({this.isOpen, this.status});
 
   Status.fromJson(Map<String, dynamic> json) {
-    isOpen = json['is_open'];
+    isOpen = json['is_open'] != null ? (json['is_open'].toString() == 'true' || json['is_open'].toString() == '1') : null;
     status = json['status'];
   }
 
@@ -433,19 +453,19 @@ class PaymentSummary {
   bool? isRushDeliveryAvailable;
   int? deliveryCharges;
   int? handlingCharges;
-  dynamic deliveryDistanceCharges;
-  dynamic deliveryDistanceKm;
+  double? deliveryDistanceCharges;
+  double? deliveryDistanceKm;
   int? totalStores;
-  dynamic totalDeliveryCharges;
+  double? totalDeliveryCharges;
   int? estimatedDeliveryTime;
   bool? useWallet;
   String? promoCode;
   String? promoDiscount;
   PromoCodeData? promoApplied;
   String? promoError;
-  dynamic walletBalance;
+  double? walletBalance;
   double? walletAmountUsed;
-  dynamic payableAmount;
+  double? payableAmount;
 
   PaymentSummary(
       {this.itemsTotal,
@@ -469,20 +489,20 @@ class PaymentSummary {
         this.payableAmount});
 
   PaymentSummary.fromJson(Map<String, dynamic> json) {
-    itemsTotal = json['items_total'];
-    perStoreDropOffFee = json['per_store_drop_off_fee'];
-    isRushDelivery = json['is_rush_delivery'];
-    isRushDeliveryAvailable = json['is_rush_delivery_available'];
-    deliveryCharges = json['delivery_charges'];
-    handlingCharges = json['handling_charges'];
-    deliveryDistanceCharges = json['delivery_distance_charges'];
-    deliveryDistanceKm = json['delivery_distance_km'];
-    totalStores = json['total_stores'];
-    totalDeliveryCharges = json['total_delivery_charges'];
-    estimatedDeliveryTime = json['estimated_delivery_time'];
-    useWallet = json['use_wallet'];
+    itemsTotal = json['items_total'] != null ? int.tryParse(json['items_total'].toString()) : null;
+    perStoreDropOffFee = json['per_store_drop_off_fee'] != null ? int.tryParse(json['per_store_drop_off_fee'].toString()) : null;
+    isRushDelivery = json['is_rush_delivery'] != null ? (json['is_rush_delivery'].toString() == 'true' || json['is_rush_delivery'].toString() == '1') : null;
+    isRushDeliveryAvailable = json['is_rush_delivery_available'] != null ? (json['is_rush_delivery_available'].toString() == 'true' || json['is_rush_delivery_available'].toString() == '1') : null;
+    deliveryCharges = json['delivery_charges'] != null ? int.tryParse(json['delivery_charges'].toString()) : null;
+    handlingCharges = json['handling_charges'] != null ? int.tryParse(json['handling_charges'].toString()) : null;
+    deliveryDistanceCharges = json['delivery_distance_charges'] != null ? double.tryParse(json['delivery_distance_charges'].toString()) : null;
+    deliveryDistanceKm = json['delivery_distance_km'] != null ? double.tryParse(json['delivery_distance_km'].toString()) : null;
+    totalStores = json['total_stores'] != null ? int.tryParse(json['total_stores'].toString()) : null;
+    totalDeliveryCharges = json['total_delivery_charges'] != null ? double.tryParse(json['total_delivery_charges'].toString()) : null;
+    estimatedDeliveryTime = json['estimated_delivery_time'] != null ? int.tryParse(json['estimated_delivery_time'].toString()) : null;
+    useWallet = json['use_wallet'] != null ? (json['use_wallet'].toString() == 'true' || json['use_wallet'].toString() == '1') : null;
     promoCode = json['promo_code'];
-    promoDiscount = json['promo_discount'].toString();
+    promoDiscount = json['promo_discount']?.toString();
     final promoData = json['promo_applied'];
     if (promoData is Map<String, dynamic>) {
       promoApplied = PromoCodeData.fromJson(promoData);
@@ -492,9 +512,9 @@ class PaymentSummary {
       promoApplied = null;
     }
     promoError = json['promo_error'];
-    walletBalance = json['wallet_balance'];
-    walletAmountUsed = double.parse(json['wallet_amount_used'].toString());
-    payableAmount = json['payable_amount'];
+    walletBalance = json['wallet_balance'] != null ? double.tryParse(json['wallet_balance'].toString()) : null;
+    walletAmountUsed = json['wallet_amount_used'] != null ? double.tryParse(json['wallet_amount_used'].toString()) : 0.0;
+    payableAmount = json['payable_amount'] != null ? double.tryParse(json['payable_amount'].toString()) : null;
   }
 
   Map<String, dynamic> toJson() {
@@ -595,26 +615,40 @@ class DeliveryZone {
         this.timeSlots});
 
   DeliveryZone.fromJson(Map<String, dynamic> json) {
-    exists = json['exists'];
+    exists = json['exists'] != null ? (json['exists'].toString() == 'true' || json['exists'].toString() == '1') : null;
     zone = json['zone'];
-    zoneCount = json['zone_count'];
-    zoneId = json['zone_id'];
-    handlingCharges = json['handling_charges'];
-    deliveryTimePerKm = json['delivery_time_per_km'];
-    rushDeliveryEnabled = json['rush_delivery_enabled'];
-    rushDeliveryTimePerKm = json['rush_delivery_time_per_km'];
-    rushDeliveryCharges = json['rush_delivery_charges'];
-    regularDeliveryCharges = json['regular_delivery_charges'];
-    freeDeliveryAmount = json['free_delivery_amount'];
-    distanceBasedDeliveryCharges = json['distance_based_delivery_charges'];
-    perStoreDropOffFee = json['per_store_drop_off_fee'];
-    bufferTime = json['buffer_time'];
-    rushDeliveryAvailable = json['rush_delivery_available'];
-    if (json['time_slots'] != null) {
+    zoneCount = json['zone_count'] != null ? int.tryParse(json['zone_count'].toString()) : null;
+    zoneId = json['zone_id'] != null ? int.tryParse(json['zone_id'].toString()) : null;
+    handlingCharges = json['handling_charges'] != null ? int.tryParse(json['handling_charges'].toString()) : null;
+    deliveryTimePerKm = json['delivery_time_per_km'] != null ? int.tryParse(json['delivery_time_per_km'].toString()) : null;
+    rushDeliveryEnabled = json['rush_delivery_enabled'] != null ? (json['rush_delivery_enabled'].toString() == 'true' || json['rush_delivery_enabled'].toString() == '1') : null;
+    rushDeliveryTimePerKm = json['rush_delivery_time_per_km'] != null ? int.tryParse(json['rush_delivery_time_per_km'].toString()) : null;
+    rushDeliveryCharges = json['rush_delivery_charges'] != null ? int.tryParse(json['rush_delivery_charges'].toString()) : null;
+    regularDeliveryCharges = json['regular_delivery_charges'] != null ? int.tryParse(json['regular_delivery_charges'].toString()) : null;
+    freeDeliveryAmount = json['free_delivery_amount'] != null ? int.tryParse(json['free_delivery_amount'].toString()) : null;
+    distanceBasedDeliveryCharges = json['distance_based_delivery_charges'] != null ? int.tryParse(json['distance_based_delivery_charges'].toString()) : null;
+    perStoreDropOffFee = json['per_store_drop_off_fee'] != null ? int.tryParse(json['per_store_drop_off_fee'].toString()) : null;
+    bufferTime = json['buffer_time'] != null ? int.tryParse(json['buffer_time'].toString()) : null;
+    rushDeliveryAvailable = json['rush_delivery_available'] != null ? (json['rush_delivery_available'].toString() == 'true' || json['rush_delivery_available'].toString() == '1') : null;
+    final dynamic rawSlots = json['time_slots'];
+    if (rawSlots != null) {
       timeSlots = <TimeSlot>[];
-      json['time_slots'].forEach((v) {
-        timeSlots!.add(TimeSlot.fromJson(v));
-      });
+      if (rawSlots is Map<String, dynamic>) {
+        if (rawSlots['normal'] is List) {
+          for (var v in rawSlots['normal'] as List) {
+            if (v is Map<String, dynamic>) timeSlots!.add(TimeSlot.fromJson(v));
+          }
+        }
+        if (rawSlots['quick'] is List) {
+          for (var v in rawSlots['quick'] as List) {
+            if (v is Map<String, dynamic>) timeSlots!.add(TimeSlot.fromJson(v));
+          }
+        }
+      } else if (rawSlots is List) {
+        for (var v in rawSlots) {
+          if (v is Map<String, dynamic>) timeSlots!.add(TimeSlot.fromJson(v));
+        }
+      }
     }
   }
 
