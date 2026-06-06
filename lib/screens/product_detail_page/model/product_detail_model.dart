@@ -74,6 +74,7 @@ class ProductData {
   // NOTE: Do NOT use this as source of truth for cart state.
   // Use your local CartProvider/state instead. This is only for initial render.
   late int itemCountInCart;
+  late String pricePerUnit;
 
   late List<String> additionalImages;
   late int minimumOrderQuantity;
@@ -119,6 +120,7 @@ class ProductData {
     String? mainImage,
     String? imageFit,
     int? itemCountInCart,
+    String? pricePerUnit,
     List<String>? additionalImages,
     int? minimumOrderQuantity,
     int? quantityStepSize,
@@ -159,6 +161,7 @@ class ProductData {
     this.mainImage = mainImage ?? '';
     this.imageFit = imageFit ?? '';
     this.itemCountInCart = itemCountInCart ?? 0;
+    this.pricePerUnit = pricePerUnit ?? '';
     this.additionalImages = additionalImages ?? [];
     this.minimumOrderQuantity = minimumOrderQuantity ?? 0;
     this.quantityStepSize = quantityStepSize ?? 1;
@@ -242,6 +245,7 @@ class ProductData {
       // FIX 2: Parse as int, not String
       itemCountInCart =
           int.tryParse(json['item_count_in_cart']?.toString() ?? '0') ?? 0;
+      pricePerUnit = json['price_per_unit']?.toString() ?? '';
 
       additionalImages = json['additional_images'] != null
           ? List<String>.from(json['additional_images'])
@@ -351,6 +355,7 @@ class ProductData {
     mainImage = '';
     imageFit = '';
     itemCountInCart = 0;
+    pricePerUnit = '';
     additionalImages = [];
     minimumOrderQuantity = 0;
     quantityStepSize = 1;
@@ -399,6 +404,7 @@ class ProductData {
     data['main_image'] = mainImage;
     data['image_fit'] = imageFit;
     data['item_count_in_cart'] = itemCountInCart;
+    data['price_per_unit'] = pricePerUnit;
     data['additional_images'] = additionalImages;
     data['minimum_order_quantity'] = minimumOrderQuantity;
     data['quantity_step_size'] = quantityStepSize;
@@ -549,7 +555,7 @@ class ProductVariants {
   late double specialPrice;
   late double mrp;
   late int mrpStatus;
-  late double pricePerUnit;
+  late String pricePerUnit;
   late String measurementUnit;
   late int storeId;
   late String storeSlug;
@@ -578,7 +584,7 @@ class ProductVariants {
     double? specialPrice,
     double? mrp,
     int? mrpStatus,
-    double? pricePerUnit,
+    String? pricePerUnit,
     String? measurementUnit,
     int? storeId,
     String? storeSlug,
@@ -604,7 +610,7 @@ class ProductVariants {
     this.specialPrice = specialPrice ?? 0.0;
     this.mrp = mrp ?? 0.0;
     this.mrpStatus = mrpStatus ?? 0;
-    this.pricePerUnit = pricePerUnit ?? 0.0;
+    this.pricePerUnit = pricePerUnit ?? '';
     this.measurementUnit = measurementUnit ?? '';
     this.storeId = storeId ?? 0;
     this.storeSlug = storeSlug?.toString() ?? '';
@@ -632,8 +638,7 @@ class ProductVariants {
         double.tryParse(json['special_price']?.toString() ?? '0') ?? 0.0;
     mrp = double.tryParse(json['mrp']?.toString() ?? '0') ?? 0.0;
     mrpStatus = int.tryParse(json['mrp_status']?.toString() ?? '0') ?? 0;
-    pricePerUnit =
-        double.tryParse(json['price_per_unit']?.toString() ?? '0') ?? 0.0;
+    pricePerUnit = json['price_per_unit']?.toString() ?? '';
     measurementUnit = json['measurement_unit']?.toString() ?? '';
     storeId = json['store_id'] ?? 0;
     storeSlug = json['store_slug'] ?? '';

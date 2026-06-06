@@ -180,10 +180,8 @@ class CustomProductCard extends StatelessWidget {
                             final double displaySpecialPrice =
                                 _displaySpecialPrice;
                             final double displayMrp = _displayMrp;
-                            final double? displayPricePerUnit =
-                                _displayPricePerUnit;
-                            final double effectivePrice =
-                                displayPricePerUnit ?? 0.0;
+                            final String? formattedPricePerUnit =
+                                _formattedPricePerUnit;
 
                             return SingleChildScrollView(
                               physics: const NeverScrollableScrollPhysics(),
@@ -204,11 +202,11 @@ class CustomProductCard extends StatelessWidget {
                                           displaySpecialPrice.toString(),
                                       locale: AppConstant.defaultLocalCurrency,
                                       context: context),
-                                  if (displayPricePerUnit != null)
+                                  if (formattedPricePerUnit != null)
                                     Padding(
                                       padding: EdgeInsets.only(top: 2.h),
                                       child: Text(
-                                        "${AppConstant.currency}${formatPrice(effectivePrice)}/$_displayMeasurementUnit",
+                                        formattedPricePerUnit,
                                         style: TextStyle(
                                           fontSize: 9.sp,
                                           color: Colors.grey.shade600,
@@ -732,10 +730,21 @@ class CustomProductCard extends StatelessWidget {
 
   double get _displayMrp => double.tryParse(mrp ?? '') ?? 0.0;
 
-  double? get _displayPricePerUnit {
-    final double? parsedPricePerUnit = double.tryParse(pricePerUnit ?? '');
-    if (parsedPricePerUnit == null || parsedPricePerUnit <= 0) return null;
-    return parsedPricePerUnit;
+  String? get _formattedPricePerUnit {
+    final String? val = pricePerUnit?.trim();
+    if (val == null || val.isEmpty || val == '0' || val == '0.0' || val == '0.00') return null;
+    final double? parsed = double.tryParse(val);
+    if (parsed != null && parsed > 0) {
+      return "${AppConstant.currency}${formatPrice(parsed)} per $_displayMeasurementUnit";
+    }
+    if (val.contains('/')) {
+      final replaced = val.replaceAll('/', ' per ');
+      if (replaced.startsWith(AppConstant.currency) || replaced.startsWith('₹')) {
+        return replaced;
+      }
+      return "${AppConstant.currency}$replaced";
+    }
+    return val;
   }
 
   String get _displayMeasurementUnit {
@@ -900,12 +909,13 @@ class CustomProductCard extends StatelessWidget {
                             builder: (context, state) {
                           final cartItem = _getCartItem(state);
                           final int currentQty = cartItem?.quantity ?? 0;
-                          final double totalPrice = _displaySpecialPrice;
-                          final double totalOriginalPrice = _displayMrp;
-                          final double? displayPricePerUnit =
-                              _displayPricePerUnit;
-                          final double effectivePrice =
-                              displayPricePerUnit ?? 0.0;
+                          final int displayQty = currentQty > 0
+                              ? currentQty
+                              : (minQty > 0 ? minQty : 1);
+                          final double totalPrice = _displaySpecialPrice * displayQty;
+                          final double totalOriginalPrice = _displayMrp * displayQty;
+                          final String? formattedPricePerUnit =
+                              _formattedPricePerUnit;
 
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -942,11 +952,11 @@ class CustomProductCard extends StatelessWidget {
                                   ],
                                 ],
                               ),
-                              if (displayPricePerUnit != null)
+                              if (formattedPricePerUnit != null)
                                 Padding(
                                   padding: EdgeInsets.only(top: 1.h),
                                   child: Text(
-                                    "${AppConstant.currency}${formatPrice(effectivePrice)}/$_displayMeasurementUnit",
+                                    formattedPricePerUnit,
                                     style: TextStyle(
                                       fontSize: 9.sp,
                                       color: Colors.grey.shade600,
@@ -1270,12 +1280,13 @@ class CustomProductCard extends StatelessWidget {
                       builder: (context, state) {
                         final cartItem = _getCartItem(state);
                         final int currentQty = cartItem?.quantity ?? 0;
-                        final double totalPrice = _displaySpecialPrice;
-                        final double totalOriginalPrice = _displayMrp;
-                        final double? displayPricePerUnit =
-                            _displayPricePerUnit;
-                        final double effectivePrice =
-                            displayPricePerUnit ?? 0.0;
+                        final int displayQty = currentQty > 0
+                            ? currentQty
+                            : (minQty > 0 ? minQty : 1);
+                        final double totalPrice = _displaySpecialPrice * displayQty;
+                        final double totalOriginalPrice = _displayMrp * displayQty;
+                        final String? formattedPricePerUnit =
+                            _formattedPricePerUnit;
 
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1315,9 +1326,9 @@ class CustomProductCard extends StatelessWidget {
                                       ],
                                     ),
                                     SizedBox(height: 4.h),
-                                    if (displayPricePerUnit != null)
+                                    if (formattedPricePerUnit != null)
                                       Text(
-                                        "${AppConstant.currency}${formatPrice(effectivePrice)}/$_displayMeasurementUnit",
+                                        formattedPricePerUnit,
                                         style: TextStyle(
                                           fontSize: 12.sp,
                                           color: Colors.grey.shade500,
@@ -1989,7 +2000,7 @@ class _TieredPricingExpandableListState
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "₹${formatPriceLocally(tierUnitPrice)}/pc for ${tier.minQty} pcs+",
+                                  "₹${formatPriceLocally(tierUnitPrice)} per pc for ${tier.minQty} pcs+",
                                   style: TextStyle(
                                     fontSize: 13.sp,
                                     fontWeight: FontWeight.w800,

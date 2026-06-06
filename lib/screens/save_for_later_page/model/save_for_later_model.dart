@@ -246,7 +246,7 @@ class SavedProductVariant {
   int? specialPrice;
   int? mrp;
   int? mrpStatus;
-  num? pricePerUnit;
+  String? pricePerUnit;
   String? measurementUnit;
   int? stock;
   String? sku;
@@ -276,7 +276,7 @@ class SavedProductVariant {
     specialPrice = json['special_price'];
     mrp = json['mrp'];
     mrpStatus = json['mrp_status'];
-    pricePerUnit = num.tryParse(json['price_per_unit']?.toString() ?? '');
+    pricePerUnit = json['price_per_unit']?.toString() ?? '';
     measurementUnit = json['measurement_unit']?.toString();
     stock = json['stock'];
     sku = json['sku'];

@@ -164,7 +164,7 @@ class ProductFeatureSectionWidget extends StatelessWidget {
                     indicator: product.indicator,
                     mrp: variant.mrp.toString(),
                     mrpStatus: variant.mrpStatus,
-                    pricePerUnit: variant.pricePerUnit.toString(),
+                    pricePerUnit: variant.pricePerUnit.isNotEmpty ? variant.pricePerUnit : product.pricePerUnit,
                     measurementUnit: variant.measurementUnit,
                   ),
                 );

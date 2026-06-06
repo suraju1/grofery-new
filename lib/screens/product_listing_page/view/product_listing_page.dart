@@ -669,7 +669,9 @@ class _ProductListingPageState extends State<ProductListingPage> {
                                 useHorizontalLayout: true,
                                 mrp: variant.mrp.toString(),
                                 mrpStatus: variant.mrpStatus,
-                                pricePerUnit: variant.pricePerUnit.toString(),
+                                pricePerUnit: variant.pricePerUnit.isNotEmpty
+                                    ? variant.pricePerUnit
+                                    : product.pricePerUnit,
                                 measurementUnit: variant.measurementUnit,
                               ),
                             );

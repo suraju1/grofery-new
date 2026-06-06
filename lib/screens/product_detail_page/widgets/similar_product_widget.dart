@@ -123,7 +123,7 @@ class SimilarProductWidget extends StatelessWidget {
                   mrp: product.variants.first.mrp.toString(),
                   mrpStatus: product.variants.first.mrpStatus,
                   pricePerUnit:
-                      product.variants.first.pricePerUnit.toString(),
+                      product.variants.first.pricePerUnit.isNotEmpty ? product.variants.first.pricePerUnit : product.pricePerUnit,
                   measurementUnit: product.variants.first.measurementUnit,
                 ),
               );

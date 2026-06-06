@@ -224,7 +224,7 @@ class _MyOrdersPageState extends State<MyOrdersPage> {
                   try {
                     final repo = OrderRepository();
                     final res = await repo.reorder(
-                      orderId: order.id!,
+                      orderSlug: order.slug!,
                       addressId: selectedAddress.id!,
                       paymentType: order.paymentMethod ?? 'cod',
                       useWallet: false,
@@ -237,21 +237,15 @@ class _MyOrdersPageState extends State<MyOrdersPage> {
                       if (res['success'] == true) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(res['message'] ?? 'Order placed successfully!'),
+                            content: Text(res['message'] ?? 'Items added to cart successfully!'),
                             backgroundColor: Colors.green,
                           ),
                         );
-                        // Refresh the orders list
-                        context.read<GetMyOrderBloc>().add(FetchMyOrder());
+                        // Refresh the cart
+                        context.read<CartBloc>().add(LoadCart());
                         
-                        // Navigate to the success page or tracking
-                        final newOrderSlug = res['data']?['slug'] ?? order.slug;
-                        final addressString = "${selectedAddress.addressLine1 ?? ''} ${selectedAddress.addressLine2 ?? ''} ${selectedAddress.city ?? ''}";
-                        GoRouter.of(context).push(AppRoutes.orderSuccess, extra: {
-                          'address': addressString,
-                          'addressType': selectedAddress.addressType ?? 'Home',
-                          'orderSlug': newOrderSlug
-                        });
+                        // Navigate to the cart screen
+                        GoRouter.of(context).push(AppRoutes.cart);
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(

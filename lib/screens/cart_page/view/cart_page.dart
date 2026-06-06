@@ -224,19 +224,9 @@ class _CartPageState extends State<CartPage> {
     double rCharge = data.deliveryZone?.rushDeliveryCharges?.toDouble() ?? 99.0;
     if (rCharge < 99.0) rCharge = 99.0;
 
-    double regCharge = 0.0;
     double curDeliveryCharge =
         billSummaryData?.totalDeliveryCharges?.toDouble() ?? 0;
     double exactGrandTotal = rawGrandTotal;
-
-    double targetCharge =
-        selectedDeliveryType == DeliveryType.rush ? rCharge : regCharge;
-
-    if (curDeliveryCharge < targetCharge) {
-      double additionalFee = targetCharge - curDeliveryCharge;
-      curDeliveryCharge = targetCharge;
-      exactGrandTotal += additionalFee;
-    }
 
     double finalWalletUsed = rawWalletUsed;
     double finalGrandTotal = exactGrandTotal;
@@ -1776,7 +1766,7 @@ class _CartPageState extends State<CartPage> {
               height: 50,
               width: double.infinity,
               child: CustomButton(
-                onPressed: _navigateToAddAddress,
+                onPressed: _showAddressSelectionBottomSheet,
                 child: Text(
                   AppLocalizations.of(context)!.chooseAddressForDelivery,
                   style: const TextStyle(

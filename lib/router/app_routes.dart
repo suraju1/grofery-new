@@ -52,6 +52,7 @@ import 'package:grofery_user/screens/wallet_page/view/wallet_page.dart';
 import 'package:grofery_user/screens/wishlist_page/view/wishlist_page.dart';
 import 'package:grofery_user/screens/wishlist_page/view/wishlist_product_listing_page.dart';
 import 'package:grofery_user/screens/manage_outlet_page/view/manage_outlet_page.dart';
+import 'package:grofery_user/screens/manage_outlet_page/view/add_outlet_page.dart';
 
 Page platformPage(Widget child) {
   if (Platform.isIOS) {
@@ -106,6 +107,7 @@ class AppRoutes {
   static const String brandsListPage = '/brands-list-page';
   static const String mobileOtpLoginPage = '/mobile-otp-login-page';
   static const String manageOutlet = '/manage-outlet';
+  static const String addOutlet = '/add-outlet';
 }
 
 class MyAppRoute {
@@ -573,6 +575,12 @@ class MyAppRoute {
           path: AppRoutes.manageOutlet,
           pageBuilder: (context, state) =>
               platformPage(const ManageOutletPage()),
+        ),
+        GoRoute(
+          name: 'add-outlet',
+          path: AppRoutes.addOutlet,
+          pageBuilder: (context, state) =>
+              platformPage(const AddOutletPage()),
         ),
       ]);
 }

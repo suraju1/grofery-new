@@ -71,6 +71,26 @@ class _ProductDetailPageState extends State<ProductDetailPage>
 
   ProductVariants? _currentVariant;
 
+  String _formatPricePerUnitStr(String val, String unit) {
+    val = val.trim();
+    if (val.isEmpty || val == '0' || val == '0.0' || val == '0.00') return '';
+    final double? parsed = double.tryParse(val);
+    if (parsed != null && parsed > 0) {
+      return "${PriceUtils.formatPrice(parsed)} per ${unit.isNotEmpty ? unit : 'pc'}";
+    }
+    String formattedVal = val;
+    if (val.contains('/')) {
+      formattedVal = val.replaceAll('/', ' per ');
+    } else {
+      formattedVal = "$val per ${unit.isNotEmpty ? unit : 'pc'}";
+    }
+    
+    if (formattedVal.startsWith(AppConstant.currency) || formattedVal.startsWith('₹')) {
+      return formattedVal;
+    }
+    return "${AppConstant.currency}$formattedVal";
+  }
+
   ProductVariants _getActiveVariant(ProductData product) {
     if (selectedVariants.isEmpty) {
       return product.variants.firstWhere(
@@ -407,6 +427,23 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                                     discountTextColor:
                                                         Colors.white,
                                                   ),
+                                                  if (activeVariant.pricePerUnit.isNotEmpty || product.pricePerUnit.isNotEmpty)
+                                                    Padding(
+                                                      padding: EdgeInsets.only(
+                                                          top: 2.h,
+                                                          bottom: 2.h),
+                                                      child: Text(
+                                                        _formatPricePerUnitStr(
+                                                          activeVariant.pricePerUnit.isNotEmpty ? activeVariant.pricePerUnit : product.pricePerUnit,
+                                                          activeVariant.measurementUnit,
+                                                        ),
+                                                        style: TextStyle(
+                                                          fontSize: 14.sp,
+                                                          fontWeight: FontWeight.w600,
+                                                          color: Colors.grey.shade700,
+                                                        ),
+                                                      ),
+                                                    ),
                                                   if (product
                                                           .minimumOrderQuantity >
                                                       1)
@@ -971,6 +1008,18 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                 fontWeight: FontWeight.w700,
                                 originalPriceColor: Colors.grey.shade600,
                               ),
+                              if (activeVariant.pricePerUnit.isNotEmpty || product.pricePerUnit.isNotEmpty)
+                                Text(
+                                  _formatPricePerUnitStr(
+                                    activeVariant.pricePerUnit.isNotEmpty ? activeVariant.pricePerUnit : product.pricePerUnit,
+                                    activeVariant.measurementUnit,
+                                  ),
+                                  style: TextStyle(
+                                    fontSize: 10.sp,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
                               if (product.minimumOrderQuantity > 1)
                                 Text(
                                   "${PriceUtils.formatPrice(effectivePrice.toDouble())} per pc",
@@ -1421,7 +1470,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "₹${tierUnitPrice.toStringAsFixed(2)}/pc for ${tier.minQty} pcs+",
+                                "${PriceUtils.formatPrice(tierUnitPrice)} per pc for ${tier.minQty} pcs+",
                                 style: TextStyle(
                                   fontSize: 13.sp,
                                   fontWeight: FontWeight.w600,

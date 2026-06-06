@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
+import 'package:grofery_user/router/app_routes.dart';
 import 'package:grofery_user/screens/address_list_page/model/get_address_list_model.dart';
-import 'package:grofery_user/config/constant.dart';  
+import 'package:grofery_user/config/constant.dart';
 import 'package:grofery_user/config/theme.dart';
 import 'package:grofery_user/screens/address_list_page/bloc/get_address_list_bloc/get_address_list_bloc.dart';
 
@@ -20,15 +22,19 @@ class AddressSelectionBottomSheet extends StatefulWidget {
   });
 
   @override
-  State<AddressSelectionBottomSheet> createState() => _AddressSelectionBottomSheetState();
+  State<AddressSelectionBottomSheet> createState() =>
+      _AddressSelectionBottomSheetState();
 }
 
-class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomSheet> {
+class _AddressSelectionBottomSheetState
+    extends State<AddressSelectionBottomSheet> {
   @override
   void initState() {
     super.initState();
     // Only pass deliveryZoneId if available (for checkout in cart page)
-    context.read<GetAddressListBloc>().add(FetchUserAddressList(deliveryZoneId: widget.deliveryZoneId));
+    context
+        .read<GetAddressListBloc>()
+        .add(FetchUserAddressList(deliveryZoneId: widget.deliveryZoneId));
   }
 
   @override
@@ -57,11 +63,7 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
           // Header
           Padding(
             padding: EdgeInsets.only(
-              left: 12.0.w,
-              right: 12.0.w,
-              top: 12.h,
-              bottom: 12.h
-            ),
+                left: 12.0.w, right: 12.0.w, top: 12.h, bottom: 12.h),
             child: Row(
               children: [
                 Text(
@@ -141,14 +143,52 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
     }
 
     return ListView.builder(
-      padding: EdgeInsets.only(
-          left: 12.0.w,
-          right: 12.0.w,
-          top: 12.h,
-          bottom: 12.h
-      ),
-      itemCount: state.addressList.length,
+      padding:
+          EdgeInsets.only(left: 12.0.w, right: 12.0.w, top: 12.h, bottom: 12.h),
+      itemCount: state.addressList.length + 1,
       itemBuilder: (context, index) {
+        if (index == state.addressList.length) {
+          return Padding(
+            padding: EdgeInsets.only(top: 8.h, bottom: 16.h),
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                GoRouter.of(context).push(
+                  AppRoutes.locationPicker,
+                  extra: {
+                    'isFromAddressPage': true,
+                    'isEdit': false,
+                    'isFromCartPage': true,
+                    'deliveryZoneId': widget.deliveryZoneId,
+                  },
+                );
+              },
+              icon: Icon(
+                TablerIcons.plus,
+                size: 20.sp,
+              ),
+              label: Text(
+                'Add New Address',
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(
+                  horizontal: 32.sp,
+                  vertical: 14.sp,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.sp),
+                ),
+                elevation: 2,
+              ),
+            ),
+          );
+        }
         final address = state.addressList[index];
         return _buildAddressCard(address);
       },
@@ -157,7 +197,7 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
 
   Widget _buildAddressCard(AddressListData address) {
     final isSelected = widget.selectedAddress?.id == address.id;
-    
+
     return GestureDetector(
       onTap: () {
         widget.onAddressSelected(address);
@@ -166,10 +206,14 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
       child: Container(
         margin: EdgeInsets.only(bottom: 12.sp),
         decoration: BoxDecoration(
-          color: isDarkMode(context) ? AppTheme.darkProductCardColor : Colors.white,
+          color: isDarkMode(context)
+              ? AppTheme.darkProductCardColor
+              : Colors.white,
           borderRadius: BorderRadius.circular(12.sp),
           border: Border.all(
-            color: isSelected ? AppTheme.primaryColor : Colors.grey.withValues(alpha: 0.3),
+            color: isSelected
+                ? AppTheme.primaryColor
+                : Colors.grey.withValues(alpha: 0.3),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: [
@@ -188,7 +232,7 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
               width: double.infinity,
               padding: EdgeInsets.symmetric(horizontal: 16.sp, vertical: 8.sp),
               decoration: BoxDecoration(
-                color: isSelected 
+                color: isSelected
                     ? AppTheme.primaryColor.withValues(alpha: 0.1)
                     : Colors.grey.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.only(
@@ -199,9 +243,11 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
               child: Row(
                 children: [
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8.h, vertical: 4.sp),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 8.h, vertical: 4.sp),
                     decoration: BoxDecoration(
-                      color: _getAddressTypeColor(address.addressType).withValues(alpha: 0.1),
+                      color: _getAddressTypeColor(address.addressType)
+                          .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8.sp),
                     ),
                     child: Text(
@@ -226,11 +272,7 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
             // Address details
             Padding(
               padding: EdgeInsets.only(
-                left: 12.0.w,
-                right: 12.0.w,
-                top: 12.h,
-                bottom: 12.h
-              ),
+                  left: 12.0.w, right: 12.0.w, top: 12.h, bottom: 12.h),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -348,9 +390,16 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(context);
-                // Navigate to add address page
-                // Replace '/add-address' with your actual route name
-                Navigator.pushNamed(context, '/add-address');
+                // Navigate to add address page using GoRouter
+                GoRouter.of(context).push(
+                  AppRoutes.locationPicker,
+                  extra: {
+                    'isFromAddressPage': true,
+                    'isEdit': false,
+                    'isFromCartPage': true,
+                    'deliveryZoneId': widget.deliveryZoneId,
+                  },
+                );
               },
               icon: Icon(
                 TablerIcons.plus,
@@ -384,7 +433,7 @@ class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomShee
 
   String _formatAddress(AddressListData address) {
     List<String> addressParts = [];
-    
+
     if (address.addressLine1?.isNotEmpty == true) {
       addressParts.add(address.addressLine1!);
     }

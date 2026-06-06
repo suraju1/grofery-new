@@ -316,7 +316,7 @@ class OrderRepository {
   }
 
   Future<Map<String, dynamic>> reorder({
-    required int orderId,
+    required String orderSlug,
     required int addressId,
     required String paymentType,
     required bool useWallet,
@@ -331,7 +331,7 @@ class OrderRepository {
       };
       
       final response = await AppConstant.apiBaseHelper.postAPICall(
-        '${ApiRoutes.createOrderApi}/$orderId/reorder',
+        '${ApiRoutes.createOrderApi}/$orderSlug/reorder',
         requestBody,
       );
       
