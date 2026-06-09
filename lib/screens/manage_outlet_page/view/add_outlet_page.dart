@@ -5,7 +5,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:grofery_user/router/app_routes.dart';
 import 'package:grofery_user/utils/widgets/custom_button.dart';
 import 'package:grofery_user/utils/widgets/custom_textfield.dart';
-
 import '../bloc/manage_outlets_bloc.dart';
 import '../bloc/manage_outlets_event.dart';
 import '../bloc/manage_outlets_state.dart';
@@ -31,12 +30,12 @@ class AddOutletView extends StatefulWidget {
 
 class _AddOutletViewState extends State<AddOutletView> {
   final _formKey = GlobalKey<FormState>();
-  
+
   final _shopNameController = TextEditingController();
   final _mobileController = TextEditingController();
   final _emailController = TextEditingController();
   final _gstController = TextEditingController();
-  
+
   // Location Fields
   String? _addressLine1;
   String? _city;
@@ -45,7 +44,7 @@ class _AddOutletViewState extends State<AddOutletView> {
   String? _country;
   String? _latitude;
   String? _longitude;
-  
+
   bool _isSaving = false;
 
   @override
@@ -85,7 +84,8 @@ class _AddOutletViewState extends State<AddOutletView> {
     if (_formKey.currentState?.validate() ?? false) {
       if (_latitude == null || _longitude == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select an outlet location on the map')),
+          const SnackBar(
+              content: Text('Please select an outlet location on the map')),
         );
         return;
       }
@@ -134,12 +134,14 @@ class _AddOutletViewState extends State<AddOutletView> {
         appBar: AppBar(
           title: const Text(
             'Add New Outlet',
-            style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.w600),
+            style: TextStyle(
+                color: Colors.black, fontSize: 18, fontWeight: FontWeight.w600),
           ),
           backgroundColor: Colors.white,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20),
+            icon: const Icon(Icons.arrow_back_ios_new,
+                color: Colors.black, size: 20),
             onPressed: () => GoRouter.of(context).pop(),
           ),
         ),
@@ -150,19 +152,23 @@ class _AddOutletViewState extends State<AddOutletView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Outlet Details", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const Text("Outlet Details",
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
                 CustomTextFormField(
                   controller: _shopNameController,
                   labelText: "Shop / Outlet Name",
-                  validator: (val) => val == null || val.isEmpty ? "Required" : null,
+                  validator: (val) =>
+                      val == null || val.isEmpty ? "Required" : null,
                 ),
                 const SizedBox(height: 12),
                 CustomTextFormField(
                   controller: _mobileController,
                   labelText: "Mobile Number",
                   keyboardType: TextInputType.phone,
-                  validator: (val) => val == null || val.isEmpty ? "Required" : null,
+                  validator: (val) =>
+                      val == null || val.isEmpty ? "Required" : null,
                 ),
                 const SizedBox(height: 12),
                 CustomTextFormField(
@@ -175,9 +181,10 @@ class _AddOutletViewState extends State<AddOutletView> {
                   controller: _gstController,
                   labelText: "GST Number (Optional)",
                 ),
-                
                 const SizedBox(height: 24),
-                const Text("Location", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const Text("Location",
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -190,10 +197,13 @@ class _AddOutletViewState extends State<AddOutletView> {
                     children: [
                       Expanded(
                         child: Text(
-                          _latitude != null 
+                          _latitude != null
                               ? "Location Selected\n${_addressLine1 ?? ''}"
                               : "No location selected",
-                          style: TextStyle(color: _latitude != null ? Colors.black87 : Colors.grey.shade600),
+                          style: TextStyle(
+                              color: _latitude != null
+                                  ? Colors.black87
+                                  : Colors.grey.shade600),
                         ),
                       ),
                       TextButton.icon(
@@ -204,7 +214,6 @@ class _AddOutletViewState extends State<AddOutletView> {
                     ],
                   ),
                 ),
-                
                 const SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,

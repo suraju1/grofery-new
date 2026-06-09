@@ -226,7 +226,19 @@ class _CartPageState extends State<CartPage> {
 
     double curDeliveryCharge =
         billSummaryData?.totalDeliveryCharges?.toDouble() ?? 0;
-    double exactGrandTotal = rawGrandTotal;
+    
+    double handlingChargeVal = billSummaryData?.handlingCharges?.toDouble() ?? 0;
+    double perStoreDropOffFeeVal = billSummaryData?.perStoreDropOffFee?.toDouble() ?? 0;
+    double promoDiscountVal = double.tryParse(billSummaryData?.promoDiscount ?? '0') ?? 0;
+
+    double exactGrandTotal = calcItemsTotal + 
+        curDeliveryCharge + 
+        handlingChargeVal + 
+        perStoreDropOffFeeVal - 
+        promoDiscountVal;
+
+    // Use rawGrandTotal as a fallback if the local calculation is somehow negative, but it shouldn't be.
+    if (exactGrandTotal < 0) exactGrandTotal = rawGrandTotal;
 
     double finalWalletUsed = rawWalletUsed;
     double finalGrandTotal = exactGrandTotal;

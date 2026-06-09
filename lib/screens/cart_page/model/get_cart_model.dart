@@ -447,12 +447,12 @@ class Status {
 }
 
 class PaymentSummary {
-  int? itemsTotal;
-  int? perStoreDropOffFee;
+  double? itemsTotal;
+  double? perStoreDropOffFee;
   bool? isRushDelivery;
   bool? isRushDeliveryAvailable;
-  int? deliveryCharges;
-  int? handlingCharges;
+  double? deliveryCharges;
+  double? handlingCharges;
   double? deliveryDistanceCharges;
   double? deliveryDistanceKm;
   int? totalStores;
@@ -489,12 +489,12 @@ class PaymentSummary {
         this.payableAmount});
 
   PaymentSummary.fromJson(Map<String, dynamic> json) {
-    itemsTotal = json['items_total'] != null ? int.tryParse(json['items_total'].toString()) : null;
-    perStoreDropOffFee = json['per_store_drop_off_fee'] != null ? int.tryParse(json['per_store_drop_off_fee'].toString()) : null;
+    itemsTotal = json['items_total'] != null ? double.tryParse(json['items_total'].toString()) : null;
+    perStoreDropOffFee = json['per_store_drop_off_fee'] != null ? double.tryParse(json['per_store_drop_off_fee'].toString()) : null;
     isRushDelivery = json['is_rush_delivery'] != null ? (json['is_rush_delivery'].toString() == 'true' || json['is_rush_delivery'].toString() == '1') : null;
     isRushDeliveryAvailable = json['is_rush_delivery_available'] != null ? (json['is_rush_delivery_available'].toString() == 'true' || json['is_rush_delivery_available'].toString() == '1') : null;
-    deliveryCharges = json['delivery_charges'] != null ? int.tryParse(json['delivery_charges'].toString()) : null;
-    handlingCharges = json['handling_charges'] != null ? int.tryParse(json['handling_charges'].toString()) : null;
+    deliveryCharges = json['delivery_charges'] != null ? double.tryParse(json['delivery_charges'].toString()) : null;
+    handlingCharges = json['handling_charges'] != null ? double.tryParse(json['handling_charges'].toString()) : null;
     deliveryDistanceCharges = json['delivery_distance_charges'] != null ? double.tryParse(json['delivery_distance_charges'].toString()) : null;
     deliveryDistanceKm = json['delivery_distance_km'] != null ? double.tryParse(json['delivery_distance_km'].toString()) : null;
     totalStores = json['total_stores'] != null ? int.tryParse(json['total_stores'].toString()) : null;
