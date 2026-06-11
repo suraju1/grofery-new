@@ -21,18 +21,16 @@ import '../../../utils/widgets/custom_toast.dart';
 class Dashboard extends StatefulWidget {
   final int index;
   final StatefulNavigationShell navigationShell;
-  const Dashboard({
-    super.key,
-    required this.index,
-    required this.navigationShell
-  });
+  const Dashboard(
+      {super.key, required this.index, required this.navigationShell});
 
   @override
   State<Dashboard> createState() => _DashboardState();
 }
 
 class _DashboardState extends State<Dashboard> {
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
   bool showBottomNavBar = true;
   late int _currentIndex;
   DateTime? _lastBackPressed;
@@ -43,14 +41,16 @@ class _DashboardState extends State<Dashboard> {
     super.initState();
     _currentIndex = widget.index;
 
-    const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
     DarwinInitializationSettings initializationSettingsDarwin =
-    DarwinInitializationSettings(
+        DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
-    final InitializationSettings initializationSettings = InitializationSettings(
+    final InitializationSettings initializationSettings =
+        InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsDarwin,
     );
@@ -71,8 +71,10 @@ class _DashboardState extends State<Dashboard> {
       log('No location stored in Hive');
     }
 
-    FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
-      if(message != null){
+    FirebaseMessaging.instance
+        .getInitialMessage()
+        .then((RemoteMessage? message) {
+      if (message != null) {
         _handleNavigation(message);
       }
     });
@@ -90,9 +92,8 @@ class _DashboardState extends State<Dashboard> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         switch (response?.id) {
           case 1:
-            GoRouter.of(context).push(AppRoutes.orderDetail, extra: {
-              'order-slug': response?.payload
-            });
+            GoRouter.of(context).push(AppRoutes.orderDetail,
+                extra: {'order-slug': response?.payload});
             break;
           default:
             break;
@@ -102,7 +103,6 @@ class _DashboardState extends State<Dashboard> {
   }
 
   void _handleNavigation(RemoteMessage message) {
-
     final type = message.data['type'];
     final orderStatus = message.data['type'];
     final orderSlug = message.data['order_slug'];
@@ -110,15 +110,15 @@ class _DashboardState extends State<Dashboard> {
 
     if (navigatorContext != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if(type == 'order' || type == 'delivery'){
-          if(orderStatus == 'assigned' || orderStatus == 'collected' || orderStatus == 'out_for_delivery') {
-            GoRouter.of(navigatorContext).push(AppRoutes.deliveryTracking, extra: {
-              'order-slug': orderSlug
-            });
+        if (type == 'order' || type == 'delivery') {
+          if (orderStatus == 'assigned' ||
+              orderStatus == 'collected' ||
+              orderStatus == 'out_for_delivery') {
+            GoRouter.of(navigatorContext).push(AppRoutes.deliveryTracking,
+                extra: {'order-slug': orderSlug});
           } else {
-            GoRouter.of(navigatorContext).push(AppRoutes.orderDetail, extra: {
-              'order-slug': orderSlug
-            });
+            GoRouter.of(navigatorContext)
+                .push(AppRoutes.orderDetail, extra: {'order-slug': orderSlug});
           }
         }
       });
@@ -144,7 +144,8 @@ class _DashboardState extends State<Dashboard> {
       _lastBackPressed = now;
       ToastManager.show(
         context: context,
-        message: AppLocalizations.of(context)?.pressAgainToExitTheApp ?? 'Press again to exit the app',
+        message: AppLocalizations.of(context)?.pressAgainToExitTheApp ??
+            'Press again to exit the app',
       );
       return;
     }
@@ -158,7 +159,7 @@ class _DashboardState extends State<Dashboard> {
     return BlocListener<CartBloc, CartState>(
       listener: (context, state) {
         if (state is CartLoaded) {
-          if(state.errorMessage != null) {
+          if (state.errorMessage != null) {
             ToastManager.show(
               context: context,
               message: state.errorMessage ?? 'Failed to add item to cart',
@@ -166,7 +167,7 @@ class _DashboardState extends State<Dashboard> {
             );
           }
         }
-         // context.read<GetUserCartBloc>().add(FetchUserCart());
+        // context.read<GetUserCartBloc>().add(FetchUserCart());
         CartService.triggerCartAnimationOnFirstAdd(context, state);
       },
       child: PopScope(
@@ -177,46 +178,48 @@ class _DashboardState extends State<Dashboard> {
         },
         child: Scaffold(
           body: widget.navigationShell,
-
           bottomNavigationBar: Container(
             height: 70.h,
             decoration: BoxDecoration(
               border: Border(
-                top: BorderSide(
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                  width: 1.0
-                )
-              ),
+                  top: BorderSide(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                      width: 1.0)),
             ),
             child: BottomNavigationBar(
               type: BottomNavigationBarType.fixed,
               currentIndex: _currentIndex,
               selectedItemColor: Theme.of(context).colorScheme.tertiary,
-              unselectedItemColor: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.8),
-              unselectedLabelStyle: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 12
-              ),
-              selectedLabelStyle: TextStyle(
-                  fontWeight: FontWeight.bold,
-                fontSize: 13
-              ),
+              unselectedItemColor:
+                  Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.8),
+              unselectedLabelStyle:
+                  TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+              selectedLabelStyle:
+                  TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               onTap: _goBranch,
               items: [
                 BottomNavigationBarItem(
-                  icon: Icon(widget.index == 0 ? RemixIcons.home_smile_fill : RemixIcons.home_smile_line),
+                  icon: Icon(widget.index == 0
+                      ? RemixIcons.home_smile_fill
+                      : RemixIcons.home_smile_line),
                   label: l10n?.home ?? 'Home',
                 ),
                 BottomNavigationBarItem(
-                  icon: Icon(widget.index == 1 ? Icons.list_alt : Icons.list_alt_outlined),
+                  icon: Icon(widget.index == 1
+                      ? Icons.list_alt
+                      : Icons.list_alt_outlined),
                   label: l10n?.myList ?? 'My List',
                 ),
                 BottomNavigationBarItem(
-                  icon: Icon(widget.index == 2 ? HeroiconsSolid.buildingStorefront : HeroiconsOutline.buildingStorefront),
+                  icon: Icon(widget.index == 2
+                      ? HeroiconsSolid.buildingStorefront
+                      : HeroiconsOutline.buildingStorefront),
                   label: l10n?.stores ?? 'Stores',
                 ),
                 BottomNavigationBarItem(
-                      icon: Icon(widget.index == 3 ? HeroiconsSolid.userCircle : HeroiconsOutline.userCircle),
+                  icon: Icon(widget.index == 3
+                      ? HeroiconsSolid.userCircle
+                      : HeroiconsOutline.userCircle),
                   label: l10n?.account ?? 'Account',
                 ),
               ],

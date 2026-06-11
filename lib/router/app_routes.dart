@@ -579,8 +579,7 @@ class MyAppRoute {
         GoRoute(
           name: 'add-outlet',
           path: AppRoutes.addOutlet,
-          pageBuilder: (context, state) =>
-              platformPage(const AddOutletPage()),
+          pageBuilder: (context, state) => platformPage(const AddOutletPage()),
         ),
       ]);
 }
