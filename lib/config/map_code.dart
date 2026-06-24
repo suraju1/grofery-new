@@ -14,6 +14,7 @@ import 'package:grofery_user/utils/widgets/custom_button.dart';
 import 'package:grofery_user/utils/widgets/custom_circular_progress_indicator.dart';
 import 'package:grofery_user/utils/widgets/custom_shimmer.dart';
 import 'package:grofery_user/utils/widgets/custom_textfield.dart';
+import 'package:grofery_user/utils/widgets/custom_toast.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:grofery_user/model/user_location/user_location_model.dart';
 import 'package:remixicon/remixicon.dart';
@@ -636,10 +637,10 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget>
                         return _buildAddressTypeButton(
                           l10n.work,
                           TablerIcons.building_skyscraper,
-                          selectedAddressType == 'work',
+                          selectedAddressType == 'office',
                           () {
                             setState(() {
-                              selectedAddressType = 'work';
+                              selectedAddressType = 'office';
                             });
                           },
                         );
@@ -790,6 +791,13 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget>
                 setState(() {
                   isLoading = false;
                 });
+                if (state.message.isNotEmpty) {
+                  ToastManager.show(
+                    context: context,
+                    message: state.message,
+                    type: ToastType.success,
+                  );
+                }
                 GoRouter.of(context).pop();
               } else if (state.isRemoving ||
                   state.isUpdating ||
@@ -797,7 +805,27 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget>
                 setState(() {
                   isLoading = true;
                 });
+              } else {
+                setState(() {
+                  isLoading = false;
+                });
+                if (state.message.isNotEmpty) {
+                  ToastManager.show(
+                    context: context,
+                    message: state.message,
+                    type: ToastType.error,
+                  );
+                }
               }
+            } else if (state is GetAddressListFailed) {
+              setState(() {
+                isLoading = false;
+              });
+              ToastManager.show(
+                context: context,
+                message: state.error,
+                type: ToastType.error,
+              );
             }
           },
         ),

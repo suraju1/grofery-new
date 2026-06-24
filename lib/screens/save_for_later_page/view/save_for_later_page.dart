@@ -10,6 +10,7 @@ import 'package:grofery_user/utils/widgets/custom_product_card.dart';
 import 'package:grofery_user/utils/widgets/custom_refresh_indicator.dart';
 import 'package:grofery_user/utils/widgets/custom_shimmer.dart';
 import 'package:grofery_user/utils/widgets/empty_states_page.dart';
+import 'package:grofery_user/utils/widgets/custom_toast.dart';
 import '../../../bloc/user_cart_bloc/user_cart_bloc.dart';
 import '../../../bloc/user_cart_bloc/user_cart_event.dart';
 import '../../../config/constant.dart';
@@ -58,6 +59,20 @@ class _SaveForLaterPageState extends State<SaveForLaterPage> {
           child: BlocConsumer<SaveForLaterBloc, SaveForLaterState>(
             listener: (BuildContext context, SaveForLaterState state) {
               if (state is ProductSavedSuccess) {
+                ToastManager.show(
+                  context: context,
+                  message: '${state.productName} updated successfully',
+                  type: ToastType.success,
+                );
+                context.read<SaveForLaterBloc>().add(
+                      FetchSavedProducts(),
+                    );
+              } else if (state is ProductDeleteSuccess) {
+                ToastManager.show(
+                  context: context,
+                  message: '${state.productName} deleted successfully',
+                  type: ToastType.success,
+                );
                 context.read<SaveForLaterBloc>().add(
                       FetchSavedProducts(),
                     );
@@ -142,86 +157,95 @@ class _SaveForLaterPageState extends State<SaveForLaterPage> {
 
   Widget _buildGridItem(List<SavedItems> productData, int index) {
     final product = productData[index];
-    // return CustomSavedProductCard(
-    //   productImage: product.product!.image!,
-    //   productName: product.product!.name!,
-    //   price: product.variant!.price.toString(),
-    //   specialPrice: product.variant!.specialPrice.toString(),
-    //   onMoveToCart: (){
-    //     context.read<AddToCartBloc>().add(
-    //       AddItemToCart(
-    //         productVariantId: product.variant!.id!,
-    //         storeId: product.storeId!,
-    //         quantity: product.quantity!,
-    //       ),
-    //     );
-    //     CartService.triggerCartAnimation(context);
-    //     context.read<GetUserCartBloc>().add(FetchUserCart());
-    //     Future.delayed((Duration(seconds: 2)),(){
-    //       context.read<SaveForLaterBloc>().add(
-    //         FetchSavedProducts(),
-    //       );
-    //     });
-    //   },
-    // );
 
-    return CustomProductCard(
-      productId: product.product!.id!,
-      productImage: product.product!.image!,
-      productSlug: product.product!.slug!,
-      productName: product.product!.name!,
-      productPrice: product.variant!.price.toString(),
-      specialPrice: product.variant!.specialPrice.toString(),
-      productTags: [],
-      estimatedDeliveryTime: product.product!.estimatedDeliveryTime.toString(),
-      assetImage: '',
-      ratings: double.parse(product.product!.ratings.toString()),
-      ratingCount: product.product!.ratingCount!,
-      quickDeliveryAvailable: product.product!.quickDeliveryAvailable ?? false,
-      onAddToCart: (quantity) {
-        final item = UserCart(
-            productId: product.id.toString(),
-            variantId: product.productVariantId.toString(),
-            variantName: product.variant!.title.toString(),
-            vendorId: product.storeId.toString(),
-            name: product.product!.name.toString(),
-            image: product.product!.image.toString(),
-            price: product.variant!.specialPrice!.toDouble(),
-            originalPrice: product.variant!.price!.toDouble(),
-            quantity: quantity,
-            serverCartItemId: null,
-            syncAction: CartSyncAction.add,
-            updatedAt: DateTime.now(),
-            minQty: product.product!.minimumOrderQuantity!,
-            maxQty: product.product!.totalAllowedQuantity!,
-            isOutOfStock: product.variant!.stock! <= 0,
-            tieredPricing: product.variant!.tieredPricing,
-            isSynced: false);
-        context.read<CartBloc>().add(AddToCart(item: item, context: context));
-        /*context.read<AddToCartBloc>().add(
-          AddItemToCart(
-            productVariantId: product.variant!.id!,
-            storeId: product.storeId!,
-            quantity: product.product!.quantityStepSize!,
+    return Stack(
+      children: [
+        CustomProductCard(
+          productId: product.product!.id!,
+          productImage: product.product!.image!,
+          productSlug: product.product!.slug!,
+          productName: product.product!.name!,
+          productPrice: product.variant!.price.toString(),
+          specialPrice: product.variant!.specialPrice.toString(),
+          productTags: [],
+          estimatedDeliveryTime: product.product!.estimatedDeliveryTime.toString(),
+          assetImage: '',
+          ratings: double.parse(product.product!.ratings.toString()),
+          ratingCount: product.product!.ratingCount!,
+          quickDeliveryAvailable: product.product!.quickDeliveryAvailable ?? false,
+          onAddToCart: (quantity) {
+            final item = UserCart(
+                productId: product.id.toString(),
+                variantId: product.productVariantId.toString(),
+                variantName: product.variant!.title.toString(),
+                vendorId: product.storeId.toString(),
+                name: product.product!.name.toString(),
+                image: product.product!.image.toString(),
+                price: product.variant!.specialPrice!.toDouble(),
+                originalPrice: product.variant!.price!.toDouble(),
+                quantity: quantity,
+                serverCartItemId: null,
+                syncAction: CartSyncAction.add,
+                updatedAt: DateTime.now(),
+                minQty: product.product!.minimumOrderQuantity!,
+                maxQty: product.product!.totalAllowedQuantity!,
+                isOutOfStock: product.variant!.stock! <= 0,
+                tieredPricing: product.variant!.tieredPricing,
+                isSynced: false);
+            context.read<CartBloc>().add(AddToCart(
+                  item: item,
+                  context: context,
+                  isFromCartPage: true,
+                ));
+          },
+          isStoreOpen: product.product!.storeStatus!.isOpen ?? true,
+          isWishListed: false,
+          productVariantId: product.variant!.id!,
+          storeId: product.storeId!,
+          totalStocks: product.variant!.stock!,
+          showWishlist: false,
+          wishlistItemId: 0,
+          imageFit: product.product!.imageFit ?? 'contain',
+          quantityStepSize: product.product!.quantityStepSize!,
+          minQty: product.product!.minimumOrderQuantity!,
+          totalAllowedQuantity: product.product!.totalAllowedQuantity!,
+          tieredPricing: product.variant!.tieredPricing,
+          mrp: product.variant!.mrp?.toString(),
+          mrpStatus: product.variant!.mrpStatus,
+          pricePerUnit: product.variant!.pricePerUnit?.toString(),
+          measurementUnit: product.variant!.measurementUnit,
+        ),
+        Positioned(
+          top: 8.h,
+          right: 8.w,
+          child: Material(
+            elevation: 2,
+            shape: const CircleBorder(),
+            color: Colors.white,
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () {
+                if (product.id != null) {
+                  context.read<SaveForLaterBloc>().add(
+                        DeleteSavedProduct(
+                          cartItemId: product.id!,
+                          productName: product.product!.name ?? '',
+                        ),
+                      );
+                }
+              },
+              child: Padding(
+                padding: EdgeInsets.all(6.w),
+                child: Icon(
+                  Icons.delete_outline,
+                  color: Colors.redAccent,
+                  size: 18.w,
+                ),
+              ),
+            ),
           ),
-        );*/
-      },
-      isStoreOpen: product.product!.storeStatus!.isOpen ?? true,
-      isWishListed: false,
-      productVariantId: product.variant!.id!,
-      storeId: product.storeId!,
-      totalStocks: product.variant!.stock!,
-      showWishlist: false,
-      wishlistItemId: 0,
-      imageFit: product.product!.imageFit ?? 'contain',
-      quantityStepSize: product.product!.quantityStepSize!,
-      minQty: product.product!.minimumOrderQuantity!,
-      totalAllowedQuantity: product.product!.totalAllowedQuantity!,
-      tieredPricing: product.variant!.tieredPricing,
-      mrp: product.variant!.mrp?.toString(),
-      mrpStatus: product.variant!.mrpStatus,
-      pricePerUnit: product.variant!.pricePerUnit?.toString(),
-      measurementUnit: product.variant!.measurementUnit,
+        ),
+      ],
     );
   }
 

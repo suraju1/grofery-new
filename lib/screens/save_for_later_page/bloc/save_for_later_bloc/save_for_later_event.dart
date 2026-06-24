@@ -10,7 +10,6 @@ class FetchSavedProducts extends SaveForLaterEvent {}
 
 class FetchMoreSavedProducts extends SaveForLaterEvent {}
 
-
 class SaveForLaterRequest extends SaveForLaterEvent {
   final int cartItemId;
   final String cartItemName;
@@ -20,3 +19,14 @@ class SaveForLaterRequest extends SaveForLaterEvent {
   // TODO: implement props
   List<Object?> get props => [cartItemId, cartItemName];
 }
+
+class DeleteSavedProduct extends SaveForLaterEvent {
+  final int cartItemId;
+  final String productName;
+
+  DeleteSavedProduct({required this.cartItemId, required this.productName});
+
+  @override
+  List<Object?> get props => [cartItemId, productName];
+}
+

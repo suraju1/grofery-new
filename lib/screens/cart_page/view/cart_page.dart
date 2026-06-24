@@ -226,15 +226,18 @@ class _CartPageState extends State<CartPage> {
 
     double curDeliveryCharge =
         billSummaryData?.totalDeliveryCharges?.toDouble() ?? 0;
-    
-    double handlingChargeVal = billSummaryData?.handlingCharges?.toDouble() ?? 0;
-    double perStoreDropOffFeeVal = billSummaryData?.perStoreDropOffFee?.toDouble() ?? 0;
-    double promoDiscountVal = double.tryParse(billSummaryData?.promoDiscount ?? '0') ?? 0;
 
-    double exactGrandTotal = calcItemsTotal + 
-        curDeliveryCharge + 
-        handlingChargeVal + 
-        perStoreDropOffFeeVal - 
+    double handlingChargeVal =
+        billSummaryData?.handlingCharges?.toDouble() ?? 0;
+    double perStoreDropOffFeeVal =
+        billSummaryData?.perStoreDropOffFee?.toDouble() ?? 0;
+    double promoDiscountVal =
+        double.tryParse(billSummaryData?.promoDiscount ?? '0') ?? 0;
+
+    double exactGrandTotal = calcItemsTotal +
+        curDeliveryCharge +
+        handlingChargeVal +
+        perStoreDropOffFeeVal -
         promoDiscountVal;
 
     // Use rawGrandTotal as a fallback if the local calculation is somehow negative, but it shouldn't be.
@@ -267,7 +270,7 @@ class _CartPageState extends State<CartPage> {
       rushCharge = rCharge;
       walletAmountUsedValue = finalWalletUsed;
       isCartLoading = false;
-      
+
       // Sync promoCode with backend's response so it doesn't get lost on page reload
       promoCode = billSummaryData?.promoCode;
       if (promoCode != null && promoCode!.isNotEmpty) {

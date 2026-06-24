@@ -177,9 +177,10 @@ class ApiBaseHelper {
           throw ApiException(
               '${e.response?.data['success']['email']}');
         } else if(e.response?.statusCode == 500){
-          log('❌ API Error 500: ${e.response?.data}');
+          final errData = e.response?.data;
+          log('❌ API Error 500: $errData');
           throw ApiException(
-              'Server error');
+              'Server error (500): $errData');
         } else if(e.response?.statusCode == 403){
           throw ApiException(
               '${e.response?.data['message']}');

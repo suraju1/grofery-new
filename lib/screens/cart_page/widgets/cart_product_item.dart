@@ -241,7 +241,7 @@ class _CartItemWidgetState extends State<CartItemWidget> {
               final stepSize = widget.item.product?.quantityStepSize ?? 1;
               final minQty = widget.item.product?.minimumOrderQuantity ?? 1;
               final targetQty = quantity - stepSize;
-              
+
               if (quantity <= minQty || targetQty < 1) {
                 widget.onRemoveItem(itemId);
               } else if (targetQty < minQty) {

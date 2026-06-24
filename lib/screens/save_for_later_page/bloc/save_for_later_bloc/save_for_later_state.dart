@@ -52,3 +52,12 @@ class SaveForLaterFailed extends SaveForLaterState {
   // TODO: implement props
   List<Object?> get props => [error];
 }
+
+class ProductDeleteSuccess extends SaveForLaterState {
+  final String productName;
+
+  ProductDeleteSuccess({required this.productName});
+
+  @override
+  List<Object?> get props => [productName];
+}

@@ -93,48 +93,59 @@ class GetAddressListBloc extends Bloc<GetAddressListEvent, GetAddressListState> 
   }
 
   Future<void> _onAddAddressRequest(AddAddressRequest event, Emitter<GetAddressListState> emit) async {
-    if (state is GetAddressListLoaded) {
-      final currentState = state as GetAddressListLoaded;
+    final GetAddressListLoaded currentState = state is GetAddressListLoaded
+        ? state as GetAddressListLoaded
+        : GetAddressListLoaded(
+            addressList: [],
+            message: '',
+            hasReachedMax: false,
+          );
 
-      emit(currentState.copyWith(isAdding: true));
+    emit(currentState.copyWith(isAdding: true));
 
-      try {
-        final response = await AddressRepository().addAddressRequest(
-            addressLine1: event.addressLine1,
-            addressLine2: event.addressLine2,
-            city: event.city,
-            landmark: event.landmark,
-            state: event.state,
-            zipcode: event.zipcode,
-            mobile: event.mobile,
-            addressType: event.addressType,
-            country: event.country,
-            countryCode: event.countryCode,
-            latitude: event.latitude,
-            longitude: event.longitude
-        );
+    try {
+      final response = await AddressRepository().addAddressRequest(
+          addressLine1: event.addressLine1,
+          addressLine2: event.addressLine2,
+          city: event.city,
+          landmark: event.landmark,
+          state: event.state,
+          zipcode: event.zipcode,
+          mobile: event.mobile,
+          addressType: event.addressType,
+          country: event.country,
+          countryCode: event.countryCode,
+          latitude: event.latitude,
+          longitude: event.longitude
+      );
 
-        if (response.isNotEmpty) {
+      if (response.isNotEmpty) {
+        add(FetchUserAddressList(deliveryZoneId: event.deliveryZoneId));
 
-          add(FetchUserAddressList(deliveryZoneId: event.deliveryZoneId));
+        emit(currentState.copyWith(
+          isAdding: false,
+          isAdded: true,
+          message: response['message'] ?? 'Address added successfully',
+        ));
 
-
-          emit(currentState.copyWith(
-            isAdding: false,
-            isAdded: true,
-          ));
-
-          await Future.delayed(const Duration(seconds: 1));
-          if (state is GetAddressListLoaded) {
-            emit((state as GetAddressListLoaded).copyWith(isAdded: false));
-            if(!HiveSelectedAddressHelper.hasSelectedAddress() && response['data'] != null){
-              HiveSelectedAddressHelper.setSelectedAddress(response['data']);
-            }
+        await Future.delayed(const Duration(seconds: 1));
+        if (state is GetAddressListLoaded) {
+          emit((state as GetAddressListLoaded).copyWith(isAdded: false));
+          if(!HiveSelectedAddressHelper.hasSelectedAddress() && response['data'] != null){
+            HiveSelectedAddressHelper.setSelectedAddress(response['data']);
           }
         }
-      } catch (e) {
-        emit(currentState.copyWith(isAdding: false));
+      } else {
+        emit(currentState.copyWith(
+          isAdding: false,
+          message: 'Failed to add address',
+        ));
       }
+    } catch (e) {
+      emit(currentState.copyWith(
+        isAdding: false,
+        message: e.toString(),
+      ));
     }
   }
 

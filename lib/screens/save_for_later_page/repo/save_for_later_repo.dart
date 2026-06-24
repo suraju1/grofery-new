@@ -9,22 +9,21 @@ class SaveForLaterRepository {
     required int perPage,
     required int currentPage,
   }) async {
-    try{
+    try {
       final locationService = LocationService.getStoredLocation();
       final latitude = locationService!.latitude;
       final longitude = locationService.longitude;
 
       final response = await AppConstant.apiBaseHelper.getAPICall(
-        '${ApiRoutes.saveForLaterApi}?page=$currentPage&per_page=$perPage&latitude=$latitude&longitude=$longitude',
-        {}
-      );
+          '${ApiRoutes.saveForLaterApi}?page=$currentPage&per_page=$perPage&latitude=$latitude&longitude=$longitude',
+          {});
 
-      if(response.statusCode == 200) {
+      if (response.statusCode == 200) {
         return response.data;
       } else {
         return {};
       }
-    }catch(e){
+    } catch (e) {
       throw ApiException(e.toString());
     }
   }
@@ -32,17 +31,33 @@ class SaveForLaterRepository {
   Future<Map<String, dynamic>> saveForLaterProduct({
     required int cartItemId,
   }) async {
-    try{
-      final response = await AppConstant.apiBaseHelper.postAPICall(
-          '${ApiRoutes.saveProductApi}$cartItemId',
-          {}
-      );
-      if(response.statusCode == 200) {
+    try {
+      final response = await AppConstant.apiBaseHelper
+          .postAPICall('${ApiRoutes.saveProductApi}$cartItemId', {});
+      if (response.statusCode == 200) {
         return response.data;
       } else {
         return {};
       }
-    }catch(e){
+    } catch (e) {
+      throw ApiException(e.toString());
+    }
+  }
+
+  Future<Map<String, dynamic>> deleteSavedProduct({
+    required int cartItemId,
+  }) async {
+    try {
+      final response = await AppConstant.apiBaseHelper.deleteAPICall(
+        ApiRoutes.removeItemFromCartApi + cartItemId.toString(),
+        {},
+      );
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        return {};
+      }
+    } catch (e) {
       throw ApiException(e.toString());
     }
   }

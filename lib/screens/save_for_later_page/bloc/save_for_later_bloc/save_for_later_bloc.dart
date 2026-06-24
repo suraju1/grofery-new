@@ -8,6 +8,7 @@ class SaveForLaterBloc extends Bloc<SaveForLaterEvent, SaveForLaterState> {
   SaveForLaterBloc() : super(SaveForLaterInitial()) {
     on<FetchSavedProducts>(_onFetchSavedProducts);
     on<SaveForLaterRequest>(_onSaveForLaterRequest);
+    on<DeleteSavedProduct>(_onDeleteSavedProduct);
   }
 
   final SaveForLaterRepository repository = SaveForLaterRepository();
@@ -18,49 +19,70 @@ class SaveForLaterBloc extends Bloc<SaveForLaterEvent, SaveForLaterState> {
   bool isLoadingMore = false;
   bool loadMore = false;
 
-  Future<void> _onFetchSavedProducts(FetchSavedProducts event, Emitter<SaveForLaterState> emit) async {
+  Future<void> _onFetchSavedProducts(
+      FetchSavedProducts event, Emitter<SaveForLaterState> emit) async {
     emit(SaveForLaterLoading());
-    try{
+    try {
       List<SavedItems> savedItems = [];
       currentPage = 1;
       hasReachedMax = false;
       isLoadingMore = false;
       final response = await repository.fetchSavedProduct(
-          perPage: perPage,
-          currentPage: currentPage,
+        perPage: perPage,
+        currentPage: currentPage,
       );
-      savedItems = List<SavedItems>.from(response['data']['items'].map((data) => SavedItems.fromJson(data)));
-      final totalProducts = int.parse(response['data']['items_count'].toString());
-      if(response['success'] == true){
+      savedItems = List<SavedItems>.from(
+          response['data']['items'].map((data) => SavedItems.fromJson(data)));
+      final totalProducts =
+          int.parse(response['data']['items_count'].toString());
+      if (response['success'] == true) {
         emit(SaveForLaterLoaded(
-          message: response['message'],
-          savedItems: savedItems,
-          hasReachedMax: hasReachedMax,
-          totalProducts: totalProducts
-        ));
-      } else if (response['error'] == true){
+            message: response['message'],
+            savedItems: savedItems,
+            hasReachedMax: hasReachedMax,
+            totalProducts: totalProducts));
+      } else if (response['error'] == true) {
         emit(SaveForLaterFailed(error: response['message']));
       }
-    }catch(e) {
+    } catch (e) {
       emit(SaveForLaterFailed(error: e.toString()));
     }
   }
 
-  Future<void> _onSaveForLaterRequest(SaveForLaterRequest event, Emitter<SaveForLaterState> emit) async {
+  Future<void> _onSaveForLaterRequest(
+      SaveForLaterRequest event, Emitter<SaveForLaterState> emit) async {
     emit(SaveForLaterLoading());
-    try{
+    try {
       final response = await repository.saveForLaterProduct(
-          cartItemId: event.cartItemId,
+        cartItemId: event.cartItemId,
       );
-      if(response['success'] == true){
-        if(response['data'] != null && response['data']['items'] != null) {
+      if (response['success'] == true) {
+        if (response['data'] != null && response['data']['items'] != null) {
           emit(ProductSavedSuccess(productName: event.cartItemName));
           add(FetchSavedProducts());
         }
-      } else if (response['error'] == true){
+      } else if (response['error'] == true) {
         emit(SaveForLaterFailed(error: response['message']));
       }
-    } catch(e) {
+    } catch (e) {
+      emit(SaveForLaterFailed(error: e.toString()));
+    }
+  }
+
+  Future<void> _onDeleteSavedProduct(
+      DeleteSavedProduct event, Emitter<SaveForLaterState> emit) async {
+    emit(SaveForLaterLoading());
+    try {
+      final response = await repository.deleteSavedProduct(
+        cartItemId: event.cartItemId,
+      );
+      if (response['success'] == true) {
+        emit(ProductDeleteSuccess(productName: event.productName));
+        add(FetchSavedProducts());
+      } else if (response['error'] == true) {
+        emit(SaveForLaterFailed(error: response['message']));
+      }
+    } catch (e) {
       emit(SaveForLaterFailed(error: e.toString()));
     }
   }

@@ -19,30 +19,45 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     }
   }
 
-  AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-    'your_channel_id',
-    'your_channel_name',
+  // Initialize the local notifications plugin in the background isolate
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@drawable/notification');
+  final DarwinInitializationSettings initializationSettingsDarwin =
+      DarwinInitializationSettings();
+  final InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+    iOS: initializationSettingsDarwin,
+  );
+
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
+  const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    'order-background',
+    'order-background-channel',
     importance: Importance.max,
     priority: Priority.high,
-    icon: 'notification', // Small icon
-    largeIcon: const DrawableResourceAndroidBitmap('notification'),
+    icon: '@drawable/notification', // Small icon
+    largeIcon: DrawableResourceAndroidBitmap('@drawable/notification'),
     fullScreenIntent: true,
   );
 
-  DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+  const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
     subtitle: 'Background Notification',
-    threadIdentifier: 'foreground_threat', // Optional: thread identifier
-    presentAlert: true, // Show the alert
-    presentBadge: true, // Show the badge
-    presentSound: true, // Show the sound
+    threadIdentifier: 'background_thread',
+    presentAlert: true,
+    presentBadge: true,
+    presentSound: true,
   );
 
   // Show default notification for background messages
-  FlutterLocalNotificationsPlugin().show(
+  await flutterLocalNotificationsPlugin.show(
     message.hashCode,
-    message.notification?.title,
-    message.notification?.body,
-    NotificationDetails(android: androidDetails, iOS: iosDetails),
+    message.notification?.title ?? 'New Notification',
+    message.notification?.body ?? 'You have a new message',
+    const NotificationDetails(android: androidDetails, iOS: iosDetails),
   );
 }
 

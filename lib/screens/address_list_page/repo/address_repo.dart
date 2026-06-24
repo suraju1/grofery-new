@@ -20,7 +20,22 @@ class AddressRepository {
     required String latitude,
     required String longitude,
   }) async {
-    try{
+    try {
+      debugPrint('📍 API Request for Add Address: ${ApiRoutes.addAddressApi}');
+      debugPrint('📍 Payload: ${AppConstant.isDemo ? AppConstant.defaultFullAddress : {
+        "address_line1": addressLine1,
+        "address_line2": addressLine2,
+        "city": city,
+        "landmark": landmark,
+        "state": state,
+        "zipcode": zipcode,
+        "mobile": mobile,
+        "address_type": addressType.toLowerCase(),
+        "country": country,
+        "country_code": countryCode,
+        "latitude": latitude,
+        "longitude": longitude
+      }}');
 
       final response = await AppConstant.apiBaseHelper.postAPICall(
         ApiRoutes.addAddressApi,
@@ -41,17 +56,25 @@ class AddressRepository {
         }
       );
 
+      debugPrint('📍 API Response Status: ${response.statusCode}');
+      debugPrint('📍 API Response Data: ${response.data}');
+
       if(response.statusCode == 200 || response.statusCode == 201) {
         if(response.data['success'] == true && response.data['data'] != null) {
           return response.data;
         } else {
-          return {};
+          throw ApiException(response.data['message'] ?? 'Failed to add address (success = false)');
         }
       } else {
-        return {};
+        throw ApiException('Failed to add address (status code: ${response.statusCode})');
       }
-    }catch(e) {
-      throw ApiException('Failed to add address');
+    } catch(e, stack) {
+      debugPrint('❌ addAddressRequest Error: $e');
+      debugPrint('❌ addAddressRequest Stack: $stack');
+      if (e is ApiException) {
+        rethrow;
+      }
+      throw ApiException(e.toString());
     }
   }
 
