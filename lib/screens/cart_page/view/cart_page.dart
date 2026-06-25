@@ -142,9 +142,7 @@ class _CartPageState extends State<CartPage> {
   }
 
   bool get canUseWallet {
-    final settingsState = context.read<SettingsBloc>().state;
-    return settingsState is SettingsLoaded &&
-        (SettingsData.instance.payment?.wallet ?? false);
+    return Global.userData != null;
   }
 
   bool get effectiveUseWallet => canUseWallet && _userWantsWallet;
@@ -999,52 +997,6 @@ class _CartPageState extends State<CartPage> {
             },
           ),
         ],
-        // Wallet toggle
-        BlocBuilder<CartUIBloc, CartUIState>(
-          builder: (context, uiState) {
-            return BlocBuilder<SettingsBloc, SettingsState>(
-              builder: (context, settingsState) {
-                final walletAllowed = settingsState is SettingsLoaded
-                    ? SettingsData.instance.payment?.wallet ?? false
-                    : false;
-
-                if (!walletAllowed && _userWantsWallet) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) {
-                      setState(() {
-                        _userWantsWallet = false;
-                      });
-                      _refreshCart();
-                    }
-                  });
-                }
-
-                if (!walletAllowed) return const SizedBox.shrink();
-
-                return Column(
-                  children: [
-                    SizedBox(height: 9.h),
-                    WalletUsageWidget(
-                      isWalletEnabled: effectiveUseWallet,
-                      isLoading: isCartLoading || uiState.isWalletLoading,
-                      walletAmountUsed: finalWalletAmountUsed,
-                      remainingBalance:
-                          effectiveWalletBalance - finalWalletAmountUsed,
-                      onWalletToggle: !uiState.isWalletLoading && !isCartLoading
-                          ? (bool value) {
-                              setState(() {
-                                _userWantsWallet = value;
-                              });
-                              _refreshCart();
-                            }
-                          : (value) {},
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-        ),
         OrderNoteWidget(
           onNoteChanged: (note) {
             setState(() {
@@ -1052,6 +1004,45 @@ class _CartPageState extends State<CartPage> {
             });
           },
           isEnabled: !isCartLoading,
+        ),
+        BlocBuilder<CartUIBloc, CartUIState>(
+          builder: (context, uiState) {
+            final walletAllowed = Global.userData != null;
+
+            if (!walletAllowed && _userWantsWallet) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _userWantsWallet = false;
+                  });
+                  _refreshCart();
+                }
+              });
+            }
+
+            if (!walletAllowed) return const SizedBox.shrink();
+
+            return Column(
+              children: [
+                SizedBox(height: 9.h),
+                WalletUsageWidget(
+                  isWalletEnabled: effectiveUseWallet,
+                  isLoading: isCartLoading || uiState.isWalletLoading,
+                  walletAmountUsed: finalWalletAmountUsed,
+                  remainingBalance:
+                      effectiveWalletBalance - finalWalletAmountUsed,
+                  onWalletToggle: !uiState.isWalletLoading && !isCartLoading
+                      ? (bool value) {
+                          setState(() {
+                            _userWantsWallet = value;
+                          });
+                          _refreshCart();
+                        }
+                      : (value) {},
+                ),
+              ],
+            );
+          },
         ),
         Padding(
           padding: EdgeInsets.symmetric(vertical: 16.h),
