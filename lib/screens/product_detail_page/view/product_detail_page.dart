@@ -937,7 +937,6 @@ class _ProductDetailPageState extends State<ProductDetailPage>
             final activeVariant = _getActiveVariant(product);
 
             return Container(
-              height: 100,
               decoration: BoxDecoration(
                 color: isDarkMode(context)
                     ? Theme.of(context).colorScheme.onPrimary
@@ -967,14 +966,17 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                 ],
               ),
               padding: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+              child: SafeArea(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                       BlocBuilder<CartBloc, CartState>(
                         builder: (context, cartState) {
                           final cartItem = _getCartItem(cartState, product.id,
@@ -996,6 +998,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                                   : 0.0;
 
                           return Column(
+                            mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -1054,10 +1057,11 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                       ),
                     ],
                   ),
-                  SizedBox(
-                    width: 8,
-                  ),
-                  if (activeVariant.stock > 0)
+                ),
+                SizedBox(
+                  width: 8,
+                ),
+                if (activeVariant.stock > 0)
                     Expanded(
                       child: Align(
                         alignment: AlignmentDirectional.centerEnd,
@@ -1386,8 +1390,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     ),
                 ],
               ),
-            );
-          },
+            ),
+          );
+        },
         ),
       ),
     );

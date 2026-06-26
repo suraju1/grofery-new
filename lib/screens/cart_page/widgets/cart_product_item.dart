@@ -144,18 +144,27 @@ class _CartItemWidgetState extends State<CartItemWidget> {
     final variant = widget.item.variant;
     final product = widget.item.product;
     final quantity = localQuantity;
+    double baseUnitPrice = (variant?.price ?? 0).toDouble();
+    double specialPrice = (variant?.specialPrice ?? 0).toDouble();
 
-    double activeUnitPrice = (variant?.specialPrice ?? 0).toDouble();
+    double activeUnitPrice = baseUnitPrice;
+
+    if (specialPrice > 0 && specialPrice < baseUnitPrice) {
+      activeUnitPrice = specialPrice;
+    }
+
     bool isTierApplied = false;
     var activeTier;
 
     if (variant?.tieredPricing != null && variant!.tieredPricing!.isNotEmpty) {
       for (var tier in variant.tieredPricing!) {
         if (quantity >= tier.minQty) {
-          activeUnitPrice = tier.price / tier.minQty;
-          isTierApplied = tier.minQty >
-              1; // Only show bulk flag if it actually scales above 1
-          activeTier = tier;
+          double tierUnitPrice = tier.price / tier.minQty;
+          if (tierUnitPrice > 0 && tierUnitPrice < activeUnitPrice) {
+            activeUnitPrice = tierUnitPrice;
+            isTierApplied = tier.minQty > 1;
+            activeTier = tier;
+          }
         }
       }
     }
@@ -183,13 +192,18 @@ class _CartItemWidgetState extends State<CartItemWidget> {
                   style:
                       TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
                 ),
-                if (variant?.title != null)
+                if (variant?.title != null &&
+                    product?.name != null &&
+                    variant!.title!.replaceAll(RegExp(r'\s+'), '').toLowerCase() !=
+                        product!.name!.replaceAll(RegExp(r'\s+'), '').toLowerCase())
                   Text(
-                    variant!.title!,
+                    variant.title!,
                     style: TextStyle(fontSize: 12.sp, color: Colors.grey),
                   ),
                 SizedBox(height: 4.h),
-                Row(
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8.w,
                   children: [
                     Text(
                       "₹${(activeUnitPrice * quantity).toStringAsFixed(2)}",
@@ -199,19 +213,6 @@ class _CartItemWidgetState extends State<CartItemWidget> {
                         color: widget.priceColor ?? Colors.black,
                       ),
                     ),
-                    if (!isTierApplied &&
-                        (variant?.price ?? 0) >
-                            (variant?.specialPrice ?? 0)) ...[
-                      SizedBox(width: 8.w),
-                      Text(
-                        "₹${((variant?.price ?? 0) * quantity).toStringAsFixed(2)}",
-                        style: TextStyle(
-                          fontSize: 12.sp,
-                          decoration: TextDecoration.lineThrough,
-                          color: widget.originalPriceColor ?? Colors.grey,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ],

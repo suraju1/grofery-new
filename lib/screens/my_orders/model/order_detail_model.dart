@@ -472,9 +472,28 @@ class OrderItems {
     taxAmount = json['tax_amount'];
     taxPercent = json['tax_percent'];
     sku = json['sku'];
-    quantity = json['quantity'];
-    price = json['price'];
-    subtotal = json['subtotal'];
+    
+    if (json['quantity'] != null) {
+      quantity = int.tryParse(json['quantity'].toString());
+    } else if (json['qty'] != null) {
+      quantity = int.tryParse(json['qty'].toString());
+    } else if (json['pivot'] != null && json['pivot']['quantity'] != null) {
+      quantity = int.tryParse(json['pivot']['quantity'].toString());
+    } else {
+      quantity = 1;
+    }
+    
+    if (json['price'] != null) {
+      price = json['price'].toString();
+    } else if (json['unit_price'] != null) {
+      price = json['unit_price'].toString();
+    } else if (json['pivot'] != null && json['pivot']['price'] != null) {
+      price = json['pivot']['price'].toString();
+    } else {
+      price = '0';
+    }
+    
+    subtotal = json['subtotal']?.toString();
     status = json['status'];
     otp = json['otp'];
     otpVerified = json['otp_verified'];

@@ -12,11 +12,14 @@ import 'package:grofery_user/router/app_routes.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:grofery_user/bloc/user_cart_bloc/user_cart_bloc.dart';
 import 'package:grofery_user/bloc/user_cart_bloc/user_cart_state.dart';
+import 'package:grofery_user/config/global.dart';
 import 'package:grofery_user/config/global_keys.dart';
+import 'package:grofery_user/screens/wishlist_page/bloc/get_user_wishlist_bloc/get_user_wishlist_bloc.dart';
 import '../../../services/location/location_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../services/cart_service.dart';
 import '../../../utils/widgets/custom_toast.dart';
+import 'package:grofery_user/config/constant.dart';
 
 class Dashboard extends StatefulWidget {
   final int index;
@@ -82,6 +85,9 @@ class _DashboardState extends State<Dashboard> {
     Future.microtask(() {
       if (mounted) {
         context.read<CartBloc>().add(LoadCart());
+        if (Global.userData != null) {
+          context.read<UserWishlistBloc>().add(GetUserWishlistRequest());
+        }
       }
     });
   }
@@ -206,9 +212,9 @@ class _DashboardState extends State<Dashboard> {
                 ),
                 BottomNavigationBarItem(
                   icon: Icon(widget.index == 1
-                      ? Icons.list_alt
-                      : Icons.list_alt_outlined),
-                  label: l10n?.myList ?? 'My List',
+                      ? AppConstant.wishListedIcon
+                      : AppConstant.notWishListedIcon),
+                  label: l10n?.wishlist ?? 'Wishlist',
                 ),
                 BottomNavigationBarItem(
                   icon: Icon(widget.index == 2

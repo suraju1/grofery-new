@@ -8,6 +8,7 @@ import 'package:grofery_user/screens/home_page/bloc/brands/brands_bloc.dart';
 import 'package:grofery_user/utils/widgets/custom_brands_card.dart';
 import 'package:grofery_user/l10n/app_localizations.dart';
 import 'package:grofery_user/utils/widgets/custom_shimmer.dart';
+import 'package:grofery_user/config/theme.dart';
 import '../../product_listing_page/model/product_listing_type.dart';
 
 class BrandsSection extends StatefulWidget {
@@ -68,9 +69,7 @@ class _BrandsSectionState extends State<BrandsSection> {
                                   AppLocalizations.of(context)?.seeAll ??
                                       'See All',
                                   style: TextStyle(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .tertiary,
+                                      color: AppTheme.primaryColor,
                                       fontWeight: FontWeight.w600,
                                       fontSize: 15.sp),
                                 ),

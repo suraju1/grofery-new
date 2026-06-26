@@ -49,8 +49,8 @@ class AppConstant {
   static String get currency =>
       SettingsData.instance.system?.currencySymbol ?? '₹';
 
-  static IconData wishListedIcon = TablerIcons.bookmark_filled;
-  static IconData notWishListedIcon = TablerIcons.bookmark;
+  static IconData wishListedIcon = TablerIcons.heart_filled;
+  static IconData notWishListedIcon = TablerIcons.heart;
   static String authMessage =
       'Please log in to continue. This helps us save your preferences and keep your shopping journey seamless.';
 

@@ -319,15 +319,6 @@ class _AccountPageState extends State<AccountPage> {
                       SectionCard(
                         child: Column(
                           children: [
-                            SettingsTile(
-                              title: l10n?.shoppingList ?? "Shopping List",
-                              icon: TablerIcons.pencil,
-                              onTap: () {
-                                GoRouter.of(context)
-                                    .push(AppRoutes.shoppingList);
-                              },
-                            ),
-                            customDivider(),
                             // Appearance
                             SettingsTile(
                               title: l10n?.appearance ?? "Appearance",
@@ -338,15 +329,11 @@ class _AccountPageState extends State<AccountPage> {
                             customDivider(),
 
                             SettingsTile(
-                              title: l10n?.wishlist ?? "Wishlist",
-                              icon: AppConstant.notWishListedIcon,
+                              title: l10n?.shoppingList ?? "Shopping List",
+                              icon: TablerIcons.list_details,
                               onTap: () {
-                                if (Global.userData == null) {
-                                  GoRouter.of(context).push(AppRoutes.login);
-                                } else {
-                                  GoRouter.of(context)
-                                      .push(AppRoutes.wishlistPage);
-                                }
+                                GoRouter.of(context)
+                                    .push(AppRoutes.shoppingList);
                               },
                             ),
                             customDivider(),

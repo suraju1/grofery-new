@@ -621,7 +621,16 @@ class CustomProductCard extends StatelessWidget {
 
               if (!finalIsWishListed) {
                 if (wishlistState is UserWishlistLoaded) {
-                  if (wishlistState.wishlistData.isNotEmpty) {
+                  if (wishlistState.wishlistData.length > 1) {
+                    openAddToWishlistSheet(
+                      context: context,
+                      productId: productId,
+                      productVariantId: productVariantId,
+                      storeId: storeId,
+                      wishlistItemId: finalWishlistItemId ?? 0,
+                    );
+                    return false;
+                  } else if (wishlistState.wishlistData.length == 1) {
                     final wishlist = wishlistState.wishlistData.first;
                     wishlistBloc.add(
                       AddItemInWishlist(
@@ -631,6 +640,7 @@ class CustomProductCard extends StatelessWidget {
                         storeId: storeId,
                       ),
                     );
+                    return true;
                   } else {
                     final userName = Global.userData?.name ?? 'My Wishlist';
                     wishlistBloc.add(
@@ -641,30 +651,18 @@ class CustomProductCard extends StatelessWidget {
                         storeId: storeId,
                       ),
                     );
+                    return true;
                   }
-                } else if (wishlistState is UserWishlistInitial) {
-                  wishlistBloc.add(GetUserWishlistRequest());
-                  final userName = Global.userData?.name ?? 'My Wishlist';
-                  wishlistBloc.add(
-                    CreateNewWishlist(
-                      title: userName,
-                      productId: productId,
-                      productVariantId: productVariantId,
-                      storeId: storeId,
-                    ),
+                } else {
+                  openAddToWishlistSheet(
+                    context: context,
+                    productId: productId,
+                    productVariantId: productVariantId,
+                    storeId: storeId,
+                    wishlistItemId: finalWishlistItemId ?? 0,
                   );
-                } else if (wishlistState is UserWishlistLoading) {
-                  final userName = Global.userData?.name ?? 'My Wishlist';
-                  wishlistBloc.add(
-                    CreateNewWishlist(
-                      title: userName,
-                      productId: productId,
-                      productVariantId: productVariantId,
-                      storeId: storeId,
-                    ),
-                  );
+                  return false;
                 }
-                return true;
               }
               return true;
             } else {

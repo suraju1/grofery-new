@@ -1,5 +1,21 @@
 import '../../../model/tiered_pricing.dart';
 
+int _toInt(dynamic value) {
+  if (value == null) return 0;
+  if (value is int) return value;
+  if (value is double) return value.toInt();
+  if (value is String) return double.tryParse(value)?.toInt() ?? int.tryParse(value) ?? 0;
+  return 0;
+}
+
+double _toDouble(dynamic value) {
+  if (value == null) return 0.0;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? 0.0;
+  return 0.0;
+}
+
 class WishlistProductModel {
   bool? success;
   String? message;
@@ -43,10 +59,10 @@ class WishlistData {
       this.updatedAt});
 
   WishlistData.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
+    id = _toInt(json['id']);
     title = json['title'];
     slug = json['slug'];
-    itemsCount = json['items_count'];
+    itemsCount = _toInt(json['items_count']);
     if (json['items'] != null) {
       items = <WishlistProductItems>[];
       json['items'].forEach((v) {
@@ -91,8 +107,8 @@ class WishlistProductItems {
       this.updatedAt});
 
   WishlistProductItems.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    wishlistId = json['wishlist_id'];
+    id = _toInt(json['id']);
+    wishlistId = _toInt(json['wishlist_id']);
     product =
         json['product'] != null ? Product.fromJson(json['product']) : null;
     variant =
@@ -133,7 +149,7 @@ class Product {
   String? estimatedDeliveryTime;
   String? imageFit;
   StoreStatus? storeStatus;
-  int? ratings;
+  double? ratings;
   int? ratingCount;
   bool? quickDeliveryAvailable;
 
@@ -154,21 +170,21 @@ class Product {
       this.quickDeliveryAvailable});
 
   Product.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
+    id = _toInt(json['id']);
     title = json['title'];
     slug = json['slug'];
     image = json['image'];
-    minimumOrderQuantity = json['minimum_order_quantity'];
-    quantityStepSize = json['quantity_step_size'];
-    totalAllowedQuantity = json['total_allowed_quantity'];
+    minimumOrderQuantity = _toInt(json['minimum_order_quantity']);
+    quantityStepSize = _toInt(json['quantity_step_size']);
+    totalAllowedQuantity = _toInt(json['total_allowed_quantity']);
     shortDescription = json['short_description'];
     estimatedDeliveryTime = json['estimated_delivery_time'].toString();
     imageFit = json['image_fit'];
     storeStatus = json['store_status'] != null
         ? StoreStatus.fromJson(json['store_status'])
         : null;
-    ratings = json['ratings'];
-    ratingCount = json['rating_count'];
+    ratings = _toDouble(json['ratings']);
+    ratingCount = _toInt(json['rating_count']);
     quickDeliveryAvailable = json['quick_delivery_available'] == true ||
         json['quick_delivery_available'] == 1 ||
         json['quick_delivery_available'] == '1';
@@ -219,9 +235,9 @@ class Variant {
   int? id;
   String? sku;
   String? image;
-  int? price;
-  int? specialPrice;
-  int? mrp;
+  double? price;
+  double? specialPrice;
+  double? mrp;
   int? mrpStatus;
   String? pricePerUnit;
   String? measurementUnit;
@@ -248,19 +264,19 @@ class Variant {
       this.tieredPricing});
 
   Variant.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
+    id = _toInt(json['id']);
     sku = json['sku'];
     image = json['image'];
-    price = json['price'];
-    specialPrice = json['special_price'];
-    mrp = json['mrp'];
-    mrpStatus = json['mrp_status'];
+    price = _toDouble(json['price']);
+    specialPrice = _toDouble(json['special_price']);
+    mrp = _toDouble(json['mrp']);
+    mrpStatus = _toInt(json['mrp_status']);
     pricePerUnit = json['price_per_unit']?.toString() ?? '';
     measurementUnit = json['measurement_unit']?.toString();
-    storeId = json['store_id'];
+    storeId = _toInt(json['store_id']);
     storeSlug = json['store_slug'];
     storeName = json['store_name'];
-    stock = json['stock'];
+    stock = _toInt(json['stock']);
     final dynamic tieredData = json['tiered_pricing'] ??
         json['tieredPricing'] ??
         json['tiered_prices'] ??
@@ -306,7 +322,7 @@ class Store {
   Store({this.id, this.name, this.slug});
 
   Store.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
+    id = _toInt(json['id']);
     name = json['name'];
     slug = json['slug'];
   }

@@ -6,6 +6,7 @@ import 'package:grofery_user/l10n/app_localizations.dart';
 import 'package:grofery_user/router/app_routes.dart';
 import 'package:grofery_user/utils/widgets/custom_shimmer.dart';
 import 'package:grofery_user/utils/widgets/custom_sub_category_card.dart';
+import 'package:grofery_user/config/theme.dart';
 import '../../product_listing_page/model/product_listing_type.dart';
 import '../bloc/category/category_bloc.dart';
 import '../bloc/category/category_state.dart';
@@ -114,7 +115,7 @@ class _SubCategoryFeatureSectionWidgetState
                           child: Text(
                             AppLocalizations.of(context)?.seeAll ?? 'See All',
                             style: TextStyle(
-                                color: Theme.of(context).colorScheme.tertiary,
+                                color: AppTheme.primaryColor,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 15.sp),
                           ),

@@ -167,9 +167,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                       isFromOrderDetail: true,
                                       downloadInvoice: () {
                                         if (orderData.invoice != null && orderData.invoice!.isNotEmpty) {
-                                          context.read<DownloadInvoiceBloc>().add(
-                                                DownloadInvoice(invoiceUrl: orderData.invoice!),
-                                              );
+                                          _launchPdf(orderData.invoice!);
                                         } else {
                                           ToastManager.show(
                                             context: context,

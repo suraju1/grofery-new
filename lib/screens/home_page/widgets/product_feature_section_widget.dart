@@ -6,6 +6,7 @@ import 'package:grofery_user/bloc/user_cart_bloc/user_cart_event.dart';
 import 'package:grofery_user/model/user_cart_model/user_cart.dart';
 import 'package:grofery_user/model/user_cart_model/cart_sync_action.dart';
 import '../../../utils/widgets/custom_product_card.dart';
+import 'package:grofery_user/config/theme.dart';
 import '../model/featured_section_product_model.dart';
 
 class ProductFeatureSectionWidget extends StatelessWidget {
@@ -74,7 +75,7 @@ class ProductFeatureSectionWidget extends StatelessWidget {
                       child: Text(
                         "See All",
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.tertiary,
+                          color: AppTheme.primaryColor,
                           fontWeight: FontWeight.w600,
                           fontSize: 15.sp,
                         ),

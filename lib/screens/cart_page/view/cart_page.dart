@@ -88,6 +88,7 @@ class _CartPageState extends State<CartPage> {
       true; //////////////////////////////////////////ha change kela aahe true hota pahile
   bool isClearingCart = false;
   bool isWholePageProgress = false;
+  bool isBillDetailsLoading = false;
   DeliveryType selectedDeliveryType = DeliveryType.regular;
   int? cartId;
   late bool _userWantsWallet = false;
@@ -196,78 +197,37 @@ class _CartPageState extends State<CartPage> {
 
     double rawTotalAmount = billSummaryData?.payableAmount?.toDouble() ?? 0.0;
     double rawWalletUsed = billSummaryData?.walletAmountUsed?.toDouble() ?? 0.0;
+    double backendItemsTotal = billSummaryData?.itemsTotal?.toDouble() ?? 0.0;
+    double curDeliveryCharge = billSummaryData?.deliveryCharges?.toDouble() ?? 0.0;
 
-    double calcItemsTotal = 0;
+    debugPrint('DEBUG_TOTALS: payableAmount=$rawTotalAmount, deliveryCharges=$curDeliveryCharge, itemsTotal=$backendItemsTotal, useWallet=${billSummaryData?.useWallet}, walletAmountUsed=$rawWalletUsed');
+
     double origItemsTotal = 0;
-
     for (var item in data.items!) {
-      double unitPrice = (item.variant?.specialPrice ?? 0).toDouble();
-      if (item.variant?.tieredPricing != null &&
-          item.variant!.tieredPricing!.isNotEmpty) {
-        for (var tier in item.variant!.tieredPricing!) {
-          if ((item.quantity ?? 1) >= tier.minQty) {
-            unitPrice = tier.price / tier.minQty;
-          }
-        }
-      }
-      calcItemsTotal += unitPrice * (item.quantity ?? 1);
       origItemsTotal += (item.variant?.price ?? 0) * (item.quantity ?? 1);
     }
 
-    double backendItemsTotal = billSummaryData?.itemsTotal?.toDouble() ?? 0;
-    double priceDifference = backendItemsTotal - calcItemsTotal;
-    double rawGrandTotal = rawTotalAmount - priceDifference;
-    double savings = origItemsTotal - calcItemsTotal;
+    double savings = origItemsTotal - backendItemsTotal;
+    if (savings < 0) savings = 0;
 
     double rCharge = data.deliveryZone?.rushDeliveryCharges?.toDouble() ?? 99.0;
     if (rCharge < 99.0) rCharge = 99.0;
 
-    double curDeliveryCharge =
-        billSummaryData?.totalDeliveryCharges?.toDouble() ?? 0;
-
-    double handlingChargeVal =
-        billSummaryData?.handlingCharges?.toDouble() ?? 0;
-    double perStoreDropOffFeeVal =
-        billSummaryData?.perStoreDropOffFee?.toDouble() ?? 0;
-    double promoDiscountVal =
-        double.tryParse(billSummaryData?.promoDiscount ?? '0') ?? 0;
-
-    double exactGrandTotal = calcItemsTotal +
-        curDeliveryCharge +
-        handlingChargeVal +
-        perStoreDropOffFeeVal -
-        promoDiscountVal;
-
-    // Use rawGrandTotal as a fallback if the local calculation is somehow negative, but it shouldn't be.
-    if (exactGrandTotal < 0) exactGrandTotal = rawGrandTotal;
-
-    double finalWalletUsed = rawWalletUsed;
-    double finalGrandTotal = exactGrandTotal;
-    double effectiveWalletBalance = walletBalance > 0
-        ? walletBalance
-        : (billSummaryData?.walletBalance?.toDouble() ?? 0.0);
-
-    if (effectiveUseWallet &&
-        effectiveWalletBalance > finalWalletUsed &&
-        finalGrandTotal > 0) {
-      double extraCoverage =
-          math.min(effectiveWalletBalance - finalWalletUsed, finalGrandTotal);
-      finalWalletUsed += extraCoverage;
-      finalGrandTotal -= extraCoverage;
-    }
-
     // FIX: stateData is updated here inside setState — the single source of truth.
     setState(() {
       stateData = cartData;
-      itemsTotal = calcItemsTotal;
-      totalAmount = finalGrandTotal;
-      calculatedItemsTotal = calcItemsTotal;
+      itemsTotal = backendItemsTotal;
+      totalAmount = rawTotalAmount;
+      calculatedItemsTotal = backendItemsTotal;
       originalItemsTotal = origItemsTotal;
       itemSavings = savings;
       currentDeliveryCharge = curDeliveryCharge;
       rushCharge = rCharge;
-      walletAmountUsedValue = finalWalletUsed;
+      walletAmountUsedValue = rawWalletUsed;
       isCartLoading = false;
+
+      // Sync wallet selection with backend's use_wallet response
+      _userWantsWallet = billSummaryData?.useWallet ?? false;
 
       // Sync promoCode with backend's response so it doesn't get lost on page reload
       promoCode = billSummaryData?.promoCode;
@@ -395,6 +355,9 @@ class _CartPageState extends State<CartPage> {
                         }
                         // _calculateTotals calls setState internally and sets stateData.
                         _calculateTotals(state.cartData);
+                        setState(() {
+                          isBillDetailsLoading = false;
+                        });
                         context.read<CartUIBloc>().add(SetWalletLoading(false));
                       } else if (state is GetUserCartLoading) {
                         if (stateData.isEmpty) {
@@ -413,6 +376,7 @@ class _CartPageState extends State<CartPage> {
 
                         setState(() {
                           isCartLoading = false;
+                          isBillDetailsLoading = false;
                           // Instead of clearing stateData unconditionally, we leave it as is
                           // to prevent flickering if it was already populated,
                           // or let the fallback logic in _buildCartContent handle it.
@@ -1035,6 +999,7 @@ class _CartPageState extends State<CartPage> {
                       ? (bool value) {
                           setState(() {
                             _userWantsWallet = value;
+                            isBillDetailsLoading = true;
                           });
                           _refreshCart();
                         }
@@ -1051,39 +1016,55 @@ class _CartPageState extends State<CartPage> {
         ),
         offerAndCouponButton(),
         SizedBox(height: 12.h),
-        BillSummaryWidget(
-          itemsOriginalPrice: originalItemsTotalVal > calculatedItemsTotalVal
-              ? originalItemsTotalVal
-              : -1,
-          itemsDiscountedPrice: calculatedItemsTotalVal,
-          itemsSavings: itemSavingsVal > 0 ? itemSavingsVal : 0,
-          deliveryChargeOriginal: currentDeliveryChargeVal,
-          handlingCharge: billSummaryData?.handlingCharges?.toDouble() ?? 0,
-          grandTotal: finalGrandTotal,
-          totalSavings: itemSavingsVal > 0 ? itemSavingsVal : 0,
-          perStoreDropOffFees:
-              billSummaryData?.perStoreDropOffFee?.toDouble() ?? 0.0,
-          promoCode: billSummaryData?.promoCode,
-          promoDiscount:
-              double.tryParse(billSummaryData?.promoDiscount ?? '0') ?? 0,
-          promoError: billSummaryData?.promoError,
-          removeCoupon: () {
-            setState(() {
-              isCartLoading = true;
-              promoCode = '';
-            });
-            context.read<PromoCodeBloc>().add(RemovePromoCode());
-            context.read<GetUserCartBloc>().add(FetchUserCart(
-                  addressId: selectedAddress?.id,
-                  rushDelivery: selectedDeliveryType == DeliveryType.rush,
-                  useWallet: _userWantsWallet,
-                  promoCode: promoCode ?? '',
-                ));
-          },
-          promoMode: billSummaryData?.promoApplied?.promoMode ?? '',
-          discountAmount: billSummaryData?.promoApplied?.discountAmount ?? '',
-          isRushDelivery: billSummaryData?.isRushDelivery,
-          walletAmountUsed: finalWalletAmountUsed,
+        Stack(
+          children: [
+            BillSummaryWidget(
+              itemsOriginalPrice: originalItemsTotalVal > calculatedItemsTotalVal
+                  ? originalItemsTotalVal
+                  : -1,
+              itemsDiscountedPrice: calculatedItemsTotalVal,
+              itemsSavings: itemSavingsVal > 0 ? itemSavingsVal : 0,
+              deliveryChargeOriginal: currentDeliveryChargeVal,
+              handlingCharge: billSummaryData?.handlingCharges?.toDouble() ?? 0,
+              grandTotal: finalGrandTotal,
+              totalSavings: itemSavingsVal > 0 ? itemSavingsVal : 0,
+              perStoreDropOffFees:
+                  billSummaryData?.perStoreDropOffFee?.toDouble() ?? 0.0,
+              promoCode: billSummaryData?.promoCode,
+              promoDiscount:
+                  double.tryParse(billSummaryData?.promoDiscount ?? '0') ?? 0,
+              promoError: billSummaryData?.promoError,
+              removeCoupon: () {
+                setState(() {
+                  isCartLoading = true;
+                  promoCode = '';
+                });
+                context.read<PromoCodeBloc>().add(RemovePromoCode());
+                context.read<GetUserCartBloc>().add(FetchUserCart(
+                      addressId: selectedAddress?.id,
+                      rushDelivery: selectedDeliveryType == DeliveryType.rush,
+                      useWallet: _userWantsWallet,
+                      promoCode: promoCode ?? '',
+                    ));
+              },
+              promoMode: billSummaryData?.promoApplied?.promoMode ?? '',
+              discountAmount: billSummaryData?.promoApplied?.discountAmount ?? '',
+              isRushDelivery: billSummaryData?.isRushDelivery,
+              walletAmountUsed: finalWalletAmountUsed,
+            ),
+            if (isBillDetailsLoading)
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(16.r),
+                  ),
+                  child: const Center(
+                    child: CustomCircularProgressIndicator(),
+                  ),
+                ),
+              ),
+          ],
         ),
       ],
     );
@@ -1465,6 +1446,9 @@ class _CartPageState extends State<CartPage> {
   }
 
   void _handleQuantityChanged(String itemId, int newQuantity) {
+    setState(() {
+      isBillDetailsLoading = true;
+    });
     context.read<UpdateItemQuantityBloc>().add(UpdateItemQuantityRequest(
           cartItemId: int.parse(itemId),
           quantity: newQuantity,
@@ -1472,6 +1456,9 @@ class _CartPageState extends State<CartPage> {
   }
 
   void _handleRemoveItem(String itemId) {
+    setState(() {
+      isBillDetailsLoading = true;
+    });
     context
         .read<RemoveItemFromCartBloc>()
         .add(RemoveItemFromCartRequest(cartItemId: int.parse(itemId)));

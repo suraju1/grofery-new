@@ -262,10 +262,10 @@ class MyAppRoute {
               ]),
               StatefulShellBranch(routes: [
                 GoRoute(
-                  name: 'shopping-list',
-                  path: AppRoutes.shoppingList,
+                  name: 'wishlist',
+                  path: AppRoutes.wishlistPage,
                   pageBuilder: (context, state) =>
-                      platformPage(ShoppingListPage()),
+                      platformPage(const WishlistPage()),
                 ),
               ]),
               StatefulShellBranch(routes: [
@@ -470,9 +470,10 @@ class MyAppRoute {
           pageBuilder: (context, state) => platformPage(SearchPage()),
         ),
         GoRoute(
-          name: 'wishlist',
-          path: AppRoutes.wishlistPage,
-          pageBuilder: (context, state) => platformPage(const WishlistPage()),
+          name: 'shopping-list',
+          path: AppRoutes.shoppingList,
+          pageBuilder: (context, state) =>
+              platformPage(ShoppingListPage()),
         ),
         GoRoute(
           name: 'wishlist-product',

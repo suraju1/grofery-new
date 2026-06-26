@@ -175,6 +175,7 @@ class CartItems {
   int? storeId;
   int? quantity;
   bool? saveForLater;
+  String? tierPrice;
   Product? product;
   Variant? variant;
   Store? store;
@@ -189,6 +190,7 @@ class CartItems {
         this.storeId,
         this.quantity,
         this.saveForLater,
+        this.tierPrice,
         this.product,
         this.variant,
         this.store,
@@ -203,6 +205,7 @@ class CartItems {
     storeId = json['store_id'] != null ? int.tryParse(json['store_id'].toString()) : null;
     quantity = json['quantity'] != null ? int.tryParse(json['quantity'].toString()) : null;
     saveForLater = json['save_for_later'] != null ? (json['save_for_later'].toString() == 'true' || json['save_for_later'].toString() == '1') : null;
+    tierPrice = json['tier_price']?.toString();
     product =
     (json['product'] != null && json['product'] is Map) ? Product.fromJson(json['product']) : null;
     variant =
@@ -221,6 +224,7 @@ class CartItems {
     data['store_id'] = storeId;
     data['quantity'] = quantity;
     data['save_for_later'] = saveForLater;
+    data['tier_price'] = tierPrice;
     if (product != null) {
       data['product'] = product!.toJson();
     }

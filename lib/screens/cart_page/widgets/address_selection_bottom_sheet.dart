@@ -260,12 +260,27 @@ class _AddressSelectionBottomSheetState
                     ),
                   ),
                   const Spacer(),
+                  IconButton(
+                    onPressed: () {
+                      _showDeleteConfirmation(context, address);
+                    },
+                    icon: Icon(
+                      TablerIcons.trash,
+                      color: Colors.red,
+                      size: isTablet(context) ? 22.sp : 18.sp,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  SizedBox(width: 8.w),
                   if (isSelected)
                     Icon(
                       TablerIcons.circle_check,
                       color: AppTheme.primaryColor,
-                      size: isTablet(context) ? 10.sp : 20.sp,
+                      size: isTablet(context) ? 24.sp : 20.sp,
                     ),
+                  if (!isSelected)
+                    SizedBox(width: isTablet(context) ? 24.sp : 20.sp),
                 ],
               ),
             ),
@@ -428,6 +443,50 @@ class _AddressSelectionBottomSheetState
           ],
         ),
       ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context, AddressListData address) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(
+            'Delete Address',
+            style: TextStyle(
+              fontSize: 18.sp,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to delete this address?',
+            style: TextStyle(fontSize: 14.sp),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                if (address.id != null) {
+                  this.context.read<GetAddressListBloc>().add(
+                        RemoveAddressRequest(addressId: address.id!),
+                      );
+                }
+              },
+              child: Text(
+                'Delete',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
